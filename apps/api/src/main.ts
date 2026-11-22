@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { migrateDatabase } from './db/migrate';
@@ -19,5 +21,11 @@ const { port, databaseUrl } = config;
 await migrateDatabase(databaseUrl);
 
 const pool = new pg.Pool({ connectionString: databaseUrl });
-await buildServer({ db: drizzle(pool), config }).listen({ port, host: '0.0.0.0' });
+// The image builds the web app next to the API; a plain dev checkout may not have, so serve it only if present.
+const dist = fileURLToPath(new URL('../../web/dist', import.meta.url));
+const webRoot = existsSync(dist) ? dist : undefined;
+await buildServer({ db: drizzle(pool), config, ...(webRoot ? { webRoot } : {}) }).listen({
+  port,
+  host: '0.0.0.0',
+});
 console.log(`api listening on :${port}`);

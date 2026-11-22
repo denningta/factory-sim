@@ -16,6 +16,7 @@ describe('loadEnv', () => {
       sessionIdleHours: 8,
       sessionMaxDays: 7,
       cookieSecure: false,
+      trustProxy: [],
     });
   });
 
@@ -66,4 +67,25 @@ describe('loadEnv session settings (PL-6)', () => {
   ])('AC3: refuses %s=%j', (key, value) => {
     expect(() => loadEnv({ ...valid, [key]: value })).toThrow(new RegExp(key));
   });
+});
+
+describe('TRUST_PROXY (#64)', () => {
+  it('AC1: parses a comma-separated list of IPs and CIDRs', () => {
+    expect(loadEnv({ ...valid, TRUST_PROXY: '172.18.0.1, 10.0.0.0/8,::1' }).trustProxy).toEqual([
+      '172.18.0.1',
+      '10.0.0.0/8',
+      '::1',
+    ]);
+  });
+
+  it('AC1: defaults to trusting nobody, even when COOKIE_SECURE=true', () => {
+    expect(loadEnv({ ...valid, COOKIE_SECURE: 'true' }).trustProxy).toEqual([]);
+  });
+
+  it.each(['true', 'nope', '10.0.0.0/99', '999.1.1.1', '1.2.3.4,,5.6.7.8'])(
+    'AC1: refuses TRUST_PROXY=%j',
+    (TRUST_PROXY) => {
+      expect(() => loadEnv({ ...valid, TRUST_PROXY })).toThrow(/TRUST_PROXY/);
+    },
+  );
 });
