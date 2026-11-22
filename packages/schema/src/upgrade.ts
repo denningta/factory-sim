@@ -64,7 +64,13 @@ export function createUpgrader<T>(options: {
     while (version < currentVersion) {
       const step = steps[version];
       if (!step) return { ok: false, error: `No upgrade step from schema version ${version}` };
-      const next = step(doc);
+      let next: unknown;
+      try {
+        next = step(doc);
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: `Upgrade from schema version ${version} failed: ${reason}` };
+      }
       const nextVersion = isRecord(next) ? next.schemaVersion : undefined;
       if (!isRecord(next) || nextVersion !== version + 1) {
         return {

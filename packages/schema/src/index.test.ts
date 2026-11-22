@@ -122,6 +122,15 @@ describe('PL-3 AC2: saves are validated; invalid data is rejected with a clear m
     expectInvalid(p, 'products[1].partNumber', 'Part number "A-100" is already used');
   });
 
+  it('trims part numbers, so padded duplicates are caught', () => {
+    const p = sampleProject();
+    p.products[0]!.partNumber = '  A-100 ';
+    const result = validateProject(p);
+    expect(result.ok && result.project.products[0]!.partNumber).toBe('A-100');
+    p.products[1]!.partNumber = 'A-100 ';
+    expectInvalid(p, 'Part number "A-100" is already used');
+  });
+
   it('rejects a connection from an object to itself', () => {
     const p = sampleProject();
     p.connections.push({ id: 'c4', from: 's1', to: 's1' });
@@ -235,6 +244,22 @@ describe('PL-3 AC3: an upgrade step converts an older version to the current one
     expect(broken({ schemaVersion: 1 })).toEqual({
       ok: false,
       error: 'Upgrade step from schema version 1 produced version 1, expected 2',
+    });
+  });
+
+  it('reports a step that throws instead of throwing', () => {
+    const throwing = createUpgrader({
+      currentVersion: 2,
+      schema: z.object({ schemaVersion: z.literal(2) }),
+      steps: {
+        1: () => {
+          throw new Error('floor.size missing');
+        },
+      },
+    });
+    expect(throwing({ schemaVersion: 1 })).toEqual({
+      ok: false,
+      error: 'Upgrade from schema version 1 failed: floor.size missing',
     });
   });
 

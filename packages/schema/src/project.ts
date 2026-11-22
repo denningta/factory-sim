@@ -47,6 +47,7 @@ export const routingStepSchema = z.strictObject({ id, stationId: id });
 
 export const productSchema = z.strictObject({
   id,
+  /** Surrounding whitespace is trimmed so " A-100" and "A-100" count as the same part. */
   partNumber: z.string().trim().min(1),
   name: z.string().min(1),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a color like #3b82f6'),
@@ -56,7 +57,7 @@ export const productSchema = z.strictObject({
 
 /**
  * A duration in seconds. A discriminated union so that random distributions (PR-4)
- * can be added as new kinds without a schema version bump.
+ * are new kinds with a trivial upgrade step, not a reshaping of existing data.
  */
 export const durationSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('fixed'), value: seconds }),

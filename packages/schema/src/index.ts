@@ -4,9 +4,11 @@
  * - `validateProject` on save: the document must already be the current version.
  * - `loadProject` on open: upgrades older documents, then validates.
  *
- * To make a breaking change: bump CURRENT_SCHEMA_VERSION, change the schema, add
- * `upgradeSteps[previousVersion]` and a test that upgrades a sample of the old version.
- * Adding an optional field or a new union member needs no bump.
+ * Every schema change, additive ones included, bumps CURRENT_SCHEMA_VERSION and adds
+ * `upgradeSteps[previousVersion]` (just setting the new version number for additive
+ * changes) plus a test that upgrades a sample of the old version. The schema rejects
+ * unknown keys, so the bump is what lets an older build say "saved by a newer version"
+ * instead of failing on an unrecognized field.
  */
 import { CURRENT_SCHEMA_VERSION, projectSchema, type Project } from './project';
 import { createUpgrader, validate, type ParseResult, type UpgradeStep } from './upgrade';
