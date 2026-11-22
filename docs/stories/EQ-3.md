@@ -23,3 +23,5 @@ issue: 6
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- `equipmentTypeSchema` already validates user-defined types, and instances keep `typeId`, so "update instances" can find them. The library table (ADR-0010) needs a migration in `apps/api`, plus API shapes, which the lead adds to `packages/schema`.
