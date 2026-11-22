@@ -3,10 +3,19 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { LibraryPanel } from './LibraryPanel';
+import { TYPE_DESCRIPTIONS } from './descriptions';
 
 afterEach(cleanup);
 
 describe('LibraryPanel', () => {
+  it('every behavior has a non-empty one-line description', () => {
+    for (const t of BASE_EQUIPMENT_TYPES) {
+      const d = TYPE_DESCRIPTIONS[t.behavior];
+      expect(d.length).toBeGreaterThan(5);
+      expect(d).not.toContain('\n');
+    }
+  });
+
   it('lists workstation, buffer/rack, conveyor, source and sink', () => {
     render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} />);
     const items = screen.getAllByRole('listitem');
@@ -17,7 +26,7 @@ describe('LibraryPanel', () => {
     }
   });
 
-  it('shows each type with its default footprint, height and behavior', () => {
+  it('shows each type with a one-line description of its behavior and its default footprint and height', () => {
     render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} />);
     for (const t of BASE_EQUIPMENT_TYPES) {
       const item = screen.getByRole('listitem', { name: t.name });
@@ -26,7 +35,7 @@ describe('LibraryPanel', () => {
         s.getByText(new RegExp(`${t.footprint.width} × ${t.footprint.length} m`)),
       ).toBeTruthy();
       expect(s.getByText(new RegExp(`height ${t.height} m`))).toBeTruthy();
-      expect(s.getByText(new RegExp(`behavior: ${t.behavior}`))).toBeTruthy();
+      expect(s.getByText(TYPE_DESCRIPTIONS[t.behavior])).toBeTruthy();
     }
   });
 

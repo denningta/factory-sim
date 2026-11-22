@@ -99,15 +99,21 @@ export function equipmentParts(
       ];
     }
     case 'sink': {
-      // Shipping dock: a box container with a dark open top and a loading ramp on one side.
+      // Shipping: an open container with a dark mouth, and a stack of pallets waiting beside it.
       const base = h * 0.1;
-      const body = h * 0.7;
-      return [
+      const lip = h * 0.02;
+      const bodyTop = h - lip;
+      const parts: Part[] = [
         slab(w, base, l, 0, 0, 0, 0.7),
-        slab(w * 0.7, body, l, base, -w * 0.15, 0, 1),
-        slab(w * 0.7, h - base - body, l * 0.1, base + body, -w * 0.15, l * 0.45, 1.2),
-        slab(w * 0.3, h * 0.25, l * 0.8, base, w * 0.35, 0, 0.6),
+        slab(w * 0.6, bodyTop - base, l * 0.9, base, -w * 0.2, 0, 1),
+        slab(w * 0.5, lip, l * 0.75, bodyTop, -w * 0.2, 0, 0.2),
       ];
+      const pallet = h * 0.12;
+      for (let i = 0; i < 3; i++)
+        parts.push(
+          slab(w * 0.3, pallet, l * 0.6, base + i * pallet, w * 0.3, 0, i % 2 ? 0.9 : 0.6),
+        );
+      return parts;
     }
   }
 }
@@ -131,6 +137,6 @@ export function partBounds(parts: Part[]): { min: Vec3; max: Vec3 } {
 /** Footprint-independent description of a shape's structure, for telling shapes apart. */
 export function shapeSignature(parts: Part[]): string {
   return parts
-    .map((p) => (p.shape === 'box' ? 'b' : p.radiusTop === p.radiusBottom ? 'c' : 'f'))
+    .map((p) => (p.shape === 'box' ? 'b' : p.radiusTop === p.radiusBottom ? 'c' : 'f') + p.tone)
     .join('');
 }

@@ -1,4 +1,5 @@
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { TYPE_DESCRIPTIONS } from './descriptions';
 import { formatNumber, toDisplay, type DisplayUnit } from '../layout/units';
 
 interface Props {
@@ -30,15 +31,12 @@ export function LibraryPanel({ unit, selectedId, onSelect }: Props) {
             >
               <strong>{t.name}</strong>
               <br />
-              <small>
-                {d(t.footprint.width)} × {d(t.footprint.length)} {unit}
-              </small>
+              <small>{TYPE_DESCRIPTIONS[t.behavior]}</small>
               <br />
               <small>
-                height {d(t.height)} {unit}
+                {d(t.footprint.width)} × {d(t.footprint.length)} {unit} · height {d(t.height)}{' '}
+                {unit}
               </small>
-              <br />
-              <small>behavior: {t.behavior}</small>
             </button>
           </li>
         ))}

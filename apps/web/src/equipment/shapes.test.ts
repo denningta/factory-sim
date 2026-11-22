@@ -32,4 +32,18 @@ describe('Each type renders as a distinct, recognizable 3D shape', () => {
     expect(b.max[0] - b.min[0]).toBeCloseTo(4, 9);
     expect(b.max[1]).toBeCloseTo(2, 9);
   });
+
+  it('the sink reads as shipping: a dark open top and a stack of pallets', () => {
+    const sink = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'sink')!;
+    const parts = equipmentParts(sink);
+    const darkest = Math.min(...parts.map((p) => p.tone));
+    expect(darkest).toBeLessThanOrEqual(0.3);
+    const top = parts.find((p) => p.tone === darkest)!;
+    expect(top.position[1]).toBeGreaterThan(sink.height * 0.9);
+    // At least three pallet-like slabs share one column.
+    const slabs = parts.filter((p) => p.shape === 'box' && p.size[1] < sink.height * 0.2);
+    const columns = new Map<number, number>();
+    for (const p of slabs) columns.set(p.position[0], (columns.get(p.position[0]) ?? 0) + 1);
+    expect(Math.max(...columns.values())).toBeGreaterThanOrEqual(3);
+  });
 });
