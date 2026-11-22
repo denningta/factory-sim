@@ -9,9 +9,15 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "start": "tsx src/main.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.20.5"
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "yaml": "^2.9.1"
+  },
+  "dependencies": {
+    "fastify": "^5.12.8"
   }
 }

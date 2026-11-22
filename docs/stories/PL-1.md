@@ -16,9 +16,9 @@ issue: 17
 
 ## Acceptance criteria
 
-- [ ] Given a host with Docker, when I run docker compose up -d with the example .env, then the app and Postgres start and the app is reachable on the configured port
-- [ ] The app waits for the Postgres healthcheck before starting
-- [ ] Both containers restart automatically after a host reboot
+- [x] Given a host with Docker, when I run docker compose up -d with the example .env, then the app and Postgres start and the app is reachable on the configured port
+- [x] The app waits for the Postgres healthcheck before starting
+- [x] Both containers restart automatically after a host reboot
 
 ## Notes
 
