@@ -113,12 +113,25 @@ export interface EditorState extends Prefs {
   /** Sets every selected item's rotation to a typed angle in degrees. */
   setSelectedRotation: (degrees: number) => void;
   deleteSelected: () => void;
+  /** Session-only edit history (LE-3). */
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  /**
+   * Groups every edit until `endEdit` into one undo step (a focused field's keystrokes). An
+   * edit session that changed nothing leaves no step.
+   */
+  beginEdit: () => void;
+  endEdit: () => void;
   /** Bumped by "Zoom to fit"; the camera rig refits only when this changes (#57). */
   fitTick: number;
   /** Replaces the editable content with an opened project's document; session state resets. */
   loadDocument: (doc: Project) => void;
   requestFit: () => void;
 }
+
+export const HISTORY_LIMIT = 100;
 
 export interface Point {
   x: number;
@@ -240,6 +253,12 @@ export function createEditorStore() {
       },
       loadDocument: (doc) =>
         set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
+      canUndo: false,
+      canRedo: false,
+      undo: () => {},
+      redo: () => {},
+      beginEdit: () => {},
+      endEdit: () => {},
       fitTick: 0,
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {
