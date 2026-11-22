@@ -6,7 +6,12 @@ export interface ControlSettings {
   mouseButtons: { MIDDLE: number; RIGHT: number };
 }
 
-/** Which OrbitControls gestures each view allows. */
-export function controlSettings(_mode: ViewMode): ControlSettings {
-  throw new Error('not implemented');
+/**
+ * Which OrbitControls gestures each view allows. The left button is reserved for selecting and
+ * dragging equipment; the wheel always zooms. 2D is locked top-down, so the right button pans.
+ */
+export function controlSettings(mode: ViewMode): ControlSettings {
+  return mode === '3d'
+    ? { enableRotate: true, mouseButtons: { MIDDLE: 2, RIGHT: 0 } }
+    : { enableRotate: false, mouseButtons: { MIDDLE: 2, RIGHT: 2 } };
 }

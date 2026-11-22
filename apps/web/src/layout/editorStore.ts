@@ -246,9 +246,7 @@ export function createEditorStore() {
         set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
       fitTick: 0,
       viewMode: '3d',
-      toggleView: () => {
-        throw new Error('not implemented');
-      },
+      toggleView: () => set({ viewMode: get().viewMode === '3d' ? '2d' : '3d' }),
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {
         const next = { ...get().floor, ...patch };

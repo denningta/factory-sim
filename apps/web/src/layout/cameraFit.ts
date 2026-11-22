@@ -78,11 +78,21 @@ export function aspectOf(size: { width: number; height: number }): number | null
   return size.width > 0 && size.height > 0 && Number.isFinite(aspect) ? aspect : null;
 }
 
-/** Top-down orthographic pose that frames the floor and labels; see fitOrtho. */
-export function fitOrtho(_opts: FloorSize & { viewport: { width: number; height: number } }): {
+/**
+ * Top-down orthographic pose framing the floor and labels in a viewport of the given pixel
+ * size. Camera `up` must be (0, 0, -1) so plan +y points down the screen. `zoom` is pixels per
+ * meter, matching a frustum sized in pixels (what three/fiber gives an ortho camera).
+ */
+export function fitOrtho(opts: FloorSize & { viewport: { width: number; height: number } }): {
   position: Vec3;
   target: Vec3;
   zoom: number;
 } {
-  throw new Error('not implemented');
+  const b = planBounds(opts);
+  const target: Vec3 = [(b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2];
+  const zoom = Math.min(
+    opts.viewport.width / (b.maxX - b.minX),
+    opts.viewport.height / (b.maxZ - b.minZ),
+  );
+  return { target, position: [target[0], 100, target[2]], zoom: zoom / PAD };
 }
