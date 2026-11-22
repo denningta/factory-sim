@@ -51,11 +51,11 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
       </p>
       {single && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
             Position X ({unit})
             <input readOnly value={pos(first.position.x)} />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
             Position Y ({unit})
             <input readOnly value={pos(first.position.y)} />
           </label>

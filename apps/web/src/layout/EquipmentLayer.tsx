@@ -115,8 +115,11 @@ export function EquipmentLayer() {
     const starts: Record<string, Point> = {};
     for (const q of state.equipment)
       if (state.selectedIds.includes(q.id)) starts[q.id] = { ...q.position };
-    const origin = { x: e.point.x, y: e.point.z };
     const dom = gl.domElement;
+    // Floor-plane point, not e.point: that is the hit on the object's top face, which would
+    // make the first move jump by the object's height.
+    const origin = floorPoint(e.nativeEvent, dom, getThree().camera);
+    if (!origin) return;
     const deltaOf = (ev: PointerEvent) => {
       const p = floorPoint(ev, dom, getThree().camera);
       return p ? { x: p.x - origin.x, y: p.y - origin.y } : null;
@@ -187,9 +190,10 @@ export function FloorInteraction() {
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (e.button !== 0) return;
-    const a = { x: e.point.x, y: e.point.z };
-    const additive = e.shiftKey;
     const dom = gl.domElement;
+    const a = floorPoint(e.nativeEvent, dom, getThree().camera);
+    if (!a) return;
+    const additive = e.shiftKey;
     const at = (ev: PointerEvent) => floorPoint(ev, dom, getThree().camera);
     stop.current?.();
     stop.current = trackDrag(
