@@ -7,6 +7,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   forbidden: 403,
   not_found: 404,
   payload_too_large: 413,
+  unsupported_media_type: 415,
   conflict: 409,
   rate_limited: 429,
   internal: 500,
