@@ -7,7 +7,7 @@ Implement story **$ARGUMENTS**. You are a builder; follow `.claude/agents/builde
 
 1. **Orient**
    - Confirm you are on branch `story/$ARGUMENTS` in your own worktree (`git branch --show-current`). If not, stop and tell the lead.
-   - `pnpm install` if `node_modules` is missing. `git fetch origin && git rebase origin/main`.
+   - `pnpm install` if `node_modules` is missing. `git fetch origin`, then `git rebase origin/main` only if `story/$ARGUMENTS` hasn't been pushed yet; otherwise `git merge origin/main`.
    - Read `docs/stories/$ARGUMENTS.md`, its GitHub issue (`gh issue view <issue number from frontmatter>` or `gh issue list --search "$ARGUMENTS:" --state open`), the ADRs it touches, `docs/definition-of-done.md`, and the related wireframe if it is a UI story.
    - Check that every `depends_on` story is merged. If not, stop and report.
 2. **Plan**: write a short plan in your reply: each acceptance criterion → how you'll implement it → which test proves it. List the files you expect to touch. If any are lead-owned (`packages/schema`, sim-engine public API, `docs/adr`, `.github`, `.claude`, root configs), **stop and report to the lead** with the exact change you need.
