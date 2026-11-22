@@ -22,6 +22,18 @@ export function gridLayout(floor: Floor): GridLayout {
   return { xs: ticks(floor.width, floor.gridSpacing), ys: ticks(floor.length, floor.gridSpacing) };
 }
 
+/**
+ * Line-segment vertices (x, y, z triples, two per line) in meters for three's ground plane:
+ * floor-plan (x, y) maps to (x, z) and y is up.
+ */
+export function gridLinePositions(floor: Floor): number[] {
+  const { xs, ys } = gridLayout(floor);
+  const pts: number[] = [];
+  for (const x of xs) pts.push(x, 0, 0, x, 0, floor.length);
+  for (const y of ys) pts.push(0, 0, y, floor.width, 0, y);
+  return pts;
+}
+
 export function snapToGrid(
   p: { x: number; y: number },
   spacing: number,

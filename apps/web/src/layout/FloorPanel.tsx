@@ -18,7 +18,7 @@ function LengthField({ label, meters, unit, onCommit }: FieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   return (
-    <label>
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {label} ({unit})
       <input
         type="text"
@@ -52,9 +52,9 @@ export function FloorPanel({ useStore = defaultStore }: { useStore?: Store }) {
     return r.ok ? null : r.error;
   };
   return (
-    <section aria-label="Floor">
+    <section aria-label="Floor" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h2>Floor</h2>
-      <label>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         Units
         <select value={unit} onChange={(e) => setUnit(e.target.value as DisplayUnit)}>
           <option value="ft">ft</option>
