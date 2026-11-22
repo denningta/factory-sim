@@ -1,10 +1,15 @@
 import {
   apiErrorSchema,
+  createProjectRequestSchema,
   createUserRequestSchema,
   loginRequestSchema,
+  projectDetailSchema,
+  projectListResponseSchema,
+  projectSummarySchema,
   sessionResponseSchema,
   setupRequestSchema,
   setupStatusResponseSchema,
+  updateProjectRequestSchema,
   updateUserRequestSchema,
   userListResponseSchema,
   userSchema,
@@ -35,7 +40,6 @@ const idParam = [
   { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
 ];
 
-/** Routes owned by PL-6; SC-1 adds the project routes. */
 export function openApiDocument() {
   return {
     openapi: '3.1.0',
@@ -77,6 +81,35 @@ export function openApiDocument() {
           summary: 'Create a user (admin)',
           requestBody: body(createUserRequestSchema),
           responses: { ...ok(userSchema, '201'), ...errors },
+        },
+      },
+      '/api/projects': {
+        get: {
+          summary: 'List my projects, newest first',
+          responses: { ...ok(projectListResponseSchema), ...errors },
+        },
+        post: {
+          summary: 'Create an empty project',
+          requestBody: body(createProjectRequestSchema),
+          responses: { ...ok(projectDetailSchema, '201'), ...errors },
+        },
+      },
+      '/api/projects/{id}': {
+        get: {
+          summary: 'Open a project (upgraded to the current schema version)',
+          parameters: idParam,
+          responses: { ...ok(projectDetailSchema), ...errors },
+        },
+        patch: {
+          summary: 'Rename and/or autosave; 409 when baseRevision is stale',
+          parameters: idParam,
+          requestBody: body(updateProjectRequestSchema),
+          responses: { ...ok(projectSummarySchema), ...errors },
+        },
+        delete: {
+          summary: 'Delete a project',
+          parameters: idParam,
+          responses: { '204': { description: 'Deleted' }, ...errors },
         },
       },
       '/api/users/{id}': {

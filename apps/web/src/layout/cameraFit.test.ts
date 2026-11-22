@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { fitCamera, labelLayout, planBounds } from './cameraFit';
+import { aspectOf, fitCamera, labelLayout, planBounds } from './cameraFit';
 
 const FOV = 45;
 
@@ -71,5 +71,25 @@ describe('fitCamera: the floor and its labels fit the canvas aspect', () => {
     const floor = { width: 30, length: 20 };
     const { lengthLabel, textHeight } = labelLayout(floor);
     expect(lengthLabel[0] - 2 * textHeight).toBeGreaterThanOrEqual(planBounds(floor).minX);
+  });
+});
+
+describe('aspectOf: the camera is never fitted to an unusable canvas size', () => {
+  it('is null for a 0×0 canvas (before the shell has laid out) and for NaN or negative sizes', () => {
+    for (const size of [
+      { width: 0, height: 0 },
+      { width: 800, height: 0 },
+      { width: 0, height: 600 },
+      { width: NaN, height: 600 },
+      { width: 800, height: -1 },
+    ])
+      expect(aspectOf(size)).toBeNull();
+  });
+
+  it('is width / height once the canvas has a size, and fitCamera then stays finite', () => {
+    const aspect = aspectOf({ width: 800, height: 400 });
+    expect(aspect).toBe(2);
+    const fit = fitCamera({ width: 30, length: 20, aspect: aspect!, fovDeg: FOV });
+    expect([...fit.position, ...fit.target, fit.distance].every(Number.isFinite)).toBe(true);
   });
 });
