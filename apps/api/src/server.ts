@@ -1,4 +1,5 @@
 import fastifyCookie from '@fastify/cookie';
+import { relative, sep } from 'node:path';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyReply } from 'fastify';
 import type { AppContext } from './context';
@@ -65,14 +66,25 @@ export function buildServer(deps: ServerDeps) {
     reply.code(404).send(new HttpError('not_found', 'Not found').body());
   const webRoot = deps.webRoot;
   if (webRoot) {
-    void app.register(fastifyStatic, { root: webRoot });
+    void app.register(fastifyStatic, {
+      root: webRoot,
+      // Vite content-hashes everything under /assets, so it never changes; index.html must be
+      // revalidated or a stale copy would point at assets a new deploy removed.
+      setHeaders: (res, filePath) => {
+        const rel = relative(webRoot, filePath).split(sep);
+        if (rel[0] === 'assets') res.header('cache-control', 'public, max-age=31536000, immutable');
+        else if (rel.join('/') === 'index.html') res.header('cache-control', 'no-cache');
+      },
+      cacheControl: false,
+    });
   }
   app.setNotFoundHandler((req, reply) => {
     const path = req.url.split('?')[0] ?? '';
     // Only extension-less GET navigations fall back to the SPA. API paths and file-like paths
     // stay 404s so a bad deploy shows up as a 404 rather than HTML where JS was expected.
     const isRoute = path !== '/api' && !path.startsWith('/api/') && !/\.[^/]+$/.test(path);
-    if (webRoot && req.method === 'GET' && isRoute) return reply.sendFile('index.html');
+    if (webRoot && (req.method === 'GET' || req.method === 'HEAD') && isRoute)
+      return reply.sendFile('index.html');
     return notFound(reply);
   });
 
