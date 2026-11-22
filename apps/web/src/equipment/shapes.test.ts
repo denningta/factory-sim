@@ -53,3 +53,26 @@ describe('Each type renders as a distinct, recognizable 3D shape', () => {
     expect(Math.max(...columns.values())).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('Shapes stay inside the footprint for edited dimensions (#61)', () => {
+  const sizes = [
+    { width: 0.2, length: 3 },
+    { width: 3, length: 0.4 },
+    { width: 2, length: 0.5 },
+    { width: 0.1, length: 0.1 },
+    { width: 10, length: 10 },
+  ];
+  it('every shape fits any edited footprint and height', () => {
+    for (const t of BASE_EQUIPMENT_TYPES)
+      for (const footprint of sizes)
+        for (const height of [0.3, 3]) {
+          const b = partBounds(equipmentParts({ ...t, footprint, height }));
+          const eps = 1e-9;
+          expect(b.min[0]).toBeGreaterThanOrEqual(-footprint.width / 2 - eps);
+          expect(b.max[0]).toBeLessThanOrEqual(footprint.width / 2 + eps);
+          expect(b.min[2]).toBeGreaterThanOrEqual(-footprint.length / 2 - eps);
+          expect(b.max[2]).toBeLessThanOrEqual(footprint.length / 2 + eps);
+          expect(b.max[1]).toBeLessThanOrEqual(height + eps);
+        }
+  });
+});

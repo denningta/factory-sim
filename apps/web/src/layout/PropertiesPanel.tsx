@@ -1,7 +1,14 @@
 import { useId, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
-import { formatLength, formatNumber, fromDisplay, toDisplay } from './units';
+import {
+  formatLength,
+  formatNumber,
+  fromDisplay,
+  speedFromDisplay,
+  speedToDisplay,
+  toDisplay,
+} from './units';
 
 type Store = typeof defaultStore;
 
@@ -18,6 +25,7 @@ function Field({
   commit,
   extraError,
   onBlur,
+  placeholder,
 }: {
   label: string;
   value: string;
@@ -25,6 +33,7 @@ function Field({
   /** A reason set from outside, e.g. the other field of a rule that spans two fields. */
   extraError?: string | null;
   onBlur?: () => void;
+  placeholder?: string;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +46,7 @@ function Field({
         type="text"
         inputMode="decimal"
         value={draft ?? value}
+        placeholder={placeholder}
         aria-invalid={shown ? 'true' : undefined}
         aria-describedby={shown ? errorId : undefined}
         onChange={(e) => {
@@ -67,7 +77,6 @@ function parseNumber(text: string): number | string {
 const PARAM_LABELS: Record<string, string> = {
   capacity: 'Capacity (units)',
   batchSize: 'Batch size (units)',
-  speed: 'Speed (m/s)',
 };
 
 export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store }) {
@@ -115,16 +124,27 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
               {BASE_EQUIPMENT_TYPES.find((t) => t.id === first.typeId)?.name ?? first.typeId}
             </span>
           </p>
-          {/* Read-only here; editing dimensions is EQ-2. */}
-          <p style={{ margin: 0 }}>
-            Dimensions:{' '}
-            <span data-testid="dimensions">
-              {[first.footprint.width, first.footprint.length, first.height]
-                .map((m) => formatNumber(toDisplay(m, unit)))
-                .join(' × ')}{' '}
-              {unit} (W × L × H)
-            </span>
-          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(
+              [
+                ['Width', first.footprint.width, (m: number) => ({ footprint: { width: m } })],
+                ['Length', first.footprint.length, (m: number) => ({ footprint: { length: m } })],
+                ['Height', first.height, (m: number) => ({ height: m })],
+              ] as const
+            ).map(([label, meters, patchOf]) => (
+              <Field
+                key={`${label}-${first.id}`}
+                label={`${label} (${unit})`}
+                value={pos(meters)}
+                commit={(t) => {
+                  const n = parseNumber(t);
+                  if (typeof n === 'string') return n;
+                  const r = updateEquipment(first.id, patchOf(fromDisplay(n, unit)));
+                  return r.ok ? null : r.error;
+                }}
+              />
+            ))}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {(['x', 'y'] as const).map((axis) => (
               <Field
@@ -146,24 +166,32 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
               />
             ))}
           </div>
-          {Object.entries(first.params).map(([key, v]) => (
-            <Field
-              key={`${key}-${first.id}`}
-              label={PARAM_LABELS[key] ?? key}
-              value={String(v)}
-              commit={(t) => {
-                const n = parseNumber(t);
-                if (typeof n === 'string') return n;
-                const r = updateEquipment(first.id, { params: { [key]: n } });
-                setLinked(
-                  !r.ok && r.field && r.field !== key ? { key: r.field, message: r.error } : null,
-                );
-                return r.ok ? null : r.error;
-              }}
-              extraError={linked?.key === key ? linked.message : null}
-              onBlur={() => setLinked(null)}
-            />
-          ))}
+          {Object.entries(first.params).map(([key, v]) => {
+            const isSpeed = key === 'speed';
+            return (
+              <Field
+                key={`${key}-${first.id}`}
+                label={
+                  isSpeed
+                    ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
+                    : (PARAM_LABELS[key] ?? key)
+                }
+                value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
+                commit={(t) => {
+                  const parsed = parseNumber(t);
+                  if (typeof parsed === 'string') return parsed;
+                  const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
+                  const r = updateEquipment(first.id, { params: { [key]: n } });
+                  setLinked(
+                    !r.ok && r.field && r.field !== key ? { key: r.field, message: r.error } : null,
+                  );
+                  return r.ok ? null : r.error;
+                }}
+                extraError={linked?.key === key ? linked.message : null}
+                onBlur={() => setLinked(null)}
+              />
+            );
+          })}
         </>
       ) : (
         <p style={{ margin: 0 }}>
@@ -174,7 +202,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
       <Field
         key={`rot-${selectedIds.join(',')}`}
         label="Rotation (°)"
-        value={formatNumber(same ? toDegrees(first.rotation) : 0)}
+        value={same ? formatNumber(toDegrees(first.rotation)) : ''}
+        placeholder={same ? undefined : 'Mixed'}
         commit={(t) => {
           const n = parseNumber(t);
           if (typeof n === 'string') return n;

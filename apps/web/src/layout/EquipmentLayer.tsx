@@ -1,20 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { BASE_EQUIPMENT_TYPES, type Equipment, type EquipmentType } from '@factory-sim/schema';
-import { equipmentParts, type Part } from '../equipment/shapes';
 import { EQUIPMENT_DRAG_TYPE } from '../equipment/LibraryPanel';
 import { useEditorStore } from './editorStore';
 import { pointerToFloor } from './picking';
 import { dragTargets } from './selection';
+import { groupEquipment, type EquipmentGroup } from './equipmentGroups';
 
 type Point = { x: number; y: number };
 
-interface Group {
-  type: EquipmentType;
-  parts: Part[];
-  items: Equipment[];
-}
+type Group = EquipmentGroup;
 
 const SELECTED_TINT = new THREE.Color('#2563eb');
 const UP = new THREE.Vector3(0, 1, 0);
@@ -58,18 +53,7 @@ export function EquipmentLayer() {
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
   const stopDrag = useRef<(() => void) | null>(null);
 
-  const groups = useMemo<Group[]>(() => {
-    const byType = new Map<string, Group>();
-    for (const e of equipment) {
-      // EQ-2 will make per-instance geometry editable; until then the type defines the shape.
-      const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === e.typeId);
-      if (!type) continue;
-      const g = byType.get(e.typeId) ?? { type, parts: equipmentParts(type), items: [] };
-      g.items.push(e);
-      byType.set(e.typeId, g);
-    }
-    return [...byType.values()];
-  }, [equipment]);
+  const groups = useMemo(() => groupEquipment(equipment), [equipment]);
 
   /** Writes every instance matrix and tint; `preview` overrides positions during a drag. */
   const write = (preview: Record<string, Point> | null) => {
@@ -79,7 +63,7 @@ export function EquipmentLayer() {
     const selected = new Set(useEditorStore.getState().selectedIds);
     for (const g of groups) {
       g.parts.forEach((part, pi) => {
-        const mesh = meshes.current.get(`${g.type.id}:${pi}`);
+        const mesh = meshes.current.get(`${g.key}:${pi}`);
         if (!mesh) return;
         g.items.forEach((e, i) => {
           const p = preview?.[e.id] ?? e.position;
@@ -88,7 +72,7 @@ export function EquipmentLayer() {
           dummy.rotation.set(0, -e.rotation, 0); // plan angle runs x→y, which is -y in three
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
-          color.set(g.type.color).multiplyScalar(part.tone);
+          color.set(g.color).multiplyScalar(part.tone);
           if (selected.has(e.id)) color.lerp(SELECTED_TINT, 0.55);
           mesh.setColorAt(i, color);
         });
@@ -149,9 +133,9 @@ export function EquipmentLayer() {
         g.parts.map((part, pi) => (
           <instancedMesh
             // Remount when the count changes: an InstancedMesh's capacity is fixed at creation.
-            key={`${g.type.id}:${pi}:${g.items.length}`}
+            key={`${g.key}:${pi}:${g.items.length}`}
             ref={(m: THREE.InstancedMesh | null) => {
-              const k = `${g.type.id}:${pi}`;
+              const k = `${g.key}:${pi}`;
               if (m) meshes.current.set(k, m);
               else meshes.current.delete(k);
             }}
