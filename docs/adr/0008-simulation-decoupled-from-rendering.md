@@ -1,6 +1,6 @@
 # ADR-0008: Simulation decoupled from rendering
 
-- **Status:** Accepted (signed off 2026-11-21; revisit if the PL-5 spike shows performance problems)
+- **Status:** Accepted (signed off 2026-11-21; confirmed by the PL-5 spike, see ADR-0014 for the segment-track design)
 - **Date:** 2026-11-21
 
 ## Context
