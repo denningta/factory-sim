@@ -7,6 +7,7 @@ import {
   instantiate,
   type Equipment,
   type Floor,
+  type Product,
   type Project,
 } from '@factory-sim/schema';
 import { dragTargets, idsInRect } from './selection';
@@ -78,6 +79,15 @@ export interface EquipmentPatch {
   height?: number;
 }
 
+export type ProductResult = { ok: true } | { ok: false; error: string; field?: string };
+
+/** The fields PR-1 edits; the routing is PR-2's. */
+export interface ProductPatch {
+  partNumber?: string;
+  name?: string;
+  color?: string;
+}
+
 export interface EditorState extends Prefs {
   /** Project document content; always meters (ADR-0006). */
   floor: Floor;
@@ -91,6 +101,13 @@ export interface EditorState extends Prefs {
   selectType: (typeId: string | null) => void;
   /** Placed equipment; part of the project document (meters, radians). */
   equipment: Equipment[];
+  /** End items built on the line; part of the project document. */
+  products: Product[];
+  /** Adds a product with a unique default part number, name and color. */
+  addProduct: () => Product;
+  /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
+  updateProduct: (id: string, patch: ProductPatch) => ProductResult;
+  deleteProduct: (id: string) => void;
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -191,6 +208,16 @@ export function createEditorStore() {
       selectedTypeId: null,
       selectType: (selectedTypeId) => set({ selectedTypeId }),
       equipment: [],
+      products: [],
+      addProduct: () => {
+        throw new Error('not implemented');
+      },
+      updateProduct: () => {
+        throw new Error('not implemented');
+      },
+      deleteProduct: () => {
+        throw new Error('not implemented');
+      },
       selectedIds: [],
       placeEquipment: (typeId, point) => {
         const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
