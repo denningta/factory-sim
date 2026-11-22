@@ -16,14 +16,21 @@ describe('ViewToolbar', () => {
 });
 
 describe('One click toggles an orthographic top-down view', () => {
-  it('one click on the view button switches 3D → 2D and a second click switches back', async () => {
+  it('a segmented 3D | 2D top-down control marks the current view with aria-pressed', async () => {
     const store = createEditorStore();
     render(<ViewToolbar useStore={store} />);
+    const d3 = await screen.findByRole('button', { name: '3D' });
+    const d2 = await screen.findByRole('button', { name: /2d top-down/i });
+    expect(d3.getAttribute('aria-pressed')).toBe('true');
+    expect(d2.getAttribute('aria-pressed')).toBe('false');
     const user = userEvent.setup();
-    expect(store.getState().viewMode).toBe('3d');
-    await user.click(await screen.findByRole('button', { name: /2d top-down/i }));
+    await user.click(d2);
     expect(store.getState().viewMode).toBe('2d');
-    await user.click(await screen.findByRole('button', { name: /3d view/i }));
+    expect(d2.getAttribute('aria-pressed')).toBe('true');
+    expect(d3.getAttribute('aria-pressed')).toBe('false');
+    await user.click(d2); // the active segment doesn't flip back
+    expect(store.getState().viewMode).toBe('2d');
+    await user.click(d3);
     expect(store.getState().viewMode).toBe('3d');
   });
 });

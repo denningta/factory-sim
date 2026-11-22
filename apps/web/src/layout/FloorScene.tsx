@@ -118,7 +118,7 @@ function CameraRig() {
 
 export function FloorScene() {
   const viewMode = useEditorStore((s) => s.viewMode);
-  const { enableRotate, mouseButtons } = controlSettings(viewMode);
+  const settings = controlSettings(viewMode);
   return (
     <Canvas>
       {viewMode === '3d' ? (
@@ -139,8 +139,13 @@ export function FloorScene() {
       <OrbitControls
         key={viewMode}
         makeDefault
-        enableRotate={enableRotate}
-        mouseButtons={mouseButtons as never}
+        enableRotate={settings.enableRotate}
+        mouseButtons={settings.mouseButtons}
+        maxPolarAngle={settings.maxPolarAngle}
+        minDistance={settings.minDistance}
+        maxDistance={settings.maxDistance}
+        minZoom={settings.minZoom}
+        maxZoom={settings.maxZoom}
       />
     </Canvas>
   );
