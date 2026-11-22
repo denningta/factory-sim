@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createEditorStore } from '../layout/editorStore';
 import { ProductsPanel } from './ProductsPanel';
@@ -49,5 +49,19 @@ describe('ProductsPanel', () => {
     await user.click(screen.getByRole('button', { name: /delete product/i }));
     expect(store.getState().products).toEqual([]);
     expect(await screen.findByText(/at least one product/i)).toBeTruthy();
+  });
+
+  it('one color change is one undo step', async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /add product/i }));
+    const before = store.getState().products[0]!.color;
+    const color = screen.getByLabelText(/color/i) as HTMLInputElement;
+    color.focus();
+    for (const c of ['#111111', '#222222', '#333333'])
+      fireEvent.change(color, { target: { value: c } });
+    color.blur();
+    expect(store.getState().products[0]!.color).toBe('#333333');
+    store.getState().undo();
+    expect(store.getState().products[0]!.color).toBe(before);
   });
 });

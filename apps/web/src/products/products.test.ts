@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createProject, validateProject } from '@factory-sim/schema';
 import { createEditorStore } from '../layout/editorStore';
 import { preRunIssues } from './preRunIssues';
 
@@ -71,13 +72,22 @@ describe('PR-1 products: create, edit and delete', () => {
 });
 
 describe('PR-1 part numbers must be unique', () => {
-  it('rejects a duplicate part number, ignoring surrounding space and case', () => {
+  it('rejects a duplicate part number, ignoring surrounding space', () => {
     const a = store.getState().addProduct();
     const b = store.getState().addProduct();
     store.getState().updateProduct(a.id, { partNumber: 'A-100' });
-    const r = store.getState().updateProduct(b.id, { partNumber: ' a-100 ' });
+    const r = store.getState().updateProduct(b.id, { partNumber: ' A-100 ' });
     expect(r).toMatchObject({ ok: false, field: 'partNumber' });
     expect(store.getState().products[1]!.partNumber).toBe(b.partNumber);
+  });
+
+  it('matches the schema exactly: part numbers differing only by case are distinct', () => {
+    const a = store.getState().addProduct();
+    const b = store.getState().addProduct();
+    store.getState().updateProduct(a.id, { partNumber: 'A-100' });
+    expect(store.getState().updateProduct(b.id, { partNumber: 'a-100' }).ok).toBe(true);
+    const doc = { ...createProject(), products: store.getState().products };
+    expect(validateProject(doc).ok).toBe(true);
   });
 
   it('keeping a product’s own part number is not a duplicate', () => {

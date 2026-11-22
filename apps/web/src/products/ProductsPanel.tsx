@@ -54,6 +54,31 @@ function TextField({
   );
 }
 
+/** Dragging in the color picker fires many changes; focus to blur is one undo step. */
+function ColorInput({
+  value,
+  commit,
+  beginEdit,
+  endEdit,
+}: {
+  value: string;
+  commit: (color: string) => unknown;
+  beginEdit: () => number;
+  endEdit: (token: number) => void;
+}) {
+  const session = useRef(0);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
+  return (
+    <input
+      type="color"
+      value={value}
+      onFocus={() => (session.current = beginEdit())}
+      onBlur={() => endEdit(session.current)}
+      onChange={(e) => commit(e.target.value)}
+    />
+  );
+}
+
 /** Wireframe 2, "End items": the products built on the line. Routings are PR-2. */
 export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store }) {
   const { products, addProduct, updateProduct, deleteProduct, beginEdit, endEdit } = useStore();
@@ -131,10 +156,11 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
           />
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             Color
-            <input
-              type="color"
+            <ColorInput
               value={selected.color}
-              onChange={(e) => updateProduct(selected.id, { color: e.target.value })}
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+              commit={(c) => updateProduct(selected.id, { color: c })}
             />
           </label>
           <button onClick={() => deleteProduct(selected.id)} style={{ color: '#b91c1c' }}>

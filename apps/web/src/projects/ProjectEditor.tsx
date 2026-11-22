@@ -4,6 +4,7 @@ import { api, type ApiRequestError } from '../api/client';
 import { Editor } from '../Editor';
 import { ProductsPanel } from '../products/ProductsPanel';
 import { useEditorStore } from '../layout/editorStore';
+import { useUndoShortcuts } from '../layout/shortcuts';
 import { createAutosaver, type SaveStatus } from './autosave';
 
 const AUTOSAVE_MS = 2000; // well inside the 5 s requirement, leaves room for the request
@@ -86,6 +87,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   }, [unsaved]);
 
   const locked = status === 'stopped' || status === 'conflict';
+  useUndoShortcuts(locked);
 
   if (loadError)
     return (

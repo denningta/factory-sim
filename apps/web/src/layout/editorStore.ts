@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import {
   BASE_EQUIPMENT_TYPES,
-  productSchema,
   createProject,
   equipmentSchema,
   floorSchema,
+  projectSchema,
   instantiate,
   type Equipment,
   type Floor,
@@ -50,8 +50,6 @@ function savePrefs(p: Prefs): void {
 
 /** Distinct from the neutral equipment colors so products read as products in the 3D view. */
 const PRODUCT_COLORS = ['#2563eb', '#c2410c', '#16a34a', '#9333ea', '#ca8a04', '#db2777'];
-/** Part numbers are unique ignoring case; the schema trims, so compare trimmed. */
-const partKey = (p: { partNumber: string }) => p.partNumber.trim().toLowerCase();
 
 const toRadians = (deg: number) => (deg * Math.PI) / 180;
 /** Keeps rotations in [0, 2π) so repeated 90° steps don't grow without bound. */
@@ -223,10 +221,10 @@ export function createEditorStore() {
       addProduct: () => {
         const { products } = get();
         const ids = new Set(products.map((p) => p.id));
-        const parts = new Set(products.map(partKey));
+        const parts = new Set(products.map((p) => p.partNumber));
         // Count up past anything taken so deleting a product never makes a default collide.
         let n = products.length + 1;
-        while (ids.has(`prod-${n}`) || parts.has(partKey({ partNumber: `P-${n}` }))) n++;
+        while (ids.has(`prod-${n}`) || parts.has(`P-${n}`)) n++;
         const product: Product = {
           id: `prod-${n}`,
           partNumber: `P-${n}`,
@@ -245,30 +243,37 @@ export function createEditorStore() {
         // The schema accepts a whitespace-only name; a blank label is useless in the UI.
         if (patch.name !== undefined && patch.name.trim() === '')
           return { ok: false, field: 'name', error: 'Name cannot be empty' };
-        const parsed = productSchema.safeParse({ ...current, ...patch });
+        // One rule set: the project schema owns uniqueness and field rules (trimmed part numbers,
+        // case-sensitive), so the UI can never accept what a save would reject.
+        const candidate = products.map((p) => (p.id === id ? { ...p, ...patch } : p));
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor: get().floor,
+          equipment: get().equipment,
+          products: candidate,
+        });
         if (!parsed.success) {
-          const issue = parsed.error.issues[0]!;
-          const field = String(issue.path[0]);
-          const label = { partNumber: 'Part number', name: 'Name', color: 'Color' }[field];
-          return {
-            ok: false,
-            field,
-            error:
-              field === 'color'
-                ? 'Pick a color'
-                : label
-                  ? `${label} cannot be empty`
-                  : issue.message,
-          };
+          const issue = parsed.error.issues.find((i) => i.path[0] === 'products');
+          if (!issue) return { ok: false, error: 'Cannot save this change' };
+          {
+            const field = String(issue.path[2]);
+            const label = { partNumber: 'Part number', name: 'Name' }[field];
+            const custom = issue.code === 'custom';
+            return {
+              ok: false,
+              field,
+              error: custom
+                ? issue.message
+                : field === 'color'
+                  ? 'Pick a color'
+                  : label
+                    ? `${label} cannot be empty`
+                    : issue.message,
+            };
+          }
         }
-        if (products.some((p) => p.id !== id && partKey(p) === partKey(parsed.data)))
-          return {
-            ok: false,
-            field: 'partNumber',
-            error: `Part number "${parsed.data.partNumber}" is already used`,
-          };
         record();
-        set({ products: products.map((p) => (p.id === id ? parsed.data : p)) });
+        set({ products: parsed.data.products });
         return { ok: true };
       },
       deleteProduct: (id) => {
