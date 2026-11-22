@@ -12,6 +12,7 @@ import {
 import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
 import type { DisplayUnit } from './units';
+import type { ViewMode } from './viewControls';
 
 const PREFS_KEY = 'factory-sim:editor-prefs';
 
@@ -118,6 +119,9 @@ export interface EditorState extends Prefs {
   /** Replaces the editable content with an opened project's document; session state resets. */
   loadDocument: (doc: Project) => void;
   requestFit: () => void;
+  /** 3D perspective or orthographic top-down; session-only. */
+  viewMode: ViewMode;
+  toggleView: () => void;
 }
 
 export interface Point {
@@ -241,6 +245,8 @@ export function createEditorStore() {
       loadDocument: (doc) =>
         set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
       fitTick: 0,
+      viewMode: '3d',
+      toggleView: () => set({ viewMode: get().viewMode === '3d' ? '2d' : '3d' }),
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {
         const next = { ...get().floor, ...patch };

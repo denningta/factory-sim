@@ -22,4 +22,7 @@ issue: 15
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- 3D controls: left button stays with select/drag (LE-2); right rotates, middle pans, wheel zooms. 2D: rotation off, right and middle pan, wheel zooms.
+- 2D is a drei `OrthographicCamera` with `up = (0,0,-1)` so plan +y runs down the screen, same orientation as the 3D plan view. `pointerToFloor` already uses `Raycaster.setFromCamera`, so placing, moving and box-select work unchanged; tests cover the ortho mapping.
+- Switching view refits the camera (like Zoom to fit); it does not preserve the orbit pose. `viewMode` is session-only in the editor store.
+- `fitOrtho` takes the viewport in pixels (zoom = px per meter) and reuses `planBounds`, so labels stay in frame. The existing 0×0 canvas guard is kept.

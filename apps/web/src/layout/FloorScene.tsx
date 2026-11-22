@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEditorStore } from './editorStore';
 import { buildGridGeometry } from './gridLayout';
 import { EquipmentLayer, FloorInteraction, LibraryDropTarget } from './EquipmentLayer';
-import { aspectOf, fitCamera, labelLayout } from './cameraFit';
+import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout } from './cameraFit';
+import { controlSettings } from './viewControls';
 import { formatLength } from './units';
 
 /** Floor plan (x, y) maps to three's ground plane (x, z); y is up. */
@@ -76,12 +77,13 @@ function DimensionLabels() {
 }
 
 /**
- * Fits the camera on mount and whenever "Zoom to fit" is pressed, never on its own after that:
+ * Fits the camera on mount, on a 2D/3D switch and whenever "Zoom to fit" is pressed, never on its own after that:
  * floor edits and window resizes would otherwise throw away the user's orbit (#57). This is
  * the only place the initial pose is set.
  */
 function CameraRig() {
   const fitTick = useEditorStore((s) => s.fitTick);
+  const viewMode = useEditorStore((s) => s.viewMode);
   const camera = useThree((s) => s.camera);
   const getThree = useThree((s) => s.get);
   const controls = useThree((s) => s.controls) as {
@@ -95,23 +97,57 @@ function CameraRig() {
     const aspect = aspectOf(getThree().size);
     if (aspect === null) return;
     const { floor } = useEditorStore.getState();
+    if (camera instanceof THREE.OrthographicCamera) {
+      const { size } = getThree();
+      const fit = fitOrtho({ width: floor.width, length: floor.length, viewport: size });
+      camera.zoom = fit.zoom;
+      camera.position.set(...fit.position);
+      camera.updateProjectionMatrix();
+      controls?.target.set(...fit.target);
+      controls?.update();
+      return;
+    }
     const fovDeg = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
-    const fit = fitCamera({
-      width: floor.width,
-      length: floor.length,
-      aspect,
-      fovDeg,
-    });
+    const fit = fitCamera({ width: floor.width, length: floor.length, aspect, fovDeg });
     camera.position.set(...fit.position);
     controls?.target.set(...fit.target);
     controls?.update();
-  }, [fitTick, ready, camera, controls, getThree]);
+  }, [fitTick, viewMode, ready, camera, controls, getThree]);
   return null;
 }
 
-export function FloorScene() {
+/** Orbit controls; the limits follow the fitted pose, so they depend on floor and canvas size. */
+function Controls() {
+  const viewMode = useEditorStore((s) => s.viewMode);
+  const floor = useEditorStore((s) => s.floor);
+  const size = useThree((s) => s.size);
+  const settings = controlSettings(viewMode, fitScale(floor, size));
+  // The left button selects and drags equipment; see controlSettings.
   return (
-    <Canvas camera={{ fov: 45, far: 5000 }}>
+    <OrbitControls
+      key={viewMode}
+      makeDefault
+      enableRotate={settings.enableRotate}
+      mouseButtons={settings.mouseButtons}
+      maxPolarAngle={settings.maxPolarAngle}
+      minDistance={settings.minDistance}
+      maxDistance={settings.maxDistance}
+      minZoom={settings.minZoom}
+      maxZoom={settings.maxZoom}
+    />
+  );
+}
+
+export function FloorScene() {
+  const viewMode = useEditorStore((s) => s.viewMode);
+  return (
+    <Canvas>
+      {viewMode === '3d' ? (
+        <PerspectiveCamera makeDefault fov={45} far={5000} />
+      ) : (
+        // up = -z so plan +y runs down the screen, as in the 3D plan orientation.
+        <OrthographicCamera makeDefault up={[0, 0, -1]} near={0.1} far={5000} />
+      )}
       <ambientLight intensity={1.2} />
       <directionalLight position={[10, 20, 8]} intensity={2} />
       <GridLines />
@@ -120,11 +156,7 @@ export function FloorScene() {
       <FloorInteraction />
       <LibraryDropTarget />
       <CameraRig />
-      {/* Left button is for selecting and dragging equipment; right rotates, wheel zooms. */}
-      <OrbitControls
-        makeDefault
-        mouseButtons={{ MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE } as never}
-      />
+      <Controls />
     </Canvas>
   );
 }
