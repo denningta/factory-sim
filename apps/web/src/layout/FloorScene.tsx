@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useEditorStore } from './editorStore';
 import { buildGridGeometry } from './gridLayout';
 import { EquipmentLayer, FloorInteraction, LibraryDropTarget } from './EquipmentLayer';
-import { fitCamera, labelLayout } from './cameraFit';
+import { aspectOf, fitCamera, labelLayout } from './cameraFit';
 import { formatLength } from './units';
 
 /** Floor plan (x, y) maps to three's ground plane (x, z); y is up. */
@@ -88,20 +88,24 @@ function CameraRig() {
     target: { set(...a: number[]): void };
     update(): void;
   } | null;
+  // The canvas can be 0×0 on mount (e.g. inside a shell that lays out later); fitting then would
+  // use a NaN aspect. `ready` flips once when it first has a size, which triggers the first fit.
+  const ready = useThree((s) => aspectOf(s.size) !== null);
   useEffect(() => {
-    const { size } = getThree();
+    const aspect = aspectOf(getThree().size);
+    if (aspect === null) return;
     const { floor } = useEditorStore.getState();
     const fovDeg = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
     const fit = fitCamera({
       width: floor.width,
       length: floor.length,
-      aspect: size.width / size.height,
+      aspect,
       fovDeg,
     });
     camera.position.set(...fit.position);
     controls?.target.set(...fit.target);
     controls?.update();
-  }, [fitTick, camera, controls, getThree]);
+  }, [fitTick, ready, camera, controls, getThree]);
   return null;
 }
 

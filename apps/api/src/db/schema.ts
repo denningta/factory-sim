@@ -1,18 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-
-/**
- * Metadata is relational; the editable content is the versioned JSONB document (ADR-0004).
- * `document` is `unknown` on purpose: reads go through `loadProject` and writes through
- * `validateProject`, never a bare cast.
- */
-export const projects = pgTable('projects', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  document: jsonb('document').$type<unknown>().notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+import {
+  boolean,
+  check,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable(
   'users',
@@ -27,6 +23,25 @@ export const users = pgTable(
   },
   (t) => [check('users_role_check', sql`${t.role} in ('admin', 'user')`)],
 );
+
+/**
+ * Metadata is relational; the editable content is the versioned JSONB document (ADR-0004).
+ * `document` is `unknown` on purpose: reads go through `loadProject` and writes through
+ * `validateProject`, never a bare cast.
+ */
+export const projects = pgTable('projects', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Projects are private to their creator (ADR-0011); deleting a user deletes their projects.
+  ownerId: uuid('owner_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  // Concurrency token for autosave; incremented by every update.
+  revision: integer('revision').notNull().default(0),
+  document: jsonb('document').$type<unknown>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
 
 /** `id_hash` is an HMAC of the cookie value, so a database leak doesn't yield usable sessions. */
 export const sessions = pgTable('sessions', {

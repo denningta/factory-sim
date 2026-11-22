@@ -19,4 +19,15 @@ describe('OpenAPI', () => {
     const login = doc.paths['/api/auth/login'].post;
     expect(login.requestBody.content['application/json'].schema.properties).toHaveProperty('email');
   });
+
+  it('SC-1: the generated document describes the project routes', async () => {
+    const t = await testApp();
+    const doc = (await t.call('GET', '/api/openapi.json')).json();
+    expect(Object.keys(doc.paths)).toEqual(
+      expect.arrayContaining(['/api/projects', '/api/projects/{id}']),
+    );
+    expect(Object.keys(doc.paths['/api/projects/{id}'])).toEqual(
+      expect.arrayContaining(['get', 'patch', 'delete']),
+    );
+  });
 });

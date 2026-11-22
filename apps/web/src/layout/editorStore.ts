@@ -7,6 +7,7 @@ import {
   instantiate,
   type Equipment,
   type Floor,
+  type Project,
 } from '@factory-sim/schema';
 import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
@@ -110,6 +111,8 @@ export interface EditorState extends Prefs {
   deleteSelected: () => void;
   /** Bumped by "Zoom to fit"; the camera rig refits only when this changes (#57). */
   fitTick: number;
+  /** Replaces the editable content with an opened project's document; session state resets. */
+  loadDocument: (doc: Project) => void;
   requestFit: () => void;
 }
 
@@ -224,6 +227,8 @@ export function createEditorStore() {
         const gone = new Set(get().selectedIds);
         set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
       },
+      loadDocument: (doc) =>
+        set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
       fitTick: 0,
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {
