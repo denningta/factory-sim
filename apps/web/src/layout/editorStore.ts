@@ -53,7 +53,17 @@ const normalizeRadians = (r: number) => {
 };
 
 export type SetFloorResult = { ok: true } | { ok: false; error: string };
-export type UpdateEquipmentResult = { ok: true } | { ok: false; error: string };
+export type UpdateEquipmentResult =
+  | { ok: true }
+  | {
+      ok: false;
+      /** Default (SI) wording; the UI may reformat it from `bounds` in the display unit. */
+      error: string;
+      /** Set when a position is off the floor: the axis and the floor limit in meters. */
+      bounds?: { axis: 'x' | 'y'; max: number };
+      /** The params key a schema rule failed on (e.g. `batchSize` when capacity is lowered). */
+      field?: string;
+    };
 
 /** The properties WS-1 edits. Position is meters; params are validated per behavior. */
 export interface EquipmentPatch {

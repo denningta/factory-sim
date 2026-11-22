@@ -112,4 +112,26 @@ describe('updateEquipment (WS-1)', () => {
     const r = s.getState().updateEquipment(e.id, { params: { batchSize: 2 } });
     expect(r).toEqual({ ok: false, error: expect.stringMatching(/batch size cannot exceed/i) });
   });
+
+  it('reports off-floor positions as structured bounds in meters', () => {
+    const { s, e } = placed();
+    expect(s.getState().updateEquipment(e.id, { position: { x: 99 } })).toMatchObject({
+      ok: false,
+      bounds: { axis: 'x', max: 30 },
+    });
+    expect(s.getState().updateEquipment(e.id, { position: { y: -1 } })).toMatchObject({
+      ok: false,
+      bounds: { axis: 'y', max: 20 },
+    });
+  });
+
+  it('names the batch size field when lowering capacity breaks the rule', () => {
+    const { s, e } = placed();
+    s.getState().updateEquipment(e.id, { params: { capacity: 3 } });
+    s.getState().updateEquipment(e.id, { params: { batchSize: 3 } });
+    expect(s.getState().updateEquipment(e.id, { params: { capacity: 1 } })).toMatchObject({
+      ok: false,
+      field: 'batchSize',
+    });
+  });
 });
