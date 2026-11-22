@@ -7,4 +7,3 @@
 export type * from './api';
 export { createSimulation } from './simulation';
 export { createRng } from './rng';
-export { createTally } from './stats';
