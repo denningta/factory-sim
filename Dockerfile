@@ -11,6 +11,10 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY apps apps
 COPY packages packages
+# Run unprivileged; node_modules stays root-owned and read-only to the app.
+USER node
 ENV PORT=8080
 EXPOSE 8080
-CMD ["pnpm", "--filter", "@factory-sim/api", "start"]
+# Call tsx directly: pnpm via corepack would download itself at runtime as the non-root user.
+WORKDIR /app/apps/api
+CMD ["./node_modules/.bin/tsx", "src/main.ts"]
