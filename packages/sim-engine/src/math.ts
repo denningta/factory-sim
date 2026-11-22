@@ -18,18 +18,41 @@ const Lg7 = 1.479819860511658591e-1;
 
 // Word access to a double. Typed arrays use platform byte order; DataView pins it.
 const view = new DataView(new ArrayBuffer(8));
-const hiWord = (x: number): number => (view.setFloat64(0, x), view.getInt32(0));
-const loWord = (): number => view.getUint32(4);
+/** The signed high and unsigned low 32-bit words of `x`, read in one call. */
+function words(x: number): [hi: number, lo: number] {
+  view.setFloat64(0, x);
+  return [view.getInt32(0), view.getUint32(4)];
+}
 function withHiWord(x: number, hi: number): number {
   view.setFloat64(0, x);
   view.setInt32(0, hi);
   return view.getFloat64(0);
 }
 
+/** The largest double below `x` (finite `x`). */
+export function nextDown(x: number): number {
+  if (x === 0) return -Number.MIN_VALUE;
+  const [hi, lo] = words(x);
+  // Stepping the 64-bit pattern by one ulp: toward zero for x > 0, away for x < 0.
+  const step = x > 0 ? -1 : 1;
+  let newLo = lo + step;
+  let newHi = hi;
+  if (newLo < 0) {
+    newLo = 0xffffffff;
+    newHi--;
+  } else if (newLo > 0xffffffff) {
+    newLo = 0;
+    newHi++;
+  }
+  view.setInt32(0, newHi);
+  view.setUint32(4, newLo);
+  return view.getFloat64(0);
+}
+
 export function log(input: number): number {
   let x = input;
-  let hx = hiWord(x);
-  const lx = loWord();
+  const [hx0, lx] = words(x);
+  let hx = hx0;
   let k = 0;
   if (hx < 0x00100000) {
     // x < 2^-1022: zero, negative or subnormal
@@ -37,7 +60,7 @@ export function log(input: number): number {
     if (hx < 0) return NaN;
     k -= 54;
     x *= two54;
-    hx = hiWord(x);
+    [hx] = words(x);
   }
   if (hx >= 0x7ff00000) return x + x; // Inf or NaN
   k += (hx >> 20) - 1023;

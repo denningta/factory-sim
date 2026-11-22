@@ -1,9 +1,11 @@
 import type { CreateRng, Rng } from './api';
-import { log } from './math';
+import { log, nextDown } from './math';
 
 /**
  * PRNG: sfc32 (Chris Doty-Humphrey's Small Fast Counting generator, 128-bit state),
- * seeded from a 32-bit seed via splitmix32. Integer-only (`Math.imul`, `| 0`, `>>>`),
+ * seeded from a 32-bit seed: the state words are successive values of a golden-ratio
+ * Weyl sequence (`s += 0x9e3779b9`), each passed through murmur3's `fmix32` finalizer,
+ * followed by 12 discarded outputs. Integer-only (`Math.imul`, `| 0`, `>>>`),
  * so it is bit-exact in every JS runtime. Doubles carry 53 random bits from two outputs.
  *
  * Changing the algorithm, seeding, `fork` hashing or the `next`/`exponential`
@@ -17,8 +19,8 @@ function normalizeSeed(seed: number): number {
   return seed >>> 0;
 }
 
-/** One splitmix32 step: advances `state` by the golden-ratio increment and mixes it. */
-function splitmix32(state: number): number {
+/** murmur3's 32-bit finalizer (`fmix32`): a bijective avalanche mix. */
+function fmix32(state: number): number {
   let z = state;
   z = Math.imul(z ^ (z >>> 16), 0x85ebca6b);
   z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35);
@@ -37,7 +39,7 @@ const TWO_POW_53 = 9007199254740992;
 
 function makeRng(seed: number): Rng {
   let s = seed;
-  const seedWord = () => splitmix32((s = (s + 0x9e3779b9) | 0));
+  const seedWord = () => fmix32((s = (s + 0x9e3779b9) | 0));
   let a = seedWord() | 0;
   let b = seedWord() | 0;
   let c = seedWord() | 0;
@@ -65,7 +67,10 @@ function makeRng(seed: number): Rng {
     next,
     uniform(min, max) {
       if (!(max >= min)) throw new Error(`uniform: need min <= max, got [${min}, ${max})`);
-      return min + next() * (max - min);
+      if (max === min) return min;
+      const x = min + next() * (max - min);
+      // Rounding can land on max when |min| dwarfs max - min; keep the range half-open.
+      return x < max ? x : nextDown(max);
     },
     integer(min, max) {
       if (!Number.isInteger(min) || !Number.isInteger(max) || max <= min) {
@@ -81,7 +86,7 @@ function makeRng(seed: number): Rng {
       return -mean * log(1 - next());
     },
     fork(label) {
-      return makeRng(splitmix32(seed ^ hashLabel(label)));
+      return makeRng(fmix32(seed ^ hashLabel(label)));
     },
   };
 }

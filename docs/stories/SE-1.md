@@ -16,10 +16,10 @@ issue: 28
 
 ## Acceptance criteria
 
-- [x] Event calendar, entities (parts), resources (stations, techs) and queues
-- [x] Runs with no 3D view attached
-- [x] Results match an M/M/1 queue's theoretical waiting time within 2% over a long run
-- [x] Unit-tested to 90%+ coverage
+- [ ] Event calendar, entities (parts), resources (stations, techs) and queues
+- [ ] Runs with no 3D view attached
+- [ ] Results match an M/M/1 queue's theoretical waiting time within 2% over a long run
+- [ ] Unit-tested to 90%+ coverage
 
 ## Notes
 
@@ -34,6 +34,6 @@ _Added by the lead or builder during the story: design decisions, open questions
 - Lint enforces the determinism rules in `packages/sim-engine/src` (no `Math.random`, `Date`, timers, inexact `Math.*` or `**`); tests are exempt so they can compare against `Math.log`.
 - M/M/1 AC: use λ < μ (e.g. ρ = 0.8), a warm-up reset via `resetStatistics()`, and a run long enough that the mean wait Wq = ρ/(μ−λ) is within 2% for a fixed seed. Keep the test under a few seconds.
 - Out of scope: the line model (`Project` → run) and the renderer event stream. The lead defines those before SE-2/SE-3/SE-4.
-- **Implemented (builder):** PRNG is **sfc32 seeded via splitmix32** (12 warm-up draws); doubles take 53 bits from two outputs; `fork(label)` = new generator seeded `splitmix32(seed ^ FNV-1a(label))`; `exponential(mean) = -mean·log(1 − u)` with `log` a port of fdlibm `__ieee754_log` (`math.ts`). Golden values are pinned in `rng.test.ts`: changing any of this requires re-baselining the reference model.
+- **Implemented (builder):** PRNG is **sfc32**, its state seeded from a golden-ratio Weyl sequence passed through murmur3 `fmix32` (then 12 discarded draws); doubles take 53 bits from two outputs; `fork(label)` = new generator seeded `fmix32(seed ^ FNV-1a(label))`; `exponential(mean) = -mean·log(1 − u)` with `log` a port of fdlibm `__ieee754_log` (`math.ts`). Golden values are pinned in `rng.test.ts`: changing any of this requires re-baselining the reference model.
 - Calendar is a binary heap on (time, priority, seq) with lazy cancellation. Wait lines are doubly linked lists so `cancel()` is O(1) and `queueLength` exact.
 - Assumptions: `runUntil` also rejects non-finite times (`Infinity` would never return with a recurring source); `schedule` rejects non-finite priorities; `Tally.min`/`max` are NaN when empty, like `mean`; an entity may hold several units of one resource (released one at a time).

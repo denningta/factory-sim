@@ -1,5 +1,10 @@
 import type { SimTime, Tally, TimeWeighted } from './api';
 
+/** A non-finite sample would poison the statistic for the rest of the run: a model bug. */
+function assertFinite(what: string, value: number): void {
+  if (!Number.isFinite(value)) throw new Error(`${what}: value must be finite, got ${value}`);
+}
+
 /** Welford's online algorithm: numerically stable mean and variance. */
 export function createTally(): Tally {
   let count = 0;
@@ -9,6 +14,7 @@ export function createTally(): Tally {
   let max = NaN;
   return {
     add(value) {
+      assertFinite('Tally.add', value);
       count++;
       if (count === 1) {
         mean = min = max = value;
@@ -51,6 +57,7 @@ export function createTimeWeighted(clock: () => SimTime, initial: number): TimeW
   let area = 0;
   return {
     update(value) {
+      assertFinite('TimeWeighted.update', value);
       const now = clock();
       area += current * (now - last);
       last = now;

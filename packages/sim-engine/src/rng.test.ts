@@ -60,6 +60,19 @@ describe('createRng (sfc32 seeded via splitmix32)', () => {
     expect(() => rng.integer(0.5, 3)).toThrow();
   });
 
+  it('uniform(min, max) never returns max, even when rounding would land on it', () => {
+    const rng = createRng(1);
+    const min = 2 ** 53; // spacing 2 here, so min + u·2 rounds to max for u > 0.5
+    const max = min + 2;
+    let atMax = 0;
+    for (let i = 0; i < 1000; i++) {
+      const x = rng.uniform(min, max);
+      expect(x >= min && x < max).toBe(true);
+      if (x === min + 1) atMax++; // nextDown(max) at this magnitude
+    }
+    expect(atMax).toBeGreaterThan(0); // the clamp actually ran
+  });
+
   it('exponential(mean) has the requested mean and rejects a non-positive mean', () => {
     const rng = createRng(11);
     let sum = 0;

@@ -364,6 +364,18 @@ describe('statistics', () => {
     expect(sim.createTimeWeighted().current).toBe(0);
   });
 
+  it('Tally.add and TimeWeighted.update reject NaN and ±Infinity', () => {
+    const sim = newSim();
+    const t = sim.createTally();
+    const w = sim.createTimeWeighted();
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      expect(() => t.add(bad)).toThrow();
+      expect(() => w.update(bad)).toThrow();
+    }
+    expect(t.count).toBe(0);
+    expect(w.current).toBe(0);
+  });
+
   it('resetStatistics() resets every tally and time-weighted stat at now', () => {
     const sim = newSim();
     const t = sim.createTally();
