@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { toErrorResponse } from './http-error';
 import { testApp } from './test-app';
 
 describe('api server', () => {
@@ -24,5 +25,15 @@ describe('api server', () => {
     });
     expect(res.statusCode).toBe(413);
     expect(res.json().error.code).toBe('payload_too_large');
+  });
+});
+
+describe('error mapping', () => {
+  it('AC2: client errors Fastify raises keep their status instead of becoming 500', () => {
+    expect(toErrorResponse(Object.assign(new Error('nope'), { statusCode: 405 }))).toEqual({
+      status: 405,
+      body: { error: { code: 'validation', message: 'nope' } },
+    });
+    expect(toErrorResponse(new Error('boom')).status).toBe(500);
   });
 });

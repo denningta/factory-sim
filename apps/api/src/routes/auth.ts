@@ -72,7 +72,8 @@ export const authRoutes: FastifyPluginAsync<{ ctx: AppContext }> = async (app, {
   app.post('/api/auth/login', async (request, reply): Promise<SessionResponse> => {
     const { email, password } = parseWith(loginRequestSchema, request.body);
     const key = `${email}|${request.ip}`;
-    const wait = ctx.throttle.retryAfter(key);
+    // Reserve the attempt before the slow verify so a concurrent burst can't all pass the check.
+    const wait = ctx.throttle.attempt(key);
     if (wait > 0) {
       throw new HttpError('rate_limited', 'Too many failed sign-ins; try again later', {
         'retry-after': String(wait),
@@ -83,11 +84,13 @@ export const authRoutes: FastifyPluginAsync<{ ctx: AppContext }> = async (app, {
     // so timing doesn't distinguish unknown emails from wrong passwords.
     const matches = await verifyPassword(user?.passwordHash ?? (await dummyHash()), password);
     if (!user || !matches || user.disabled) {
-      ctx.throttle.fail(key);
       throw new HttpError('unauthorized', BAD_CREDENTIALS);
     }
     ctx.throttle.succeed(key);
     const now = ctx.now();
+    // Signing in again replaces the session this browser presented, rather than leaving it valid.
+    const presented = sessionCookie(request);
+    if (presented) await deleteSession(ctx.db, ctx.policy, presented);
     await purgeExpired(ctx.db, ctx.policy, now);
     // A new id on every login prevents session fixation.
     setSessionCookie(ctx, reply, await createSession(ctx.db, ctx.policy, user.id, now));

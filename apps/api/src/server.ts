@@ -1,10 +1,11 @@
 import fastifyCookie from '@fastify/cookie';
 import Fastify from 'fastify';
 import type { AppContext } from './context';
+import { dummyHash } from './auth/passwords';
 import { createLoginThrottle, type LoginThrottle } from './auth/rate-limit';
 import type { Db } from './db/client';
 import type { AppEnv } from './env';
-import { HttpError } from './http-error';
+import { HttpError, toErrorResponse } from './http-error';
 import { openApiDocument } from './openapi';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
@@ -31,7 +32,11 @@ export function buildServer(deps: ServerDeps) {
     throttle: deps.throttle ?? createLoginThrottle(() => now().getTime()),
   };
 
-  const app = Fastify({ logger: false });
+  // Behind a TLS-terminating proxy (COOKIE_SECURE=true) take the client IP from X-Forwarded-For,
+  // so the sign-in throttle is per client rather than per proxy. See docs/deploy.md.
+  const app = Fastify({ logger: false, trustProxy: deps.config.cookieSecure });
+  // Pay the argon2 cost of the dummy hash now, not on the first unknown-email sign-in.
+  void dummyHash();
   void app.register(fastifyCookie);
 
   // JSON only on mutating routes (CSRF defense with SameSite): drop Fastify's text/plain
@@ -39,21 +44,13 @@ export function buildServer(deps: ServerDeps) {
   app.removeContentTypeParser('text/plain');
 
   app.setErrorHandler((error: Error & { statusCode?: number; code?: string }, request, reply) => {
-    if (error instanceof HttpError) {
-      return reply.code(error.status).headers(error.headers).send(error.body());
+    const { status, body } = toErrorResponse(error);
+    if (status >= 500) {
+      // Details stay in the log; clients get a generic message.
+      console.error(`${request.method} ${request.url}`, error);
     }
-    const status = error.statusCode ?? 500;
-    if (error.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
-      return reply
-        .code(413)
-        .send(new HttpError('payload_too_large', 'Request body too large').body());
-    }
-    if (status === 415 || status === 400) {
-      return reply.code(status).send(new HttpError('validation', error.message).body());
-    }
-    // Details stay in the log; clients get a generic message.
-    console.error(`${request.method} ${request.url}`, error);
-    return reply.code(500).send(new HttpError('internal', 'Internal server error').body());
+    const headers = error instanceof HttpError ? error.headers : {};
+    return reply.code(status).headers(headers).send(body);
   });
   app.setNotFoundHandler((_req, reply) =>
     reply.code(404).send(new HttpError('not_found', 'Not found').body()),

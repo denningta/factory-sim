@@ -201,3 +201,30 @@ describe('sessions', () => {
     expect((await t.call('POST', '/api/auth/logout')).statusCode).toBe(204);
   });
 });
+
+describe('sign-in hardening', () => {
+  it('AC2: concurrent wrong-password requests are throttled, not all evaluated', async () => {
+    const t = await testApp();
+    await t.setup();
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => t.login('admin@plant.test', 'wrong password!!')),
+    );
+    const codes = results.map((r) => r.res.statusCode);
+    expect(codes.filter((c) => c === 401)).toHaveLength(5); // FREE_FAILURES
+    expect(codes.filter((c) => c === 429)).toHaveLength(15);
+  });
+
+  it('AC2: signing in again ends the session the browser presented', async () => {
+    const t = await testApp();
+    const { cookie: old } = await t.setup();
+    const res = await t.call(
+      'POST',
+      '/api/auth/login',
+      { email: 'admin@plant.test', password: PASSWORD },
+      old,
+    );
+    const fresh = t.cookieOf(res)!;
+    expect((await t.call('GET', '/api/auth/session', undefined, old)).statusCode).toBe(401);
+    expect((await t.call('GET', '/api/auth/session', undefined, fresh)).statusCode).toBe(200);
+  });
+});
