@@ -23,3 +23,5 @@ issue: 37
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Lead decision (schema v2, #55):** `batchSize ≤ capacity`, enforced by the schema. A batch is loaded and processed together, so a batch larger than the station's capacity is rejected. If the product owner wants multi-cycle batches instead, that's a schema change through the lead.
