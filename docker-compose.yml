@@ -24,6 +24,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:?set in .env}
       SESSION_SECRET: ${SESSION_SECRET:?set in .env}
       PORT: '8080'
+      SESSION_IDLE_HOURS: ${SESSION_IDLE_HOURS:-8}
+      SESSION_MAX_DAYS: ${SESSION_MAX_DAYS:-7}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - '${APP_PORT:-8080}:8080'
     healthcheck:

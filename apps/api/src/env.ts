@@ -19,12 +19,30 @@ const envSchema = z.object({
       (v) => v !== SECRET_PLACEHOLDER,
       'is still the .env.example placeholder; set a long random value',
     ),
+  // Defaults are the product owner's choice (docs/stories/PL-6.md); unset means default.
+  SESSION_IDLE_HOURS: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/, 'must be a positive number')
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default(8),
+  SESSION_MAX_DAYS: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/, 'must be a positive number')
+    .transform(Number)
+    .pipe(z.number().positive())
+    .default(7),
+  // Set to "true" when a TLS-terminating proxy fronts the app, so the cookie gets `Secure`.
+  COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
 });
 
 export interface AppEnv {
   port: number;
   databaseUrl: string;
   sessionSecret: string;
+  sessionIdleHours: number;
+  sessionMaxDays: number;
+  cookieSecure: boolean;
 }
 
 /** Validates the process environment, throwing one readable message listing every problem. */
@@ -34,6 +52,13 @@ export function loadEnv(env: Record<string, string | undefined>): AppEnv {
     const problems = result.error.issues.map((i) => `  ${String(i.path[0])}: ${i.message}`);
     throw new Error(`Invalid configuration:\n${problems.join('\n')}`);
   }
-  const { PORT, DATABASE_URL, SESSION_SECRET } = result.data;
-  return { port: PORT, databaseUrl: DATABASE_URL, sessionSecret: SESSION_SECRET };
+  const d = result.data;
+  return {
+    port: d.PORT,
+    databaseUrl: d.DATABASE_URL,
+    sessionSecret: d.SESSION_SECRET,
+    sessionIdleHours: d.SESSION_IDLE_HOURS,
+    sessionMaxDays: d.SESSION_MAX_DAYS,
+    cookieSecure: d.COOKIE_SECURE === 'true',
+  };
 }
