@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
-import { api } from '../api/client';
+import { api, type ApiRequestError } from '../api/client';
 import { Editor } from '../Editor';
 import { useEditorStore } from '../layout/editorStore';
 import { createAutosaver, type SaveStatus } from './autosave';
 
 const AUTOSAVE_MS = 2000; // well inside the 5 s requirement, leaves room for the request
 
-const LABEL: Record<SaveStatus, string> = {
+const LABEL: Record<Exclude<SaveStatus, 'stopped'>, string> = {
   saved: 'All changes saved',
   unsaved: 'Unsaved changes…',
   saving: 'Saving…',
   error: 'Save failed, retrying…',
-  stopped: 'Saving stopped.',
   conflict:
     'This project was changed elsewhere. Reload to continue; your latest edits are not saved.',
 };
@@ -21,6 +20,7 @@ const LABEL: Record<SaveStatus, string> = {
 export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void }) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState<SaveStatus>('saved');
+  const [stop, setStop] = useState<ApiRequestError | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -40,7 +40,10 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         saver = createAutosaver({
           delayMs: AUTOSAVE_MS,
           maxWaitMs: 4000,
-          onStatus: setStatus,
+          onStatus: (s, err) => {
+            setStatus(s);
+            setStop(s === 'stopped' || s === 'conflict' ? (err ?? null) : null);
+          },
           save: async () => {
             const { floor, equipment } = useEditorStore.getState();
             const document = { ...base, floor, equipment };
@@ -63,6 +66,15 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
     };
   }, [id]);
 
+  // Closing the tab inside the debounce window would lose the last edits.
+  const unsaved = status !== 'saved';
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
+
   if (loadError)
     return (
       <p role="alert">
@@ -77,11 +89,20 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         <strong>{name}</strong>
         <span
           role="status"
-          style={{ color: status === 'conflict' || status === 'error' ? '#b91c1c' : '#6b7280' }}
+          style={{
+            color:
+              status === 'conflict' || status === 'error' || status === 'stopped'
+                ? '#b91c1c'
+                : '#6b7280',
+          }}
         >
-          {LABEL[status]}
+          {status === 'stopped' ? `Not saved: ${stop?.message ?? 'saving stopped'}` : LABEL[status]}
         </span>
-        {status === 'conflict' && <button onClick={() => location.reload()}>Reload</button>}
+        {(status === 'conflict' || status === 'stopped') && (
+          <button onClick={() => location.reload()}>
+            {stop?.code === 'unauthorized' ? 'Sign in' : 'Reload'}
+          </button>
+        )}
       </header>
       <Editor />
     </div>

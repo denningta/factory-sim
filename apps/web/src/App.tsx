@@ -38,5 +38,11 @@ export function App() {
   if (user === undefined) return <p style={{ font: '14px sans-serif', padding: 16 }}>Loading…</p>;
   if (user === null) return <SignIn needsSetup={needsSetup} onSignedIn={setUser} />;
   if (openId) return <ProjectEditor key={openId} id={openId} onClose={() => open(null)} />;
-  return <ProjectList api={projectsApi} onOpen={open} />;
+  return (
+    <ProjectList
+      api={projectsApi}
+      onOpen={open}
+      onSignOut={() => void api.logout().finally(() => setUser(null))}
+    />
+  );
 }

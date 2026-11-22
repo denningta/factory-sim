@@ -37,12 +37,26 @@ export function SignIn({
     >
       <h1>{needsSetup ? 'Create the admin account' : 'Sign in'}</h1>
       <label>
-        Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        Email{' '}
+        <input
+          type="email"
+          required
+          autoComplete="username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
       </label>
       <label>
         Password{' '}
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input
+          type="password"
+          required
+          autoComplete={needsSetup ? 'new-password' : 'current-password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </label>
+      {needsSetup && <small>Use at least 12 characters.</small>}
       {error && (
         <p role="alert" style={{ color: '#b91c1c' }}>
           {error}

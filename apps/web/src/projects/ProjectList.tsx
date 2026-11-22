@@ -19,7 +19,6 @@ export function ProjectList({
   onOpen: (id: string) => void;
   onSignOut?: () => void;
 }) {
-  void onSignOut; // wired in the implementation commit
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
@@ -62,7 +61,10 @@ export function ProjectList({
 
   return (
     <section style={{ maxWidth: 640, margin: '0 auto', padding: 24, font: '14px sans-serif' }}>
-      <h1>Projects</h1>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1>Projects</h1>
+        {onSignOut && <button onClick={onSignOut}>Sign out</button>}
+      </header>
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -23,9 +23,13 @@ export function createAutosaver(opts: {
   let saving: Promise<void> | undefined;
   let stopped = false;
 
+  // When the oldest unsaved change was made; bounds the debounce so continuous editing still saves.
+  let firstDirtyAt = 0;
+
   const schedule = () => {
     clearTimeout(timer);
-    timer = setTimeout(() => void run(), opts.delayMs);
+    const remaining = firstDirtyAt + opts.maxWaitMs - Date.now();
+    timer = setTimeout(() => void run(), Math.max(0, Math.min(opts.delayMs, remaining)));
   };
 
   const run = async (): Promise<void> => {
@@ -34,6 +38,7 @@ export function createAutosaver(opts: {
     if (saving) return saving; // the in-flight save re-runs if dirty when it finishes
     if (!dirty) return;
     dirty = false;
+    firstDirtyAt = 0;
     opts.onStatus('saving');
     saving = opts
       .save()
@@ -43,10 +48,18 @@ export function createAutosaver(opts: {
       .catch((err: unknown) => {
         if (err instanceof ApiRequestError && err.code === 'conflict') {
           stopped = true;
-          opts.onStatus('conflict');
+          opts.onStatus('conflict', err);
+          return;
+        }
+        // Network trouble and server faults may pass; anything else (stale app, expired session,
+        // deleted project, too large) would fail the same way every time, so tell the user.
+        if (err instanceof ApiRequestError && err.code !== 'internal') {
+          stopped = true;
+          opts.onStatus('stopped', err);
           return;
         }
         dirty = true;
+        firstDirtyAt ||= Date.now();
         opts.onStatus('error');
       })
       .finally(() => {
@@ -60,6 +73,7 @@ export function createAutosaver(opts: {
     markDirty: () => {
       if (stopped) return;
       dirty = true;
+      if (!firstDirtyAt) firstDirtyAt = Date.now();
       opts.onStatus('unsaved');
       if (!saving) schedule();
     },
