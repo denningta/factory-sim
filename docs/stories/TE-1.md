@@ -24,3 +24,5 @@ issue: 33
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Kernel pattern for a station with several assigned techs** (engine API, `WaitHandle`): model each tech as its own `Resource` (capacity 1) and request all of them. When the first grant arrives, `cancel()` the others. A `cancel()` that returns false means that tech was granted too (both were free at once), so `release` it right away. Without this, a tech stays reserved and idle.
