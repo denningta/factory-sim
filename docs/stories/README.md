@@ -3,7 +3,7 @@
 One file per story, generated from `docs/planning/mvp-backlog.xlsx` by `scripts/import-backlog.py`.
 GitHub Issues are the live status; these files are the spec. Acceptance criteria change only with product-owner approval.
 
-## Sprint 1: Foundation: one-command deploy, simulation engine core, to-scale floor (30 pts)
+## Sprint 1: Foundation: one-command deploy, simulation engine core, to-scale floor (32 pts)
 
 | ID              | Epic              | Pts | Priority | Depends on |
 | --------------- | ----------------- | --- | -------- | ---------- |
@@ -16,7 +16,7 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [SE-1](SE-1.md) | Simulation engine | 8   | Must     | —          |
 | [PL-7](PL-7.md) | Platform          | 2   | Must     | PL-1, PL-2 |
 
-## Sprint 2: Build a layout: place and edit equipment, sign in, save projects (32 pts)
+## Sprint 2: Build a layout: place and edit equipment, sign in, save projects (34 pts)
 
 | ID              | Epic                 | Pts | Priority | Depends on       |
 | --------------- | -------------------- | --- | -------- | ---------------- |
@@ -28,9 +28,9 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [EQ-2](EQ-2.md) | Equipment library    | 3   | Must     | EQ-1             |
 | [WS-1](WS-1.md) | Workstation config   | 3   | Must     | LE-2             |
 | [SC-1](SC-1.md) | Scenarios & projects | 5   | Must     | PL-2, PL-3, PL-6 |
-| [PL-8](PL-8.md) | Platform             | 2   | Must     | PL-1             |
+| [PL-8](PL-8.md) | Platform             | 2   | Must     | PL-1, PL-6       |
 
-## Sprint 3: Mixed-model data: products, routings, cycle times, connections, buffers (24 pts)
+## Sprint 3: Mixed-model data: products, routings, cycle times, connections, buffers (27 pts)
 
 | ID              | Epic                | Pts | Priority | Depends on |
 | --------------- | ------------------- | --- | -------- | ---------- |

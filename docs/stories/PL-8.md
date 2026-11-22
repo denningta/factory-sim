@@ -4,7 +4,7 @@ epic: Platform
 points: 2
 priority: Must
 sprint: 2
-depends_on: [PL-1]
+depends_on: [PL-1, PL-6]
 builder_model: sonnet
 owner: builder
 issue: 58
@@ -27,6 +27,6 @@ _Added by the lead with product-owner approval (2026-11-22). The LE-1 review fou
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - One container, same origin: Fastify serves the built `apps/web/dist` (e.g. `@fastify/static`) next to the API, so session cookies (PL-6) need no CORS. The Dockerfile runs `vite build` for `apps/web`.
-- Unknown `/api/*` paths must stay JSON 404s (the `ApiError` shape in `@factory-sim/schema`), never `index.html`.
-- **Overlap:** PL-6 also changes `apps/api/src/server.ts`, so this story is scheduled after PL-6, not alongside it.
+- Unknown `/api/*` paths must stay JSON 404s (the `ApiError` shape in `@factory-sim/schema`), never `index.html`. Paths that look like files (with an extension, e.g. `/assets/missing.js`) also answer 404, so a bad deploy shows a 404 rather than MIME errors. Only extension-less paths fall back to `index.html`.
+- **Overlap:** PL-6 also changes `apps/api/src/server.ts`, so this story depends on PL-6.
 - CI: the `compose smoke` job (lead-owned) gets a check that `/` returns HTML. Tell the lead when the PR is up; don't edit `.github/`.
