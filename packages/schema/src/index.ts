@@ -15,6 +15,7 @@ import { createUpgrader, validate, type ParseResult, type UpgradeStep } from './
 
 export * from './equipment';
 export * from './project';
+export * from './http';
 export { createUpgrader, formatIssues, type ParseResult, type UpgradeStep } from './upgrade';
 
 /**
