@@ -44,6 +44,17 @@ describe('LE-3 undo and redo: covered edits', () => {
     expect(store.getState().equipment).toEqual([]); // the undo reverted the placing
   });
 
+  it('view and camera state are not undoable', () => {
+    place();
+    store.getState().toggleView();
+    store.getState().requestFit();
+    const { viewMode, fitTick } = store.getState();
+    store.getState().undo(); // reverts the placing only
+    expect(store.getState().viewMode).toBe(viewMode);
+    expect(store.getState().fitTick).toBe(fitTick);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
   it('undoes rotating', () => {
     const e = place();
     store.getState().selectEquipment(e.id, false);
