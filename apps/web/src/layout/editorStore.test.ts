@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createEditorStore } from './editorStore';
+import { createEditorStore, type EquipmentPatch } from './editorStore';
 import { fromDisplay } from './units';
 
 let store: ReturnType<typeof createEditorStore>;
@@ -66,5 +66,50 @@ describe('selected library type (EQ-1)', () => {
     store.getState().selectType('base-sink');
     store.getState().toggleSnap();
     expect(localStorage.getItem('factory-sim:editor-prefs')).not.toContain('base-sink');
+  });
+});
+
+describe('updateEquipment (WS-1)', () => {
+  const placed = () => {
+    const s = createEditorStore();
+    return { s, e: s.getState().placeEquipment('base-workstation', { x: 4, y: 4 })! };
+  };
+
+  it('edits update the stored equipment immediately (name, position, params)', () => {
+    const { s, e } = placed();
+    expect(s.getState().updateEquipment(e.id, { name: 'Weld 1' }).ok).toBe(true);
+    expect(s.getState().updateEquipment(e.id, { position: { x: 7.5 } }).ok).toBe(true);
+    expect(s.getState().updateEquipment(e.id, { params: { capacity: 3 } }).ok).toBe(true);
+    const got = s.getState().equipment[0]!;
+    expect(got.name).toBe('Weld 1');
+    expect(got.position).toEqual({ x: 7.5, y: 4 });
+    expect(got.params).toEqual({ capacity: 3, batchSize: 1 });
+  });
+
+  it('rejects invalid values with a reason and leaves the equipment unchanged', () => {
+    const { s, e } = placed();
+    const before = s.getState().equipment;
+    const bad: EquipmentPatch[] = [
+      { params: { capacity: 0 } },
+      { params: { capacity: 1.5 } },
+      { params: { batchSize: 2 } }, // exceeds capacity 1
+      { params: { bogus: 1 } },
+      { name: '   ' },
+      { position: { x: -1 } },
+      { position: { y: 999 } },
+      { position: { x: Number.NaN } },
+    ];
+    for (const patch of bad) {
+      const r = s.getState().updateEquipment(e.id, patch);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
+    }
+    expect(s.getState().equipment).toBe(before);
+  });
+
+  it('explains the batch size rule', () => {
+    const { s, e } = placed();
+    const r = s.getState().updateEquipment(e.id, { params: { batchSize: 2 } });
+    expect(r).toEqual({ ok: false, error: expect.stringMatching(/batch size cannot exceed/i) });
   });
 });

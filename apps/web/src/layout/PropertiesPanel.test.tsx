@@ -66,4 +66,58 @@ describe('PropertiesPanel', () => {
     await user.click(screen.getByRole('button', { name: /delete/i }));
     expect(store.getState().equipment).toHaveLength(0);
   });
+
+  it('Selecting an object opens its name, type, dimensions and simulation parameters', async () => {
+    const e = place(4, 4);
+    expect(((await screen.findByLabelText(/^name/i)) as HTMLInputElement).value).toBe(e.name);
+    expect(screen.getByText('Workstation', { selector: '[data-testid="type"]' })).toBeTruthy();
+    expect(screen.getByTestId('dimensions').textContent).toMatch(/2.*1\.5.*1\.2/);
+    expect((screen.getByLabelText(/capacity/i) as HTMLInputElement).value).toBe('1');
+    expect((screen.getByLabelText(/batch size/i) as HTMLInputElement).value).toBe('1');
+  });
+
+  it('shows a conveyor speed field for conveyors', async () => {
+    const e = store.getState().placeEquipment('base-conveyor', { x: 5, y: 5 })!;
+    store.getState().selectEquipment(e.id, false);
+    expect(((await screen.findByLabelText(/speed/i)) as HTMLInputElement).value).toBe('0.2');
+  });
+
+  it('edits in the panel update the stored equipment (and so the 3D view) immediately', async () => {
+    const user = userEvent.setup();
+    place(4, 4);
+    const name = await screen.findByLabelText(/^name/i);
+    await user.clear(name);
+    await user.type(name, 'Weld');
+    expect(store.getState().equipment[0]!.name).toBe('Weld');
+    const x = screen.getByLabelText(/position x/i);
+    await user.clear(x);
+    await user.type(x, '9');
+    expect(store.getState().equipment[0]!.position.x).toBe(9);
+    const cap = screen.getByLabelText(/capacity/i);
+    await user.clear(cap);
+    await user.type(cap, '4');
+    expect(store.getState().equipment[0]!.params).toMatchObject({ capacity: 4 });
+  });
+
+  it('rejects an invalid value inline with a reason and does not store it', async () => {
+    const user = userEvent.setup();
+    place(4, 4);
+    const batch = await screen.findByLabelText(/batch size/i);
+    await user.clear(batch);
+    await user.type(batch, '5');
+    expect((await screen.findByRole('alert')).textContent).toMatch(/batch size cannot exceed/i);
+    expect(store.getState().equipment[0]!.params).toMatchObject({ batchSize: 1 });
+    expect(batch.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('rejects non-numeric text and clears the error once the value is valid', async () => {
+    const user = userEvent.setup();
+    place(4, 4);
+    const cap = await screen.findByLabelText(/capacity/i);
+    await user.clear(cap);
+    expect((await screen.findByRole('alert')).textContent).toMatch(/enter a number/i);
+    await user.type(cap, '2');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(store.getState().equipment[0]!.params).toMatchObject({ capacity: 2 });
+  });
 });

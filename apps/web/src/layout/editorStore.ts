@@ -52,6 +52,14 @@ const normalizeRadians = (r: number) => {
 };
 
 export type SetFloorResult = { ok: true } | { ok: false; error: string };
+export type UpdateEquipmentResult = { ok: true } | { ok: false; error: string };
+
+/** The properties WS-1 edits. Position is meters; params are validated per behavior. */
+export interface EquipmentPatch {
+  name?: string;
+  position?: Partial<Point>;
+  params?: Record<string, number>;
+}
 
 export interface EditorState extends Prefs {
   /** Project document content; always meters (ADR-0006). */
@@ -79,6 +87,11 @@ export interface EditorState extends Prefs {
    * anchor snaps to the grid and the rest keep their offset from it.
    */
   dragSelected: (starts: Record<string, Point>, anchorId: string, delta: Point) => void;
+  /**
+   * Edits one equipment's name, position or params. Validates with the schema (plus: name
+   * non-blank, position on the floor); on failure nothing changes and the reason is returned.
+   */
+  updateEquipment: (id: string, patch: EquipmentPatch) => UpdateEquipmentResult;
   /** Adds degrees to every selected item's rotation. */
   rotateSelected: (degrees: number) => void;
   /** Sets every selected item's rotation to a typed angle in degrees. */
@@ -152,6 +165,9 @@ export function createEditorStore() {
             return p ? { ...e, position: p } : e;
           }),
         });
+      },
+      updateEquipment: () => {
+        throw new Error('not implemented');
       },
       rotateSelected: (degrees) => {
         mapSelected((e) => ({ ...e, rotation: normalizeRadians(e.rotation + toRadians(degrees)) }));
