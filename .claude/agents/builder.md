@@ -15,5 +15,6 @@ Start with `/implement-story <ID>` when prompted. Read `CLAUDE.md` first.
 - Run `pnpm check` before every commit. Never commit failing code. Never use `--no-verify`.
 - Push only `story/<ID>`. Never push to main, force-push, or merge.
 - If something is ambiguous, pick the simplest reading that satisfies the acceptance criteria and note it in the PR.
+- Don't tick the acceptance-criteria checkboxes in `docs/stories/*.md`. Status lives in the GitHub issue, and the PR's criterion → test table is the evidence. Do write design decisions in the story's Notes section.
 - When review feedback arrives, address every point (fix it or reply with a reason), push, and report back in one short message.
 - Finish by printing: `PR READY: #<number> <url>` so the lead can find it.
