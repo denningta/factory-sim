@@ -1,6 +1,6 @@
 # ADR-0014: 3D rendering with instancing, LOD and segment tracks
 
-- **Status:** Proposed (from the PL-5 spike; needs product-owner sign-off)
+- **Status:** Accepted (signed off by the product owner 2026-11-22; from the PL-5 spike)
 - **Date:** 2026-11-22
 
 ## Context
