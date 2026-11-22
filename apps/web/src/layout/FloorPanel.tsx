@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { useEditorStore } from './editorStore';
 import { useEditorStore as defaultStore } from './editorStore';
 import { formatNumber, fromDisplay, toDisplay, type DisplayUnit } from './units';
@@ -11,12 +11,16 @@ interface FieldProps {
   unit: DisplayUnit;
   /** Returns an error message, or null when the edit was accepted. */
   onCommit: (meters: number) => string | null;
+  /** One focus-to-blur (or Enter) session is one undo step. */
+  beginEdit: () => void;
+  endEdit: () => void;
 }
 
 /** Keeps the typed text while editing so "1." or "" aren't reformatted under the cursor. */
-function LengthField({ label, meters, unit, onCommit }: FieldProps) {
+function LengthField({ label, meters, unit, onCommit, beginEdit, endEdit }: FieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => endEdit, [endEdit]);
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {label} ({unit})
@@ -24,6 +28,12 @@ function LengthField({ label, meters, unit, onCommit }: FieldProps) {
         type="text"
         inputMode="decimal"
         value={draft ?? formatNumber(toDisplay(meters, unit))}
+        onFocus={beginEdit}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return;
+          endEdit();
+          beginEdit();
+        }}
         onChange={(e) => {
           const text = e.target.value;
           setDraft(text);
@@ -35,6 +45,7 @@ function LengthField({ label, meters, unit, onCommit }: FieldProps) {
           );
         }}
         onBlur={() => {
+          endEdit();
           setDraft(null);
           setError(null);
         }}
@@ -46,7 +57,8 @@ function LengthField({ label, meters, unit, onCommit }: FieldProps) {
 }
 
 export function FloorPanel({ useStore = defaultStore }: { useStore?: Store }) {
-  const { floor, unit, snapEnabled, setFloor, setUnit, toggleSnap } = useStore();
+  const { floor, unit, snapEnabled, setFloor, setUnit, toggleSnap, beginEdit, endEdit } =
+    useStore();
   const commit = (key: 'width' | 'length' | 'gridSpacing') => (meters: number) => {
     const r = setFloor({ [key]: meters });
     return r.ok ? null : r.error;
@@ -62,18 +74,24 @@ export function FloorPanel({ useStore = defaultStore }: { useStore?: Store }) {
         </select>
       </label>
       <LengthField
+        beginEdit={beginEdit}
+        endEdit={endEdit}
         label="Floor width"
         meters={floor.width}
         unit={unit}
         onCommit={commit('width')}
       />
       <LengthField
+        beginEdit={beginEdit}
+        endEdit={endEdit}
         label="Floor length"
         meters={floor.length}
         unit={unit}
         onCommit={commit('length')}
       />
       <LengthField
+        beginEdit={beginEdit}
+        endEdit={endEdit}
         label="Grid spacing"
         meters={floor.gridSpacing}
         unit={unit}

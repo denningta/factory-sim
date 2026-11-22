@@ -140,8 +140,42 @@ export interface Point {
 
 export function createEditorStore() {
   return create<EditorState>()((set, get) => {
+    // History is session-only and snapshots the document content the editor owns. A future
+    // connect/disconnect (FL-1) joins by adding `connections` to Snapshot and to loadDocument.
+    interface Snapshot {
+      floor: Floor;
+      equipment: Equipment[];
+    }
+    const snapshot = (): Snapshot => ({ floor: get().floor, equipment: get().equipment });
+    let past: Snapshot[] = [];
+    let future: Snapshot[] = [];
+    /** Set between beginEdit and endEdit; `pushed` once its first write took the snapshot. */
+    let session: { before: Snapshot; pushed: boolean } | null = null;
+    const syncFlags = () => set({ canUndo: past.length > 0, canRedo: future.length > 0 });
+    /** Call just before a successful document write; one call per undo step. */
+    const record = () => {
+      if (session) {
+        if (session.pushed) return;
+        session.pushed = true;
+      }
+      past.push(session ? session.before : snapshot());
+      if (past.length > HISTORY_LIMIT) past = past.slice(past.length - HISTORY_LIMIT);
+      future = [];
+      syncFlags();
+    };
+    const restore = (to: Snapshot) => {
+      const ids = new Set(to.equipment.map((e) => e.id));
+      set({
+        ...to,
+        selectedIds: get().selectedIds.filter((id) => ids.has(id)),
+        canUndo: past.length > 0,
+        canRedo: future.length > 0,
+      });
+    };
     const mapSelected = (f: (e: Equipment) => Equipment) => {
       const ids = new Set(get().selectedIds);
+      if (!get().equipment.some((e) => ids.has(e.id))) return;
+      record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
     };
     return {
@@ -166,6 +200,7 @@ export function createEditorStore() {
           name: `${type.name} ${sameType}`,
           position: p,
         });
+        record();
         set({ equipment: [...equipment, placed] });
         return placed;
       },
@@ -190,6 +225,7 @@ export function createEditorStore() {
           spacing: floor.gridSpacing,
           enabled: snapEnabled,
         });
+        record();
         set({
           equipment: get().equipment.map((e) => {
             const p = to[e.id];
@@ -237,6 +273,7 @@ export function createEditorStore() {
             ...(field ? { field } : {}),
           };
         }
+        record();
         set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
         return { ok: true };
       },
@@ -249,16 +286,45 @@ export function createEditorStore() {
       },
       deleteSelected: () => {
         const gone = new Set(get().selectedIds);
+        if (!get().equipment.some((e) => gone.has(e.id))) return;
+        record();
         set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
       },
-      loadDocument: (doc) =>
-        set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
+      loadDocument: (doc) => {
+        past = [];
+        future = [];
+        session = null;
+        set({
+          floor: doc.floor,
+          equipment: doc.equipment,
+          selectedIds: [],
+          selectedTypeId: null,
+          canUndo: false,
+          canRedo: false,
+        });
+      },
       canUndo: false,
       canRedo: false,
-      undo: () => {},
-      redo: () => {},
-      beginEdit: () => {},
-      endEdit: () => {},
+      undo: () => {
+        session = null;
+        const to = past.pop();
+        if (!to) return;
+        future.push(snapshot());
+        restore(to);
+      },
+      redo: () => {
+        session = null;
+        const to = future.pop();
+        if (!to) return;
+        past.push(snapshot());
+        restore(to);
+      },
+      beginEdit: () => {
+        session ??= { before: snapshot(), pushed: false };
+      },
+      endEdit: () => {
+        session = null;
+      },
       fitTick: 0,
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {
@@ -270,6 +336,7 @@ export function createEditorStore() {
           parsed.data.length / parsed.data.gridSpacing > MAX_GRID_LINES
         )
           return { ok: false, error: 'Grid spacing is too small for this floor' };
+        record();
         set({ floor: parsed.data });
         return { ok: true };
       },
