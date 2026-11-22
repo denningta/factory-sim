@@ -21,7 +21,7 @@ cd ~/code/factory-sim && git pull
 scripts/team-up.sh         # starts lead + reviewer (idempotent) and a "services" tab
 ```
 
-The lead reads the docs, runs `/next-story`, recommends what to do and waits for your go-ahead. Say e.g. "go: dispatch builder-1 on PL-1". The lead runs `/dispatch builder-1 PL-1`, which calls `scripts/team-up.sh builder builder-1 PL-1`.
+The lead reads the docs, runs `/next-story` and **dispatches ready stories in sprint order without asking** (product owner, 2026-11-22), within the builder limit and the no-two-stories-per-module rule. It reports who is on what. It still asks before starting a new sprint, changing the builder limit, or anything outside the backlog. The lead runs `/dispatch builder-1 PL-1`, which calls `scripts/team-up.sh builder builder-1 PL-1`.
 
 ## Story pipeline
 
