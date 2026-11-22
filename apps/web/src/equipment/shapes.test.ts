@@ -59,6 +59,7 @@ describe('Shapes stay inside the footprint for edited dimensions (#61)', () => {
     { width: 0.2, length: 3 },
     { width: 3, length: 0.4 },
     { width: 2, length: 0.5 },
+    { width: 10, length: 0.4 },
     { width: 0.1, length: 0.1 },
     { width: 10, length: 10 },
   ];
