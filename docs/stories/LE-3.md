@@ -23,3 +23,5 @@ issue: 14
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- From the WS-1 review (#68): every keystroke in a properties field commits a store write (typing `12.5` writes 1, 12, 12., 12.5). Coalesce edits per field focus, or per blur/Enter, so one edit is one undo step.

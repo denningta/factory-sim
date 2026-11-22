@@ -24,4 +24,6 @@ issue: 5
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
+- From the WS-1 review (#68): conveyor speed displays in m/s even in ft mode. Show it in ft/min when the display unit is ft (display-only conversion; stored value stays m/s). Multi-selection with mixed rotations still shows "0"; show it as mixed.
+
 - From the EQ-1 review (#61): conveyor legs sit at `z = ±0.45·l` with thickness `0.12·w`, which can leave the footprint when a conveyor is short and wide. Clamp it, and add a test that every shape stays inside its footprint for edited dimensions.
