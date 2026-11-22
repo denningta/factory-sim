@@ -79,15 +79,22 @@ export const footprintSchema = z.strictObject({ width: metersSchema, length: met
  * in the equipment's own frame (−0.5…0.5 across `width` and along `length`), so ports stay
  * on the footprint when it is resized (EQ-2). Rotation and position come from the instance.
  */
-export const portSchema = z.strictObject({
-  id: idSchema,
-  kind: z.enum(['input', 'output']),
-  u: z.number().min(-0.5).max(0.5),
-  v: z.number().min(-0.5).max(0.5),
-});
+export const portSchema = z
+  .strictObject({
+    id: idSchema,
+    kind: z.enum(['input', 'output']),
+    u: z.number().min(-0.5).max(0.5),
+    v: z.number().min(-0.5).max(0.5),
+  })
+  .refine((p) => Math.abs(p.u) === 0.5 || Math.abs(p.v) === 0.5, {
+    message: 'A port must sit on the footprint edge (u or v = ±0.5)',
+  });
 
 /** What each behavior needs: sources only emit, sinks only absorb, the rest do both. */
-const PORT_RULES: Record<string, { input: 'none' | 'some'; output: 'none' | 'some' }> = {
+const PORT_RULES: Record<
+  (typeof EQUIPMENT_BEHAVIORS)[number],
+  { input: 'none' | 'some'; output: 'none' | 'some' }
+> = {
   source: { input: 'none', output: 'some' },
   sink: { input: 'some', output: 'none' },
   workstation: { input: 'some', output: 'some' },
@@ -109,7 +116,9 @@ function checkPorts(
       });
     seen.add(port.id);
   });
-  const rule = PORT_RULES[e.behavior];
+  const rule = Object.hasOwn(PORT_RULES, e.behavior)
+    ? PORT_RULES[e.behavior as keyof typeof PORT_RULES]
+    : undefined;
   if (!rule) return;
   for (const kind of ['input', 'output'] as const) {
     const count = e.ports.filter((p) => p.kind === kind).length;
@@ -132,7 +141,9 @@ function checkPorts(
  * Default ports (EQ-4): material flows along the footprint's length, entering at one end
  * and leaving at the other.
  */
-export function defaultPorts(behavior: string): z.infer<typeof portSchema>[] {
+export function defaultPorts(
+  behavior: (typeof EQUIPMENT_BEHAVIORS)[number],
+): z.infer<typeof portSchema>[] {
   const input = { id: 'in', kind: 'input' as const, u: 0, v: -0.5 };
   const output = { id: 'out', kind: 'output' as const, u: 0, v: 0.5 };
   if (behavior === 'source') return [output];

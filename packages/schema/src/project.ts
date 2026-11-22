@@ -7,7 +7,7 @@ import {
 } from './equipment';
 
 /**
- * Project document, schema version 2 (ADR-0006, ADR-0009, ADR-0010).
+ * Project document, schema version 3 (ADR-0006, ADR-0009, ADR-0010).
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * v3: equipment has `ports`; connections join an output port to an input port and carry a
  *     `capacity` (FL-1, FL-2).

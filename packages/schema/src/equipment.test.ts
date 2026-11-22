@@ -195,6 +195,10 @@ describe('ports (schema v3, FL-1/EQ-4 contract)', () => {
     const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
     const off = { ...ws, ports: [{ ...ws.ports[0]!, u: 0.6 }, ws.ports[1]!] };
     expect(equipmentTypeSchema.safeParse(off).success).toBe(false);
+    const interior = { ...ws, ports: [{ ...ws.ports[0]!, u: 0.1, v: 0.2 }, ws.ports[1]!] };
+    expect(equipmentTypeSchema.safeParse(interior).success).toBe(false);
+    const side = { ...ws, ports: [{ ...ws.ports[0]!, u: -0.5, v: 0.1 }, ws.ports[1]!] };
+    expect(equipmentTypeSchema.safeParse(side).success).toBe(true);
     const dup = { ...ws, ports: [ws.ports[0]!, { ...ws.ports[1]!, id: 'in' }] };
     expect(equipmentTypeSchema.safeParse(dup).success).toBe(false);
   });
