@@ -1,3 +1,5 @@
+import { ApiRequestError } from '../api/client';
+
 export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict';
 
 export interface Autosaver {
@@ -6,10 +8,64 @@ export interface Autosaver {
   dispose: () => void;
 }
 
-export function createAutosaver(_opts: {
+/**
+ * Debounced saver: saves `delayMs` after the last change. A failed save retries after the same
+ * delay; a conflict stops saving so the newer server copy is never overwritten.
+ */
+export function createAutosaver(opts: {
   save: () => Promise<void>;
   delayMs: number;
   onStatus: (s: SaveStatus) => void;
 }): Autosaver {
-  throw new Error('not implemented');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let dirty = false;
+  let saving: Promise<void> | undefined;
+  let stopped = false;
+
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void run(), opts.delayMs);
+  };
+
+  const run = async (): Promise<void> => {
+    clearTimeout(timer);
+    if (stopped) return;
+    if (saving) return saving; // the in-flight save re-runs if dirty when it finishes
+    if (!dirty) return;
+    dirty = false;
+    opts.onStatus('saving');
+    saving = opts
+      .save()
+      .then(() => {
+        opts.onStatus(dirty ? 'unsaved' : 'saved');
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiRequestError && err.code === 'conflict') {
+          stopped = true;
+          opts.onStatus('conflict');
+          return;
+        }
+        dirty = true;
+        opts.onStatus('error');
+      })
+      .finally(() => {
+        saving = undefined;
+        if (dirty && !stopped) schedule();
+      });
+    return saving;
+  };
+
+  return {
+    markDirty: () => {
+      if (stopped) return;
+      dirty = true;
+      opts.onStatus('unsaved');
+      if (!saving) schedule();
+    },
+    flush: run,
+    dispose: () => {
+      stopped = true;
+      clearTimeout(timer);
+    },
+  };
 }

@@ -167,7 +167,7 @@ export function createEditorStore() {
         const gone = new Set(get().selectedIds);
         set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
       },
-      loadDocument: () => {},
+      loadDocument: (doc) => set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [] }),
       fitTick: 0,
       requestFit: () => set({ fitTick: get().fitTick + 1 }),
       setFloor: (patch) => {

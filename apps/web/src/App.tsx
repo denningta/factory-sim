@@ -1,58 +1,42 @@
-import { useEffect } from 'react';
-import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
-import { LibraryPanel } from './equipment/LibraryPanel';
-import { LibraryPreview } from './equipment/EquipmentModel';
-import { FloorPanel } from './layout/FloorPanel';
-import { FloorScene } from './layout/FloorScene';
-import { PropertiesPanel } from './layout/PropertiesPanel';
-import { ViewToolbar } from './layout/ViewToolbar';
-import { useEditorStore } from './layout/editorStore';
+import { useCallback, useEffect, useState } from 'react';
+import type { User } from '@factory-sim/schema';
+import { api } from './api/client';
+import { SignIn } from './auth/SignIn';
+import { ProjectEditor } from './projects/ProjectEditor';
+import { ProjectList, type ProjectsApi } from './projects/ProjectList';
 
+const projectsApi: ProjectsApi = {
+  listProjects: api.listProjects,
+  createProject: api.createProject,
+  renameProject: (p, name) => api.updateProject(p.id, { name, baseRevision: p.revision }),
+  deleteProject: api.deleteProject,
+};
+
+const idFromHash = () => /^#\/p\/([\w-]+)$/.exec(location.hash)?.[1] ?? null;
+
+/** Shell: sign in → project list → editor. The open project lives in the URL hash so reload keeps it. */
 export function App() {
-  const unit = useEditorStore((s) => s.unit);
-  const snap = useEditorStore((s) => s.snapEnabled);
-  const selectedId = useEditorStore((s) => s.selectedTypeId);
-  const selectType = useEditorStore((s) => s.selectType);
-  const selected = BASE_EQUIPMENT_TYPES.find((t) => t.id === selectedId);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [openId, setOpenId] = useState(idFromHash);
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target;
-      if (t instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') useEditorStore.getState().deleteSelected();
-      if (e.key === 'Escape') useEditorStore.getState().clearSelection();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    api.session().then(setUser, async () => {
+      setNeedsSetup(await api.setupNeeded().catch(() => false));
+      setUser(null);
+    });
   }, []);
-  // Wireframe 1: library left, viewport centre, properties right.
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '260px 1fr 280px',
-        height: '100vh',
-        minHeight: 0,
-      }}
-    >
-      <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
-        <LibraryPanel unit={unit} selectedId={selectedId} onSelect={selectType} />
-        {selected ? (
-          <LibraryPreview type={selected} />
-        ) : (
-          <p style={{ color: '#6b7280' }}>Select a type to preview it in 3D.</p>
-        )}
-      </aside>
-      <main style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr) auto', minHeight: 0 }}>
-        <ViewToolbar />
-        <FloorScene />
-        <footer style={{ padding: 8, font: '13px sans-serif' }}>
-          Units: {unit} · Snap to grid: {snap ? 'on' : 'off'}
-        </footer>
-      </main>
-      <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
-        <PropertiesPanel />
-        <FloorPanel />
-      </aside>
-    </div>
-  );
+  useEffect(() => {
+    const onHash = () => setOpenId(idFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const open = useCallback((id: string | null) => {
+    location.hash = id ? `#/p/${id}` : '';
+  }, []);
+
+  if (user === undefined) return <p style={{ font: '14px sans-serif', padding: 16 }}>Loading…</p>;
+  if (user === null) return <SignIn needsSetup={needsSetup} onSignedIn={setUser} />;
+  if (openId) return <ProjectEditor key={openId} id={openId} onClose={() => open(null)} />;
+  return <ProjectList api={projectsApi} onOpen={open} />;
 }

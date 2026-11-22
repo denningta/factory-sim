@@ -10,6 +10,7 @@ import type { AppEnv } from './env';
 import { HttpError, toErrorResponse } from './http-error';
 import { openApiDocument } from './openapi';
 import { authRoutes } from './routes/auth';
+import { projectRoutes } from './routes/projects';
 import { userRoutes } from './routes/users';
 
 export interface ServerDeps {
@@ -95,6 +96,7 @@ export function buildServer(deps: ServerDeps) {
   void app.register(async (api) => {
     await api.register(authRoutes, { ctx });
     await api.register(userRoutes, { ctx });
+    await api.register(projectRoutes, { ctx });
   });
   return app;
 }

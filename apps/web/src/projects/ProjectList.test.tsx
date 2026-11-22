@@ -66,7 +66,7 @@ describe('ProjectList', () => {
     const user = userEvent.setup();
     render(<ProjectList api={api} onOpen={() => {}} />);
     await user.click(await screen.findByRole('button', { name: /rename line a/i }));
-    const input = screen.getByLabelText(/project name/i);
+    const input = screen.getByLabelText(/^project name$/i);
     await user.clear(input);
     await user.type(input, 'Line Z{Enter}');
     expect(await screen.findByText('Line Z')).toBeTruthy();

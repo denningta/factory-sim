@@ -8,7 +8,14 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { describe, expect, it } from 'vitest';
 import { MIGRATIONS_FOLDER } from './migrate';
-import { projects } from './schema';
+import { projects, users } from './schema';
+
+const newOwner = (db: Awaited<ReturnType<typeof freshDb>>) =>
+  db
+    .insert(users)
+    .values({ email: 'o@plant.test', passwordHash: 'x', role: 'user' })
+    .returning()
+    .then(([u]) => u!.id);
 
 // PGlite is real Postgres compiled to WASM, so the same SQL files run as in the container.
 async function freshDb() {
@@ -25,9 +32,10 @@ describe('migrations', () => {
   it('AC3: running migrations twice is safe and keeps existing rows', async () => {
     const db = await freshDb();
     await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+    const ownerId = await newOwner(db);
     const [row] = await db
       .insert(projects)
-      .values({ name: 'Line 1', document: createProject() })
+      .values({ ownerId, name: 'Line 1', document: createProject() })
       .returning();
     await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
     const rows = await db.select().from(projects).where(eq(projects.id, row!.id));
@@ -43,9 +51,10 @@ describe('persistence', () => {
       const first = new PGlite(dataDir);
       const db1 = drizzle(first);
       await migrate(db1, { migrationsFolder: MIGRATIONS_FOLDER });
+      const ownerId = await newOwner(db1);
       const [row] = await db1
         .insert(projects)
-        .values({ name: 'Line 1', document: createProject() })
+        .values({ ownerId, name: 'Line 1', document: createProject() })
         .returning();
       await first.close();
 
