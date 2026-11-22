@@ -52,7 +52,8 @@ export function equipmentParts(
       // Cabinet with a machine block on top and a signal tower: a manned work cell.
       const cab = h * 0.55;
       const mach = h * 0.35;
-      const tower = cyl(w * 0.04, w * 0.04, h - cab, cab, 0.5);
+      const tr = Math.min(w, l) * 0.04; // by the shorter side so it fits narrow footprints
+      const tower = cyl(tr, tr, h - cab, cab, 0.5);
       return [
         slab(w, cab, l, 0, 0, 0, 0.85),
         slab(w * 0.6, mach, l * 0.6, cab, 0, l * 0.1, 1.1),
@@ -79,12 +80,14 @@ export function equipmentParts(
       const rail = w * 0.12;
       const belt = h * 0.12;
       const legH = h - belt - h * 0.1;
+      // Keep the legs (thickness `rail` along z) inside the footprint on short, wide belts.
+      const legZ = Math.min(0.45 * l, l / 2 - rail / 2);
       const parts: Part[] = [slab(w - 2 * rail, belt, l, legH, 0, 0, 0.55)];
       for (const s of [-1, 1])
         parts.push(slab(rail, h - legH, l, legH, s * (w / 2 - rail / 2), 0, 1));
       for (const s of [-1, 1])
-        for (const z of [-0.45, 0.45])
-          parts.push(slab(rail, legH, rail, 0, s * (w / 2 - rail / 2), z * l, 0.7));
+        for (const z of [-legZ, legZ])
+          parts.push(slab(rail, legH, rail, 0, s * (w / 2 - rail / 2), z, 0.7));
       return parts;
     }
     case 'source': {

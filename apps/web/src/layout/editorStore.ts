@@ -103,7 +103,7 @@ export interface EditorState extends Prefs {
    */
   dragSelected: (starts: Record<string, Point>, anchorId: string, delta: Point) => void;
   /**
-   * Edits one equipment's name, position or params. Validates with the schema (plus: name
+   * Edits one equipment's name, position, size or params. Validates with the schema (plus: name
    * non-blank, position on the floor); on failure nothing changes and the reason is returned.
    */
   updateEquipment: (id: string, patch: EquipmentPatch) => UpdateEquipmentResult;
@@ -206,13 +206,20 @@ export function createEditorStore() {
           name: patch.name ?? current.name,
           position,
           params: { ...current.params, ...patch.params },
+          footprint: { ...current.footprint, ...patch.footprint },
+          height: patch.height ?? current.height,
         };
         // The schema owns the rules (positive ints, batch size <= capacity, no unknown keys).
         const parsed = equipmentSchema.safeParse(next);
         if (!parsed.success) {
           const issue = parsed.error.issues[0]!;
           const field = issue.path[0] === 'params' ? String(issue.path[1]) : undefined;
-          return { ok: false, error: issue.message, ...(field ? { field } : {}) };
+          const isSize = issue.path[0] === 'footprint' || issue.path[0] === 'height';
+          return {
+            ok: false,
+            error: isSize ? 'Must be greater than 0' : issue.message,
+            ...(field ? { field } : {}),
+          };
         }
         set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
         return { ok: true };

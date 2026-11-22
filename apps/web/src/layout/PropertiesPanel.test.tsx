@@ -71,7 +71,7 @@ describe('PropertiesPanel', () => {
     const e = place(4, 4);
     expect(((await screen.findByLabelText(/^name/i)) as HTMLInputElement).value).toBe(e.name);
     expect(screen.getByText('Workstation', { selector: '[data-testid="type"]' })).toBeTruthy();
-    expect(screen.getByTestId('dimensions').textContent).toMatch(/2.*1\.5.*1\.2/);
+    expect((screen.getByLabelText(/^width/i) as HTMLInputElement).value).toBe('2');
     expect((screen.getByLabelText(/capacity/i) as HTMLInputElement).value).toBe('1');
     expect((screen.getByLabelText(/batch size/i) as HTMLInputElement).value).toBe('1');
   });
