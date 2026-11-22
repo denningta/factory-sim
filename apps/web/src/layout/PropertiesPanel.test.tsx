@@ -177,4 +177,75 @@ describe('PropertiesPanel', () => {
     await user.tab();
     expect(screen.queryByRole('alert')).toBeNull();
   });
+
+  describe('EQ-2: footprint and height', () => {
+    const num = (re: RegExp) => screen.getByLabelText(re) as HTMLInputElement;
+
+    it('Length, width and height are editable in the current units (m)', async () => {
+      const user = userEvent.setup();
+      place(4, 4);
+      expect(((await screen.findByLabelText(/^width/i)) as HTMLInputElement).value).toBe('2');
+      expect(num(/^length/i).value).toBe('1.5');
+      expect(num(/^height/i).value).toBe('1.2');
+      for (const [re, text] of [
+        [/^width/i, '3'],
+        [/^length/i, '2.5'],
+        [/^height/i, '1.8'],
+      ] as const) {
+        await user.clear(num(re));
+        await user.type(num(re), text);
+      }
+      const e = store.getState().equipment[0]!;
+      expect(e.footprint).toEqual({ width: 3, length: 2.5 });
+      expect(e.height).toBe(1.8);
+    });
+
+    it('edits in ft are stored as meters', async () => {
+      const user = userEvent.setup();
+      store.getState().setUnit('ft');
+      place(4, 4);
+      await user.clear(await screen.findByLabelText(/^width \(ft\)/i));
+      await user.type(num(/^width/i), '10');
+      expect(store.getState().equipment[0]!.footprint.width).toBeCloseTo(3.048, 9);
+    });
+
+    it('rejects zero or negative sizes inline and does not store them', async () => {
+      const user = userEvent.setup();
+      place(4, 4);
+      const w = await screen.findByLabelText(/^width/i);
+      await user.clear(w);
+      await user.type(w, '0');
+      expect(await screen.findByRole('alert')).toBeTruthy();
+      expect(store.getState().equipment[0]!.footprint.width).toBe(2);
+    });
+
+    it('conveyor speed shows in ft/min in ft mode, stored as m/s', async () => {
+      const user = userEvent.setup();
+      store.getState().setUnit('ft');
+      const e = store.getState().placeEquipment('base-conveyor', { x: 5, y: 5 })!;
+      store.getState().selectEquipment(e.id, false);
+      const f = (await screen.findByLabelText(/speed \(ft\/min\)/i)) as HTMLInputElement;
+      expect(f.value).toBe('39.37');
+      await user.clear(f);
+      await user.type(f, '60');
+      expect((store.getState().equipment[0]!.params as { speed: number }).speed).toBeCloseTo(
+        0.3048,
+        9,
+      );
+    });
+
+    it('mixed rotations show as mixed', async () => {
+      place(2, 2);
+      place(6, 6);
+      store.getState().rotateSelected(0);
+      const first = store.getState().equipment[0]!;
+      store.getState().selectEquipment(first.id, false);
+      store.getState().rotateSelected(90);
+      store.getState().selectEquipment(store.getState().equipment[1]!.id, true);
+      expect(((await screen.findByLabelText(/rotation/i)) as HTMLInputElement).placeholder).toBe(
+        'Mixed',
+      );
+      expect((screen.getByLabelText(/rotation/i) as HTMLInputElement).value).toBe('');
+    });
+  });
 });

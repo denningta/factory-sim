@@ -70,6 +70,10 @@ export interface EquipmentPatch {
   name?: string;
   position?: Partial<Point>;
   params?: Record<string, number>;
+  /** Meters. */
+  footprint?: { width?: number; length?: number };
+  /** Meters. */
+  height?: number;
 }
 
 export interface EditorState extends Prefs {
