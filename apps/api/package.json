@@ -1,0 +1,17 @@
+{
+  "name": "@factory-sim/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fastify REST API, auth, migrations (ADR-0003/0005/0011).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5"
+  }
+}

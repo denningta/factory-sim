@@ -1,0 +1,14 @@
+{
+  "name": "@factory-sim/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React + React Three Fiber editor and simulation UI (ADR-0002).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}

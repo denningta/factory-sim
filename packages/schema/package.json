@@ -1,0 +1,14 @@
+{
+  "name": "@factory-sim/schema",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Versioned project document schema (zod). Owned by the lead (ADR-0006).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}
