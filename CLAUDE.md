@@ -82,7 +82,7 @@ A hook runs prettier and the owning package's type check after every Edit/Write.
 - Branch `story/<ID>`, commits `<ID>: <imperative summary>` (e.g. `PL-1: add postgres healthcheck`).
 - One PR per story, using `.github/pull_request_template.md`: `Closes #<issue>`, a table mapping **each acceptance criterion → the test/check that verifies it**, the DoD checklist, and screenshots for UI.
 - CI (lint, typecheck, tests) must be green before requesting review.
-- Rebase on `origin/main` before opening the PR; resolve conflicts in your own branch only.
+- Before the **first** push, rebase on `origin/main`. After a branch is pushed, never rebase it: bring in main with `git merge origin/main`, so pushes stay fast-forward (force-push is denied). Resolve conflicts in your own branch only.
 
 ## Definition of Done (summary; full list in docs/definition-of-done.md)
 
