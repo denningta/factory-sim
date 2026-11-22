@@ -10,6 +10,11 @@ const CONFIGS: { label: string; config: Config }[] = [
   { label: 'instanced', config: { mode: 'instanced', lod: false } },
   { label: 'instanced+LOD', config: { mode: 'instanced', lod: true } },
 ];
+// ?order=reverse runs the configs last-to-first, to expose thermal drift between runs.
+const ORDER =
+  new URLSearchParams(location.search).get('order') === 'reverse'
+    ? [...CONFIGS].reverse()
+    : CONFIGS;
 const SETTLE_MS = 2000;
 const MEASURE_MS = 5000;
 
@@ -51,7 +56,7 @@ export function App() {
     bench.results = [];
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     void (async () => {
-      for (const c of CONFIGS) {
+      for (const c of ORDER) {
         if (cancelled) return;
         setConfig(c.config);
         // Wait for frames to stabilise: first use of a new program can stall for seconds

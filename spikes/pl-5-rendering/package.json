@@ -5,7 +5,7 @@
   "type": "module",
   "description": "PL-5 spike: three.js rendering benchmark. Throwaway; nothing imports it.",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",

@@ -48,6 +48,7 @@ function Equipment({ config }: { config: Config }) {
   const hi = useRef<THREE.InstancedMesh>(null);
   const lo = useRef<THREE.InstancedMesh>(null);
   const naive = useRef<(THREE.Mesh | null)[]>([]);
+  const lastKey = useRef('');
   const geos = useMemo(() => ({ hi: detailedGeometry(), lo: lowGeometry() }), []);
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#6c8cb0' }), []);
 
@@ -66,6 +67,10 @@ function Equipment({ config }: { config: Config }) {
     const h = hi.current;
     const l = lo.current;
     if (!h || !l) return;
+    // Equipment is static: rewrite and re-upload matrices only when the LOD split can change.
+    const key = `${config.lod}|${camera.position.x.toFixed(1)}|${camera.position.z.toFixed(1)}`;
+    if (key === lastKey.current) return;
+    lastKey.current = key;
     let nh = 0;
     let nl = 0;
     for (const e of equipment) {
