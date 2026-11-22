@@ -4,6 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEditorStore } from './editorStore';
 import { gridLinePositions } from './gridLayout';
+import { fitCamera, labelLayout } from './cameraFit';
 import { formatLength } from './units';
 
 /** Floor plan (x, y) maps to three's ground plane (x, z); y is up. */
@@ -62,44 +63,40 @@ type Vec3 = [number, number, number];
 function DimensionLabels() {
   const floor = useEditorStore((s) => s.floor);
   const unit = useEditorStore((s) => s.unit);
-  const h = Math.max(floor.width, floor.length) * 0.035;
-  const off = h * 1.2;
+  const { textHeight: h, widthLabel, lengthLabel, gridLabel } = labelLayout(floor);
   return (
     <>
-      <TextLabel
-        text={formatLength(floor.width, unit)}
-        position={[floor.width / 2, 0, -off]}
-        height={h}
-      />
-      <TextLabel
-        text={formatLength(floor.length, unit)}
-        position={[-off * 2, 0, floor.length / 2]}
-        height={h}
-      />
+      <TextLabel text={formatLength(floor.width, unit)} position={widthLabel} height={h} />
+      <TextLabel text={formatLength(floor.length, unit)} position={lengthLabel} height={h} />
       <TextLabel
         text={`grid ${formatLength(floor.gridSpacing, unit)}`}
-        position={[floor.width / 2, 0, floor.length + off]}
+        position={gridLabel}
         height={h}
       />
     </>
   );
 }
 
-/** Refits the camera when the floor size changes (the Canvas camera prop only applies once). */
+/**
+ * Refits the camera when the floor size or the canvas size changes, so the floor and its labels
+ * fill the canvas whatever its aspect (the Canvas camera prop only applies once).
+ */
 function CameraRig() {
   const width = useEditorStore((s) => s.floor.width);
   const length = useEditorStore((s) => s.floor.length);
+  const size = useThree((s) => s.size);
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as {
     target: { set(...a: number[]): void };
     update(): void;
   } | null;
   useEffect(() => {
-    const reach = Math.max(width, length);
-    camera.position.set(width / 2, reach * 0.9, length / 2 + reach * 0.9);
-    controls?.target.set(width / 2, 0, length / 2);
+    const fovDeg = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
+    const fit = fitCamera({ width, length, aspect: size.width / size.height, fovDeg });
+    camera.position.set(...fit.position);
+    controls?.target.set(...fit.target);
     controls?.update();
-  }, [width, length, camera, controls]);
+  }, [width, length, size.width, size.height, camera, controls]);
   return null;
 }
 
