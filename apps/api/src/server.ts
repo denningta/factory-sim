@@ -1,5 +1,6 @@
 import fastifyCookie from '@fastify/cookie';
-import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
+import Fastify, { type FastifyReply } from 'fastify';
 import type { AppContext } from './context';
 import { dummyHash } from './auth/passwords';
 import { createLoginThrottle, type LoginThrottle } from './auth/rate-limit';
@@ -37,9 +38,12 @@ export function buildServer(deps: ServerDeps) {
     throttle: deps.throttle ?? createLoginThrottle(() => now().getTime()),
   };
 
-  // Behind a TLS-terminating proxy (COOKIE_SECURE=true) take the client IP from X-Forwarded-For,
-  // so the sign-in throttle is per client rather than per proxy. See docs/deploy.md.
-  const app = Fastify({ logger: false, trustProxy: deps.config.cookieSecure });
+  // Only the listed proxies may set X-Forwarded-For; otherwise any client could forge its IP and
+  // dodge the sign-in throttle. An empty list trusts nobody. See docs/deploy.md.
+  const app = Fastify({
+    logger: false,
+    trustProxy: deps.config.trustProxy.length > 0 ? deps.config.trustProxy : false,
+  });
   // Pay the argon2 cost of the dummy hash now, not on the first unknown-email sign-in.
   void dummyHash();
   void app.register(fastifyCookie);
@@ -57,9 +61,20 @@ export function buildServer(deps: ServerDeps) {
     const headers = error instanceof HttpError ? error.headers : {};
     return reply.code(status).headers(headers).send(body);
   });
-  app.setNotFoundHandler((_req, reply) =>
-    reply.code(404).send(new HttpError('not_found', 'Not found').body()),
-  );
+  const notFound = (reply: FastifyReply) =>
+    reply.code(404).send(new HttpError('not_found', 'Not found').body());
+  const webRoot = deps.webRoot;
+  if (webRoot) {
+    void app.register(fastifyStatic, { root: webRoot });
+  }
+  app.setNotFoundHandler((req, reply) => {
+    const path = req.url.split('?')[0] ?? '';
+    // Only extension-less GET navigations fall back to the SPA. API paths and file-like paths
+    // stay 404s so a bad deploy shows up as a 404 rather than HTML where JS was expected.
+    const isRoute = path !== '/api' && !path.startsWith('/api/') && !/\.[^/]+$/.test(path);
+    if (webRoot && req.method === 'GET' && isRoute) return reply.sendFile('index.html');
+    return notFound(reply);
+  });
 
   // Liveness probe used by the container healthcheck.
   app.get('/health', () => ({ status: 'ok' }));

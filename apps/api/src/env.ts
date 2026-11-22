@@ -1,7 +1,16 @@
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 // Must match .env.example: shipping with this value would make sessions forgeable.
 const SECRET_PLACEHOLDER = 'change-me-to-a-long-random-string';
+
+function isIpOrCidr(v: string): boolean {
+  const [addr = '', prefix, ...rest] = v.split('/');
+  const family = isIP(addr);
+  if (family === 0 || rest.length > 0) return false;
+  if (prefix === undefined) return true;
+  return /^\d+$/.test(prefix) && Number(prefix) <= (family === 4 ? 32 : 128);
+}
 
 const envSchema = z.object({
   // Unset means "use the default"; an empty or non-numeric value is a misconfiguration.
@@ -34,6 +43,12 @@ const envSchema = z.object({
     .default(7),
   // Set to "true" when a TLS-terminating proxy fronts the app, so the cookie gets `Secure`.
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
+  // Explicit list, never "any": a blanket trust lets any client forge X-Forwarded-For.
+  TRUST_PROXY: z
+    .string()
+    .transform((v) => (v.trim() === '' ? [] : v.split(',').map((x) => x.trim())))
+    .refine((list) => list.every(isIpOrCidr), 'must be a comma-separated list of IPs or CIDRs')
+    .default([]),
 });
 
 export interface AppEnv {
@@ -62,6 +77,6 @@ export function loadEnv(env: Record<string, string | undefined>): AppEnv {
     sessionIdleHours: d.SESSION_IDLE_HOURS,
     sessionMaxDays: d.SESSION_MAX_DAYS,
     cookieSecure: d.COOKIE_SECURE === 'true',
-    trustProxy: [],
+    trustProxy: d.TRUST_PROXY,
   };
 }

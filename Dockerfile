@@ -11,6 +11,8 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY apps apps
 COPY packages packages
+# Production bundle, served by the API; no Vite dev server runs in the container.
+RUN pnpm --filter @factory-sim/web build
 # Run unprivileged; node_modules stays root-owned and read-only to the app.
 USER node
 ENV PORT=8080
