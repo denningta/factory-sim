@@ -26,24 +26,28 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:coverage
 
-  docker:
-    name: docker images
+  compose-smoke:
+    # Starts the real stack (#42): the image builds, Postgres becomes healthy, the app
+    # starts and answers /health. Supersedes the old main-only image build.
+    name: compose smoke
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      COMPOSE_PROJECT_NAME: ci-smoke
     steps:
       - uses: actions/checkout@v6
-      - name: Detect Dockerfiles
-        id: detect
-        run: |
-          if [ -f docker-compose.yml ] && ls apps/*/Dockerfile Dockerfile >/dev/null 2>&1; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "No Dockerfile/compose yet (arrives with PL-1); skipping image build."
-          fi
-      - name: Build images
-        if: steps.detect.outputs.present == 'true'
+      - name: Prepare .env from .env.example
         run: |
           cp .env.example .env
-          docker compose build
+          # A real secret, so this keeps passing once startup refuses the placeholder (#43).
+          sed -i "s/^SESSION_SECRET=.*/SESSION_SECRET=$(openssl rand -hex 32)/" .env
+      - name: Start stack and wait for healthchecks
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: /health answers on the published port
+        run: curl -fsS "http://localhost:$(sed -n 's/^APP_PORT=//p' .env)/health"
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
