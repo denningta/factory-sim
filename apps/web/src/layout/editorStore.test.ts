@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { createProject } from '@factory-sim/schema';
 import { createEditorStore } from './editorStore';
 import { fromDisplay } from './units';
 
@@ -66,5 +67,18 @@ describe('selected library type (EQ-1)', () => {
     store.getState().selectType('base-sink');
     store.getState().toggleSnap();
     expect(localStorage.getItem('factory-sim:editor-prefs')).not.toContain('base-sink');
+  });
+});
+
+describe('loadDocument (SC-1)', () => {
+  it('AC1: opening a project replaces floor and equipment and clears selection', () => {
+    const store = createEditorStore();
+    store.getState().placeEquipment('workstation', { x: 2, y: 2 });
+    store.getState().selectEquipment('eq-1', false);
+    const doc = { ...createProject(), floor: { width: 44, length: 33, gridSpacing: 1 } };
+    store.getState().loadDocument(doc);
+    expect(store.getState().floor).toEqual(doc.floor);
+    expect(store.getState().equipment).toEqual([]);
+    expect(store.getState().selectedIds).toEqual([]);
   });
 });
