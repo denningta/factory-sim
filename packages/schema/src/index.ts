@@ -14,6 +14,7 @@ import { CURRENT_SCHEMA_VERSION, projectSchema, type Project } from './project';
 import { createUpgrader, validate, type ParseResult, type UpgradeStep } from './upgrade';
 
 export * from './project';
+export * from './http';
 export { createUpgrader, formatIssues, type ParseResult, type UpgradeStep } from './upgrade';
 
 /** Keyed by the version each step upgrades from. Empty while v1 is the only version. */

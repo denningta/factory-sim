@@ -24,3 +24,8 @@ issue: 22
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Contract (lead):** request, response and error shapes, plus the route table, are in `packages/schema/src/http.ts`. Validate requests with them and generate OpenAPI from them (ADR-0003). Don't hand-write shapes.
+- **Defaults (product owner can change):** passwords need at least 12 characters (`PASSWORD_MIN_LENGTH`). Sessions expire after **8 hours idle**, configurable with `SESSION_IDLE_HOURS`, which is validated in `apps/api/src/env.ts` and documented in `.env.example`.
+- Cookie: httpOnly, `SameSite=Lax`, `Secure` when served over HTTPS. Session rows live in Postgres (ADR-0011). Disabling a user deletes their sessions. Wrong email and wrong password both answer `unauthorized` with the same message.
+- The first-admin setup is allowed only while no admin exists. After that it answers 409 `conflict`.

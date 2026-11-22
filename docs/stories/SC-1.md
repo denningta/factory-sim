@@ -23,3 +23,8 @@ issue: 27
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Contract (lead):** shapes and routes are in `packages/schema/src/http.ts`. Reads go through `loadProject`, so the client always gets the current schema version, and writes go through `validateProject` (via `projectDetailSchema` and `updateProjectRequestSchema`).
+- **Privacy (ADR-0011):** projects are private to their creator. Another user's project id answers 404. This needs an `owner_id` column, added by a migration in this story.
+- **Autosave:** `PATCH` with `baseUpdatedAt`. If the project changed since then, answer 409 `conflict`, and the web app tells the user instead of overwriting.
+- **Depends on PL-6** for sessions and user ids.
