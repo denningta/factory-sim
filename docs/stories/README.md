@@ -14,6 +14,7 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [PL-5](PL-5.md) | Platform          | 3   | Must     | —          |
 | [LE-1](LE-1.md) | Layout editor     | 5   | Must     | PL-5       |
 | [SE-1](SE-1.md) | Simulation engine | 8   | Must     | —          |
+| [PL-7](PL-7.md) | Platform          | 2   | Must     | PL-1, PL-2 |
 
 ## Sprint 2: Build a layout: place and edit equipment, sign in, save projects (32 pts)
 
