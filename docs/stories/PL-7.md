@@ -23,7 +23,7 @@ _Follow-up from the post-merge review of PL-1 (#41); the lead added it with prod
 - [ ] `docs/deploy.md`:
   - the health-check example uses the configured port
   - the backup command works on the host and writes to a file
-  - it explains that the database password appears in both `POSTGRES_PASSWORD` and `DATABASE_URL` and must be changed in both
+  - it explains that the database password appears in both `POSTGRES_PASSWORD` and `DATABASE_URL` and must be changed in both, **or** the configuration derives one from the other
 
 ## Notes
 
