@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   BASE_EQUIPMENT_TYPES,
+  productSchema,
   createProject,
   equipmentSchema,
   floorSchema,
@@ -46,6 +47,11 @@ function savePrefs(p: Prefs): void {
     // Preferences are a convenience; ignore failures.
   }
 }
+
+/** Distinct from the neutral equipment colors so products read as products in the 3D view. */
+const PRODUCT_COLORS = ['#2563eb', '#c2410c', '#16a34a', '#9333ea', '#ca8a04', '#db2777'];
+/** Part numbers are unique ignoring case; the schema trims, so compare trimmed. */
+const partKey = (p: { partNumber: string }) => p.partNumber.trim().toLowerCase();
 
 const toRadians = (deg: number) => (deg * Math.PI) / 180;
 /** Keeps rotations in [0, 2π) so repeated 90° steps don't grow without bound. */
@@ -168,8 +174,13 @@ export function createEditorStore() {
     interface Snapshot {
       floor: Floor;
       equipment: Equipment[];
+      products: Product[];
     }
-    const snapshot = (): Snapshot => ({ floor: get().floor, equipment: get().equipment });
+    const snapshot = (): Snapshot => ({
+      floor: get().floor,
+      equipment: get().equipment,
+      products: get().products,
+    });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
     /** Set between beginEdit and endEdit; `pushed` once its first write took the snapshot. */
@@ -210,13 +221,60 @@ export function createEditorStore() {
       equipment: [],
       products: [],
       addProduct: () => {
-        throw new Error('not implemented');
+        const { products } = get();
+        const ids = new Set(products.map((p) => p.id));
+        const parts = new Set(products.map(partKey));
+        // Count up past anything taken so deleting a product never makes a default collide.
+        let n = products.length + 1;
+        while (ids.has(`prod-${n}`) || parts.has(partKey({ partNumber: `P-${n}` }))) n++;
+        const product: Product = {
+          id: `prod-${n}`,
+          partNumber: `P-${n}`,
+          name: `Product ${n}`,
+          color: PRODUCT_COLORS[(n - 1) % PRODUCT_COLORS.length]!,
+          routing: [],
+        };
+        record();
+        set({ products: [...products, product] });
+        return product;
       },
-      updateProduct: () => {
-        throw new Error('not implemented');
+      updateProduct: (id, patch) => {
+        const { products } = get();
+        const current = products.find((p) => p.id === id);
+        if (!current) return { ok: false, error: 'Product not found' };
+        // The schema accepts a whitespace-only name; a blank label is useless in the UI.
+        if (patch.name !== undefined && patch.name.trim() === '')
+          return { ok: false, field: 'name', error: 'Name cannot be empty' };
+        const parsed = productSchema.safeParse({ ...current, ...patch });
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0]!;
+          const field = String(issue.path[0]);
+          const label = { partNumber: 'Part number', name: 'Name', color: 'Color' }[field];
+          return {
+            ok: false,
+            field,
+            error:
+              field === 'color'
+                ? 'Pick a color'
+                : label
+                  ? `${label} cannot be empty`
+                  : issue.message,
+          };
+        }
+        if (products.some((p) => p.id !== id && partKey(p) === partKey(parsed.data)))
+          return {
+            ok: false,
+            field: 'partNumber',
+            error: `Part number "${parsed.data.partNumber}" is already used`,
+          };
+        record();
+        set({ products: products.map((p) => (p.id === id ? parsed.data : p)) });
+        return { ok: true };
       },
-      deleteProduct: () => {
-        throw new Error('not implemented');
+      deleteProduct: (id) => {
+        if (!get().products.some((p) => p.id === id)) return;
+        record();
+        set({ products: get().products.filter((p) => p.id !== id) });
       },
       selectedIds: [],
       placeEquipment: (typeId, point) => {
@@ -337,6 +395,7 @@ export function createEditorStore() {
         set({
           floor: doc.floor,
           equipment: doc.equipment,
+          products: doc.products,
           selectedIds: [],
           selectedTypeId: null,
           canUndo: false,

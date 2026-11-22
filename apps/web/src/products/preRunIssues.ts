@@ -5,6 +5,9 @@ export interface PreRunIssue {
   message: string;
 }
 
-export function preRunIssues(_project: Pick<Project, 'products'>): PreRunIssue[] {
-  throw new Error('not implemented');
+/** Reasons a run can't start yet. The run button (SIM) disables itself while this is non-empty. */
+export function preRunIssues(project: Pick<Project, 'products'>): PreRunIssue[] {
+  return project.products.length === 0
+    ? [{ code: 'no_products', message: 'A run needs at least one product. Add one first.' }]
+    : [];
 }

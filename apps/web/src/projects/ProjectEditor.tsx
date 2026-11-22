@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
 import { Editor } from '../Editor';
+import { ProductsPanel } from '../products/ProductsPanel';
 import { useEditorStore } from '../layout/editorStore';
 import { createAutosaver, type SaveStatus } from './autosave';
 
@@ -23,6 +24,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   const [stop, setStop] = useState<ApiRequestError | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState<'layout' | 'products'>('layout');
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +35,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       (p) => {
         if (cancelled) return;
         let revision = p.revision;
-        // Products, routings etc. aren't edited yet; carry them through unchanged.
+        // Routings, cycle times etc. aren't edited yet; carry them through unchanged.
         let base: Project = p.document;
         useEditorStore.getState().loadDocument(base);
         setName(p.name);
@@ -45,15 +47,23 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             setStop(s === 'stopped' || s === 'conflict' ? (err ?? null) : null);
           },
           save: async () => {
-            const { floor, equipment } = useEditorStore.getState();
-            const document = { ...base, floor, equipment };
+            const { floor, equipment, products } = useEditorStore.getState();
+            // A deleted product's cycle times would reference an unknown product.
+            const known = new Set(products.map((p) => p.id));
+            const cycleTimes = base.cycleTimes.filter((c) => known.has(c.productId));
+            const document = { ...base, floor, equipment, products, cycleTimes };
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
             base = document;
           },
         });
         unsubscribe = useEditorStore.subscribe((s, prev) => {
-          if (s.floor !== prev.floor || s.equipment !== prev.equipment) saver?.markDirty();
+          if (
+            s.floor !== prev.floor ||
+            s.equipment !== prev.equipment ||
+            s.products !== prev.products
+          )
+            saver?.markDirty();
         });
         setReady(true);
       },
@@ -89,6 +99,13 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       <header style={{ display: 'flex', gap: 12, padding: '6px 12px', font: '14px sans-serif' }}>
         <button onClick={onClose}>← Projects</button>
         <strong>{name}</strong>
+        <nav aria-label="Screens" style={{ display: 'flex', gap: 4 }}>
+          {(['layout', 'products'] as const).map((t) => (
+            <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
+              {t === 'layout' ? 'Layout' : 'Products'}
+            </button>
+          ))}
+        </nav>
         <span
           role="status"
           style={{
@@ -109,7 +126,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       </header>
       {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
       <div inert={locked} style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}>
-        <Editor readOnly={locked} />
+        {tab === 'layout' ? <Editor readOnly={locked} /> : <ProductsPanel />}
       </div>
     </div>
   );
