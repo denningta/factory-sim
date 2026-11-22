@@ -28,6 +28,7 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [EQ-2](EQ-2.md) | Equipment library    | 3   | Must     | EQ-1             |
 | [WS-1](WS-1.md) | Workstation config   | 3   | Must     | LE-2             |
 | [SC-1](SC-1.md) | Scenarios & projects | 5   | Must     | PL-2, PL-3, PL-6 |
+| [PL-8](PL-8.md) | Platform             | 2   | Must     | PL-1             |
 
 ## Sprint 3: Mixed-model data: products, routings, cycle times, connections, buffers (24 pts)
 
@@ -38,6 +39,7 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [PR-3](PR-3.md) | Products & routings | 5   | Must     | PR-2       |
 | [FL-1](FL-1.md) | Flow & connections  | 5   | Must     | LE-2       |
 | [FL-2](FL-2.md) | Flow & connections  | 3   | Must     | FL-1       |
+| [PL-9](PL-9.md) | Platform            | 3   | Must     | PL-6       |
 
 ## Sprint 4: Configure the line: distributions, techs, release rules, routing at splits (25 pts)
 
