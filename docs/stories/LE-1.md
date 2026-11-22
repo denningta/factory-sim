@@ -23,4 +23,8 @@ issue: 12
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- Floor lives in a Zustand store (`apps/web/src/layout/editorStore.ts`) as the schema's `Floor` (meters); edits are validated with `floorSchema` plus a max-grid-lines guard (500 per axis).
+- Unit (default ft) and snap (default on) are UI prefs kept in the store and `localStorage`, never in the document. ft↔m conversion (exact 0.3048) happens only in `units.ts`, at the input/label boundary.
+- Snap has no consumer until LE-2 (placement); LE-1 provides the toggle and `snapToGrid()`.
+- Complies with ADR-0014: no per-frame React work; the grid is memoized geometry and the labels re-render only when the floor or unit changes.
+- The web app had no scaffold; this story adds Vite, React, R3F, drei and Zustand to `apps/web`.
