@@ -56,22 +56,31 @@ describe('HTTP contract: auth (PL-6)', () => {
 
 describe('HTTP contract: projects (SC-1)', () => {
   it('returns the project document validated against the current schema', () => {
-    const detail = { id: uuid, name: 'Line 1', updatedAt: now, document: createProject() };
+    const detail = {
+      id: uuid,
+      name: 'Line 1',
+      updatedAt: now,
+      revision: 0,
+      document: createProject(),
+    };
     expect(projectDetailSchema.safeParse(detail).success).toBe(true);
     const stale = { ...detail, document: { ...createProject(), schemaVersion: 0 } };
     expect(projectDetailSchema.safeParse(stale).success).toBe(false);
   });
 
-  it('requires baseUpdatedAt on updates so autosave cannot silently overwrite', () => {
+  it('requires baseRevision on updates so autosave cannot silently overwrite', () => {
     expect(updateProjectRequestSchema.safeParse({ name: 'Renamed' }).success).toBe(false);
-    expect(
-      updateProjectRequestSchema.safeParse({ name: 'Renamed', baseUpdatedAt: now }).success,
-    ).toBe(true);
+    expect(updateProjectRequestSchema.safeParse({ name: 'Renamed', baseRevision: 3 }).success).toBe(
+      true,
+    );
+    expect(updateProjectRequestSchema.safeParse({ name: 'X', baseRevision: 1.5 }).success).toBe(
+      false,
+    );
   });
 
   it('rejects an update with nothing to change, and blank names', () => {
-    expect(updateProjectRequestSchema.safeParse({ baseUpdatedAt: now }).success).toBe(false);
-    expect(updateProjectRequestSchema.safeParse({ name: '   ', baseUpdatedAt: now }).success).toBe(
+    expect(updateProjectRequestSchema.safeParse({ baseRevision: 3 }).success).toBe(false);
+    expect(updateProjectRequestSchema.safeParse({ name: '   ', baseRevision: 3 }).success).toBe(
       false,
     );
   });

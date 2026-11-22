@@ -26,6 +26,18 @@ issue: 22
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - **Contract (lead):** request, response and error shapes, plus the route table, are in `packages/schema/src/http.ts`. Validate requests with them and generate OpenAPI from them (ADR-0003). Don't hand-write shapes.
-- **Defaults (product owner can change):** passwords need at least 12 characters (`PASSWORD_MIN_LENGTH`). Sessions expire after **8 hours idle**, configurable with `SESSION_IDLE_HOURS`, which is validated in `apps/api/src/env.ts` and documented in `.env.example`.
-- Cookie: httpOnly, `SameSite=Lax`, `Secure` when served over HTTPS. Session rows live in Postgres (ADR-0011). Disabling a user deletes their sessions. Wrong email and wrong password both answer `unauthorized` with the same message.
-- The first-admin setup is allowed only while no admin exists. After that it answers 409 `conflict`.
+- **Defaults (product owner can change):**
+  - Passwords need at least 12 characters (`PASSWORD_MIN_LENGTH`).
+  - Sessions expire after **8 hours idle** (`SESSION_IDLE_HOURS`) and after **7 days** in any case (`SESSION_MAX_DAYS`).
+  - Both are validated in `apps/api/src/env.ts` and documented in `.env.example`.
+- **Sessions (ADR-0011):**
+  - Session ids are ≥ 128 bits from a CSPRNG. Postgres stores a **hash** of the id, never the raw value.
+  - A new id is issued on login (no fixation).
+  - Cookie: httpOnly, `SameSite=Lax`. Set `Secure` behind HTTPS: use Fastify `trustProxy` or an explicit `COOKIE_SECURE` env, and document it in `deploy.md` for TLS-terminating proxies.
+  - The role and disabled flag are read from the DB on each request, so demoting or disabling takes effect at once. Disabling a user also deletes their sessions.
+- **Sign-in:**
+  - Wrong email and wrong password answer `unauthorized` with the same message, **and the same cost**: for an unknown email, verify against a fixed dummy argon2id hash.
+  - Disabled users get the same generic answer.
+  - Throttle repeated failures per email and IP with backoff and answer `rate_limited` (429). Keep it simple and in memory: one app instance.
+- **CSRF:** only accept `application/json` on mutating routes. Don't register form or multipart parsers.
+- **First-admin setup:** allowed only while no admin exists, enforced atomically (transaction plus a unique or partial constraint), so concurrent setups can't create two admins. After that it answers 409 `conflict`. `deploy.md`: complete setup right after the first start, because whoever reaches a fresh install first becomes admin.

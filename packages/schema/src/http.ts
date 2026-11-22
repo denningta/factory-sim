@@ -24,6 +24,9 @@ import { projectSchema } from './project';
  * | PATCH  /api/projects/:id   | UpdateProjectRequest | ProjectSummary           | SC-1  |
  * | DELETE /api/projects/:id   | —                    | 204                      | SC-1  |
  *
+ * Mutating routes accept only `Content-Type: application/json` (no form parsers), which
+ * together with SameSite cookies blocks cross-site form posts.
+ *
  * Errors always use ApiError. Projects are private to the user who created them
  * (ADR-0011): another user's project id answers 404, not 403, so ids don't leak.
  */
@@ -101,6 +104,12 @@ export const projectSummarySchema = z.strictObject({
   id: projectIdSchema,
   name: projectNameSchema,
   updatedAt: isoDateTime,
+  /**
+   * Increments on every successful update; the concurrency token for autosave. An
+   * integer, not `updatedAt`, because Postgres stores microseconds and JS keeps
+   * milliseconds, so timestamps never compare equal after a round trip.
+   */
+  revision: z.number().int().nonnegative(),
 });
 
 /** `document` is always the current schema version: the API upgrades on read (loadProject). */
@@ -118,15 +127,15 @@ export const projectListResponseSchema = z.strictObject({
 export const createProjectRequestSchema = z.strictObject({ name: projectNameSchema });
 
 /**
- * Rename and/or autosave. `baseUpdatedAt` is the `updatedAt` the client last saw. If the
- * project changed since then (e.g. edited in another tab), the API answers 409 `conflict`
- * instead of silently overwriting.
+ * Rename and/or autosave. `baseRevision` is the `revision` the client last saw. The API
+ * updates only `WHERE revision = baseRevision` (then increments it), so a project changed
+ * since then, e.g. in another tab, answers 409 `conflict` instead of being overwritten.
  */
 export const updateProjectRequestSchema = z
   .strictObject({
     name: projectNameSchema.optional(),
     document: projectSchema.optional(),
-    baseUpdatedAt: isoDateTime,
+    baseRevision: z.number().int().nonnegative(),
   })
   .refine((u) => u.name !== undefined || u.document !== undefined, {
     message: 'Nothing to update',
@@ -139,7 +148,9 @@ export const apiErrorCodeSchema = z.enum([
   'unauthorized', // 401: no or expired session, or wrong email/password
   'forbidden', // 403: signed in but not allowed (e.g. not an admin)
   'not_found', // 404
-  'conflict', // 409: setup already done, email taken, stale baseUpdatedAt
+  'payload_too_large', // 413: body over the API's limit (Fastify default 1 MiB)
+  'conflict', // 409: setup already done, email taken, stale baseRevision
+  'rate_limited', // 429: too many failed sign-ins; retry later
   'internal', // 500: details are logged, never returned
 ]);
 
