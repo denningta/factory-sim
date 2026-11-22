@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 interface Service {
   restart?: string;
+  volumes?: string[];
   ports?: string[];
   healthcheck?: { test?: string[] };
   depends_on?: Record<string, { condition?: string }>;
@@ -22,7 +23,8 @@ describe('docker-compose.yml', () => {
   });
 
   it('AC1: postgres data lives in a named volume', () => {
-    expect(Object.keys(compose.volumes ?? {})).toHaveLength(1);
+    expect(Object.keys(compose.volumes ?? {})).toEqual(['pgdata']);
+    expect(compose.services.postgres?.volumes).toContain('pgdata:/var/lib/postgresql/data');
   });
 
   it('AC2: postgres has a healthcheck and the app waits for it to be healthy', () => {
