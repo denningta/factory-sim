@@ -83,6 +83,23 @@ describe('loadDocument (SC-1)', () => {
   });
 });
 
+describe('loadDocument resets session state (SC-1, review N4)', () => {
+  it('clears the library preview and selection, and edits then apply to the loaded equipment', () => {
+    const store = createEditorStore();
+    const a = store.getState().placeEquipment('base-workstation', { x: 4, y: 4 })!;
+    store.getState().selectEquipment(a.id, false);
+    store.getState().selectType('base-sink');
+    const other = createEditorStore();
+    const b = other.getState().placeEquipment('base-buffer', { x: 6, y: 6 })!;
+    store.getState().loadDocument({ ...createProject(), equipment: [b] });
+    expect(store.getState().selectedTypeId).toBeNull();
+    expect(store.getState().selectedIds).toEqual([]);
+    expect(store.getState().updateEquipment(a.id, { name: 'Ghost' }).ok).toBe(false);
+    expect(store.getState().updateEquipment(b.id, { name: 'Renamed' }).ok).toBe(true);
+    expect(store.getState().equipment.map((e) => e.name)).toEqual(['Renamed']);
+  });
+});
+
 describe('updateEquipment (WS-1)', () => {
   const placed = () => {
     const s = createEditorStore();
