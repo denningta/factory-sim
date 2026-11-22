@@ -12,10 +12,15 @@ import { userRoutes } from './routes/users';
 
 export interface ServerDeps {
   db: Db;
-  config: Pick<AppEnv, 'sessionSecret' | 'sessionIdleHours' | 'sessionMaxDays' | 'cookieSecure'>;
+  config: Pick<
+    AppEnv,
+    'sessionSecret' | 'sessionIdleHours' | 'sessionMaxDays' | 'cookieSecure' | 'trustProxy'
+  >;
   /** Injected so tests can move time without sleeping. */
   now?: () => Date;
   throttle?: LoginThrottle;
+  /** Directory holding the built web app; when set, the API also serves it. */
+  webRoot?: string;
 }
 
 export function buildServer(deps: ServerDeps) {

@@ -7,7 +7,9 @@ import { buildServer } from './server';
 export const PASSWORD = 'correct horse battery';
 
 /** Real Postgres (PGlite) plus a movable clock; shared by the route tests. */
-export async function testApp(overrides: { idleHours?: number; maxDays?: number } = {}) {
+export async function testApp(
+  overrides: { idleHours?: number; maxDays?: number; webRoot?: string; trustProxy?: string[] } = {},
+) {
   const db = drizzle(new PGlite());
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   let time = new Date('2026-01-01T09:00:00Z').getTime();
@@ -18,8 +20,10 @@ export async function testApp(overrides: { idleHours?: number; maxDays?: number 
       sessionIdleHours: overrides.idleHours ?? 8,
       sessionMaxDays: overrides.maxDays ?? 7,
       cookieSecure: false,
+      trustProxy: overrides.trustProxy ?? [],
     },
     now: () => new Date(time),
+    ...(overrides.webRoot ? { webRoot: overrides.webRoot } : {}),
   });
   await app.ready();
 

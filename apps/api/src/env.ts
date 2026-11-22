@@ -43,6 +43,8 @@ export interface AppEnv {
   sessionIdleHours: number;
   sessionMaxDays: number;
   cookieSecure: boolean;
+  /** IPs/CIDRs of reverse proxies whose X-Forwarded-For is believed. */
+  trustProxy: string[];
 }
 
 /** Validates the process environment, throwing one readable message listing every problem. */
@@ -60,5 +62,6 @@ export function loadEnv(env: Record<string, string | undefined>): AppEnv {
     sessionIdleHours: d.SESSION_IDLE_HOURS,
     sessionMaxDays: d.SESSION_MAX_DAYS,
     cookieSecure: d.COOKIE_SECURE === 'true',
+    trustProxy: [],
   };
 }
