@@ -6,7 +6,8 @@ priority: Must
 sprint: 5
 depends_on: [SE-1, PL-5]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 30
 ---
 
 # SE-3: See parts move through the line in 3D

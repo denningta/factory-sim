@@ -6,7 +6,8 @@ priority: Must
 sprint: 5
 depends_on: [SE-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 31
 ---
 
 # SE-4: Set warm-up period, run length and random seed

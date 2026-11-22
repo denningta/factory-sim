@@ -6,7 +6,8 @@ priority: Must
 sprint: 6
 depends_on: [EQ-1, WS-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 6
 ---
 
 # EQ-3: Create custom equipment types (e.g., "5-axis CNC")

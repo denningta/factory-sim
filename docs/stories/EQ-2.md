@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [EQ-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 5
 ---
 
 # EQ-2: Set each object's real footprint and height

@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: []
 builder_model: opus
-issue:
+owner: builder
+issue: 28
 ---
 
 # SE-1: A discrete-event simulation engine in a shared TypeScript package

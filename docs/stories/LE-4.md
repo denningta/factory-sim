@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [LE-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 15
 ---
 
 # LE-4: Orbit in 3D and switch to a top-down 2D view

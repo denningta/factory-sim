@@ -6,7 +6,8 @@ priority: Must
 sprint: 4
 depends_on: [PR-3]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 36
 ---
 
 # WS-2: Cycle times as fixed values or statistical distributions

@@ -52,7 +52,7 @@ def main():
         if not i or i["state"] == "CLOSED" or (sprint and s["sprint"] != sprint):
             continue
         row = {"id": s["id"], "issue": i["number"], "sprint": int(s["sprint"]), "points": s["points"],
-               "title": s["title"], "builder_model": s.get("builder_model", "sonnet")}
+               "title": s["title"], "builder_model": "lead" if s.get("owner") == "lead" else s.get("builder_model", "sonnet")}
         if i["labels"] & BUSY:
             busy.append({**row, "status": sorted(i["labels"] & BUSY)})
         elif all(d in closed for d in s["depends_on"]):

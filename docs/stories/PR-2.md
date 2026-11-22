@@ -6,7 +6,8 @@ priority: Must
 sprint: 3
 depends_on: [PR-1, EQ-1]
 builder_model: opus
-issue:
+owner: builder
+issue: 24
 ---
 
 # PR-2: Define each product's routing (ordered operations)

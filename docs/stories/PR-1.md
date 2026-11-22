@@ -6,7 +6,8 @@ priority: Must
 sprint: 3
 depends_on: [SC-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 23
 ---
 
 # PR-1: Define the end items built on my line

@@ -6,7 +6,8 @@ priority: Must
 sprint: 3
 depends_on: [LE-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 8
 ---
 
 # FL-1: Draw directed connections between equipment

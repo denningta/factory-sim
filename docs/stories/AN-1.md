@@ -6,7 +6,8 @@ priority: Must
 sprint: 6
 depends_on: [SE-4]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 1
 ---
 
 # AN-1: Throughput, WIP and lead time by product

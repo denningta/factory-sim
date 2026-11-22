@@ -6,7 +6,8 @@ priority: Must
 sprint: 4
 depends_on: [PR-2, FL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 10
 ---
 
 # FL-3: Parts to follow their product's routing where flow splits

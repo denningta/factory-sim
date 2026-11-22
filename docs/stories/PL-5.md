@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: []
 builder_model: sonnet
-issue:
+owner: builder
+issue: 21
 ---
 
 # PL-5: Spike: Prove the three.js rendering approach

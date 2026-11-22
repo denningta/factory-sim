@@ -6,7 +6,8 @@ priority: Must
 sprint: 5
 depends_on: [TE-1, SE-3]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 34
 ---
 
 # TE-2: Techs to walk between their stations in the 3D view

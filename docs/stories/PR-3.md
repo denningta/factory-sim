@@ -6,7 +6,8 @@ priority: Must
 sprint: 3
 depends_on: [PR-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 25
 ---
 
 # PR-3: Enter cycle time per product per station

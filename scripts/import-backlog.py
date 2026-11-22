@@ -15,6 +15,8 @@ M = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 EXTRA_DEPS = {"LE-1": ["PL-5"]}
 # Stories whose builder should run on Opus (agent-team-setup.md).
 OPUS = {"SE-1", "PR-2"}
+# Stories the lead implements itself (shared contracts).
+LEAD_OWNED = {"PL-3"}
 
 
 def title(story):
@@ -86,6 +88,7 @@ def main():
             f"sprint: {s['sprint']}",
             f"depends_on: [{', '.join(s['deps'])}]",
             f"builder_model: {model}",
+            f"owner: {'lead' if s['id'] in LEAD_OWNED else 'builder'}",
             f"issue: {issue}",
             "---",
             "",

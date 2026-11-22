@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [LE-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 35
 ---
 
 # WS-1: A properties panel for the selected object

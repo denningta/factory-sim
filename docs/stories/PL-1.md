@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: []
 builder_model: sonnet
-issue:
+owner: builder
+issue: 17
 ---
 
 # PL-1: Deploy the whole app with one Docker Compose command

@@ -6,7 +6,8 @@ priority: Should
 sprint: 6
 depends_on: [EQ-3, FL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 7
 ---
 
 # EQ-4: Define where parts enter and leave a piece of equipment

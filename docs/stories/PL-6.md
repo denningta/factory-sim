@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [PL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 22
 ---
 
 # PL-6: Sign in with my own account

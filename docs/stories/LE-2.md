@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [LE-1, EQ-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 13
 ---
 
 # LE-2: Place, move, rotate and delete equipment

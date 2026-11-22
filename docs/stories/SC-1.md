@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [PL-2, PL-3, PL-6]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 27
 ---
 
 # SC-1: Save and open projects on the server

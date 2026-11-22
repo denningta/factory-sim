@@ -6,7 +6,8 @@ priority: Must
 sprint: 6
 depends_on: [SE-4, TE-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 2
 ---
 
 # AN-2: Utilization by station and by tech

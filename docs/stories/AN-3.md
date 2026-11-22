@@ -6,7 +6,8 @@ priority: Must
 sprint: 6
 depends_on: [AN-2, SE-3]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 3
 ---
 
 # AN-3: Stations colored by state and the bottleneck flagged

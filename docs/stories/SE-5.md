@@ -6,7 +6,8 @@ priority: Must
 sprint: 5
 depends_on: [PR-3, TE-1, FL-3]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 32
 ---
 
 # SE-5: The model checked before a run

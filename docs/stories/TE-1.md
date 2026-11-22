@@ -6,7 +6,8 @@ priority: Must
 sprint: 4
 depends_on: [WS-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 33
 ---
 
 # TE-1: Create technicians and assign them to stations

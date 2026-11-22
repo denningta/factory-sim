@@ -6,7 +6,8 @@ priority: Should
 sprint: 4
 depends_on: [FL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 11
 ---
 
 # FL-4: Set transfer time on a connection

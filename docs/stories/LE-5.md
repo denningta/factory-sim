@@ -6,7 +6,8 @@ priority: Should
 sprint: 6
 depends_on: [LE-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 16
 ---
 
 # LE-5: Overlapping equipment flagged

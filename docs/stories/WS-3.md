@@ -6,7 +6,8 @@ priority: Must
 sprint: 4
 depends_on: [SE-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 37
 ---
 
 # WS-3: Set a station's capacity and batch size

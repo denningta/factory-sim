@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: [LE-2]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 14
 ---
 
 # LE-3: Undo and redo

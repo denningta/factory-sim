@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: [PL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 18
 ---
 
 # PL-2: Data to survive upgrades

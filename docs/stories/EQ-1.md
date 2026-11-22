@@ -6,7 +6,8 @@ priority: Must
 sprint: 2
 depends_on: []
 builder_model: sonnet
-issue:
+owner: builder
+issue: 4
 ---
 
 # EQ-1: A library of base equipment types

@@ -6,7 +6,8 @@ priority: Must
 sprint: 4
 depends_on: [PR-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 26
 ---
 
 # PR-4: Set demand mix and release rules

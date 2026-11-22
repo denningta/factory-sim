@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: []
 builder_model: sonnet
-issue:
+owner: lead
+issue: 19
 ---
 
 # PL-3: A versioned project data schema

@@ -6,7 +6,8 @@ priority: Must
 sprint: 3
 depends_on: [FL-1]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 9
 ---
 
 # FL-2: Set buffer capacity between stations

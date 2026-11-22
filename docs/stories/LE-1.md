@@ -6,7 +6,8 @@ priority: Must
 sprint: 1
 depends_on: [PL-5]
 builder_model: sonnet
-issue:
+owner: builder
+issue: 12
 ---
 
 # LE-1: Set the floor's real dimensions and units
