@@ -31,6 +31,48 @@ const noPlatformImports = {
     'sim-engine and schema must run in browser and Node: no Node, DOM or rendering imports (ADR-0007/0008).',
 };
 
+/** Shared with the engine block below, which has to repeat it (flat config replaces rule options). */
+const noSrcImports = {
+  selector: 'ImportDeclaration[source.value=/^@factory-sim\\/[^/]+\\/src/]',
+  message: 'Import workspace packages via their public entry, not /src paths.',
+};
+
+/** Engine determinism (CLAUDE.md, ADR-0007): seeded PRNG and sim clock only, exact math only. */
+const inexactMath = [
+  'log',
+  'log1p',
+  'log2',
+  'log10',
+  'exp',
+  'expm1',
+  'pow',
+  'cbrt',
+  'hypot',
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'atan2',
+  'sinh',
+  'cosh',
+  'tanh',
+  'asinh',
+  'acosh',
+  'atanh',
+];
+const engineRestrictedProperties = [
+  { object: 'Math', property: 'random', message: 'Use the seeded Rng (ADR-0007).' },
+  { object: 'Date', property: 'now', message: 'Use the simulation clock.' },
+  ...inexactMath.map((property) => ({
+    object: 'Math',
+    property,
+    message:
+      "Implementation-approximated in JS; use the engine's exact-math version (bit-exact rule in api.ts).",
+  })),
+];
+
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'docs/**'] },
   js.configs.recommended,
@@ -91,11 +133,35 @@ export default tseslint.config(
     // The engine must not depend on the schema package's internals beyond its public entry.
     files: ['packages/**'],
     rules: {
+      'no-restricted-syntax': ['error', noSrcImports],
+    },
+  },
+  {
+    files: ['packages/sim-engine/src/**'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-properties': ['error', ...engineRestrictedProperties],
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'setTimeout',
+          'setInterval',
+          'setImmediate',
+          'queueMicrotask',
+          'performance',
+          'Date',
+        ].map((name) => ({
+          name,
+          message: 'The engine never uses wall-clock time or timers (ADR-0007).',
+        })),
+      ],
       'no-restricted-syntax': [
         'error',
+        noSrcImports,
         {
-          selector: 'ImportDeclaration[source.value=/^@factory-sim\\/[^/]+\\/src/]',
-          message: 'Import workspace packages via their public entry, not /src paths.',
+          selector: "BinaryExpression[operator='**'], AssignmentExpression[operator='**=']",
+          message:
+            "`**` is as approximate as Math.pow; use exact multiplication or the engine's own pow.",
         },
       ],
     },
