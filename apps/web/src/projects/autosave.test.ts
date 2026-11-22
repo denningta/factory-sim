@@ -7,8 +7,17 @@ afterEach(() => vi.useRealTimers());
 
 function setup(save: () => Promise<void>) {
   const statuses: SaveStatus[] = [];
-  const saver = createAutosaver({ save, delayMs: 2000, onStatus: (s) => statuses.push(s) });
-  return { saver, statuses };
+  const details: (ApiRequestError | undefined)[] = [];
+  const saver = createAutosaver({
+    save,
+    delayMs: 2000,
+    maxWaitMs: 4000,
+    onStatus: (s, err) => {
+      statuses.push(s);
+      details.push(err);
+    },
+  });
+  return { saver, statuses, details };
 }
 
 describe('autosave', () => {
@@ -79,4 +88,41 @@ describe('autosave', () => {
     await saver.flush();
     expect(save).toHaveBeenCalledTimes(1);
   });
+
+  it('AC2: continuous editing still saves within 5 seconds of the first change', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { saver } = setup(save);
+    for (let t = 0; t < 10; t++) {
+      saver.markDirty();
+      await vi.advanceTimersByTimeAsync(1000);
+      if (t === 4) expect(save).toHaveBeenCalledTimes(1); // first save no later than ~4 s
+    }
+    expect(save.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('AC2: a network failure (internal) keeps retrying', async () => {
+    const save = vi
+      .fn()
+      .mockRejectedValue(new ApiRequestError('internal', 'Cannot reach the server'));
+    const { saver, statuses } = setup(save);
+    saver.markDirty();
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(save.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(statuses.at(-1)).toBe('error');
+  });
+
+  it.each(['validation', 'unauthorized', 'not_found', 'payload_too_large'] as const)(
+    'AC2: a %s error stops retrying and reports the server message',
+    async (code) => {
+      const save = vi.fn().mockRejectedValue(new ApiRequestError(code, 'Server says no'));
+      const { saver, statuses, details } = setup(save);
+      saver.markDirty();
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(statuses.at(-1)).toBe('stopped');
+      expect(details.at(-1)).toMatchObject({ code, message: 'Server says no' });
+      saver.markDirty();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(save).toHaveBeenCalledTimes(1);
+    },
+  );
 });

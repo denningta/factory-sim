@@ -83,4 +83,12 @@ describe('ProjectList', () => {
     await vi.waitFor(() => expect(screen.queryByText('Line A')).toBeNull());
     expect(api.deleteProject).toHaveBeenCalledWith(A.id);
   });
+
+  it('N2: the header has a sign-out button', async () => {
+    const onSignOut = vi.fn();
+    const user = userEvent.setup();
+    render(<ProjectList api={fakeApi([A])} onOpen={() => {}} onSignOut={onSignOut} />);
+    await user.click(await screen.findByRole('button', { name: /sign out/i }));
+    expect(onSignOut).toHaveBeenCalled();
+  });
 });

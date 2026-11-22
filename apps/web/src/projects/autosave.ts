@@ -1,6 +1,6 @@
 import { ApiRequestError } from '../api/client';
 
-export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict';
+export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict' | 'stopped';
 
 export interface Autosaver {
   markDirty: () => void;
@@ -15,7 +15,8 @@ export interface Autosaver {
 export function createAutosaver(opts: {
   save: () => Promise<void>;
   delayMs: number;
-  onStatus: (s: SaveStatus) => void;
+  maxWaitMs: number;
+  onStatus: (s: SaveStatus, err?: ApiRequestError) => void;
 }): Autosaver {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let dirty = false;

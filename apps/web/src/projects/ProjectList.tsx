@@ -10,7 +10,16 @@ export interface ProjectsApi {
 
 const message = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong');
 
-export function ProjectList({ api, onOpen }: { api: ProjectsApi; onOpen: (id: string) => void }) {
+export function ProjectList({
+  api,
+  onOpen,
+  onSignOut,
+}: {
+  api: ProjectsApi;
+  onOpen: (id: string) => void;
+  onSignOut?: () => void;
+}) {
+  void onSignOut; // wired in the implementation commit
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState('');

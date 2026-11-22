@@ -12,6 +12,7 @@ const LABEL: Record<SaveStatus, string> = {
   unsaved: 'Unsaved changes…',
   saving: 'Saving…',
   error: 'Save failed, retrying…',
+  stopped: 'Saving stopped.',
   conflict:
     'This project was changed elsewhere. Reload to continue; your latest edits are not saved.',
 };
@@ -38,6 +39,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         setName(p.name);
         saver = createAutosaver({
           delayMs: AUTOSAVE_MS,
+          maxWaitMs: 4000,
           onStatus: setStatus,
           save: async () => {
             const { floor, equipment } = useEditorStore.getState();
