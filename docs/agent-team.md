@@ -11,7 +11,7 @@ How the Factory Flow Simulator is built by Claude Code agents in herdr. Backgrou
 | `builder-1..3`        | own worktree, branch `story/<ID>` | `.claude/agents/builder.md`  | Sonnet (Opus for SE-1, PR-2) | One story, tests first, opens a PR                                                 | Touches lead-owned areas, pushes main, merges |
 | `reviewer`            | main checkout, tab "control"      | `.claude/agents/reviewer.md` | Opus, Edit/Write disabled    | Reviews PRs vs acceptance criteria, ADRs, DoD; runs tests                          | Edits code, merges                            |
 
-**Max concurrent builders:** Sprint 1 = **1**. Raise to 3 only when CI and your review time keep up (product owner decides; update this line).
+**Max concurrent builders:** Sprint 1 = **2** (raised by the product owner on 2026-11-21 so SE-1 can run in parallel). Raise to 3 only when CI and your review time keep up (product owner decides; update this line).
 
 ## Start of day
 
@@ -68,7 +68,7 @@ gh pr list ; gh issue list --label sprint:1
 ## Rollout
 
 1. **Sprint 0** (done): repo, CLAUDE.md, `.claude/`, CI (PL-4), branch protection, issues, docs.
-2. **Sprint 1**: lead + builder-1 + reviewer. Order: PL-3 (lead) → PL-1 → PL-2 → PL-5 spike → LE-1. SE-1 goes to builder-2 on Opus mid-sprint, after the lead defines the engine API.
+2. **Sprint 1**: lead + builder-1 + builder-2 (SE-1) + reviewer. Order: PL-3 (lead) → PL-1 → PL-2 → PL-5 spike → LE-1. SE-1 goes to builder-2 on Opus mid-sprint, after the lead defines the engine API.
 3. **Sprint 2+**: up to 3 builders if review and CI keep up.
 
 ## Backlog maintenance
