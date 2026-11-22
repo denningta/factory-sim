@@ -1,6 +1,6 @@
 # ADR-0002: Frontend: React + React Three Fiber
 
-- **Status:** Accepted (signed off 2026-11-21; revisit if the PL-5 spike shows performance problems)
+- **Status:** Accepted (signed off 2026-11-21; performance confirmed by the PL-5 spike on UHD 630 / Chromium, weaker-machine rerun pending; see ADR-0014)
 - **Date:** 2026-11-21
 
 ## Context
@@ -14,7 +14,7 @@ React + Vite for the app, React Three Fiber + drei for the three.js scene, Zusta
 ## Consequences
 
 - Positive: Declarative 3D that shares state with the UI; large ecosystem; agents write React well.
-- Negative: React re-renders must be kept out of the render loop; PL-5 must confirm performance with instancing.
+- Negative: React re-renders must be kept out of the render loop; rendering approach (instancing, LOD, budgets) is set in ADR-0014.
 
 ## Alternatives considered
 
