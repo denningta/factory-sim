@@ -45,12 +45,17 @@ export interface EditorState extends Prefs {
   /** Display only: does not touch `floor`. */
   setUnit: (unit: DisplayUnit) => void;
   toggleSnap: () => void;
+  /** The library type to preview and, with LE-2, to place. Session-only, not a preference. */
+  selectedTypeId: string | null;
+  selectType: (typeId: string | null) => void;
 }
 
 export function createEditorStore() {
   return create<EditorState>()((set, get) => ({
     ...loadPrefs(),
     floor: createProject().floor,
+    selectedTypeId: null,
+    selectType: (selectedTypeId) => set({ selectedTypeId }),
     setFloor: (patch) => {
       const next = { ...get().floor, ...patch };
       const parsed = floorSchema.safeParse(next);

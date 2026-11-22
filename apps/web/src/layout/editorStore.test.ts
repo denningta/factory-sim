@@ -49,3 +49,22 @@ describe('editor store', () => {
     expect(Object.keys(again.getState().floor).sort()).toEqual(['gridSpacing', 'length', 'width']);
   });
 });
+
+describe('selected library type (EQ-1)', () => {
+  it('starts with nothing selected and records the type to place', () => {
+    const store = createEditorStore();
+    expect(store.getState().selectedTypeId).toBeNull();
+    store.getState().selectType('base-conveyor');
+    expect(store.getState().selectedTypeId).toBe('base-conveyor');
+    store.getState().selectType(null);
+    expect(store.getState().selectedTypeId).toBeNull();
+  });
+
+  it('is not persisted with the display preferences', () => {
+    localStorage.clear();
+    const store = createEditorStore();
+    store.getState().selectType('base-sink');
+    store.getState().toggleSnap();
+    expect(localStorage.getItem('factory-sim:editor-prefs')).not.toContain('base-sink');
+  });
+});
