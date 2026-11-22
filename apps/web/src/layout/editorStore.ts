@@ -114,6 +114,19 @@ export interface EditorState extends Prefs {
   /** Sets every selected item's rotation to a typed angle in degrees. */
   setSelectedRotation: (degrees: number) => void;
   deleteSelected: () => void;
+  /** Session-only edit history (LE-3). */
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  /**
+   * Groups every edit until `endEdit` into one undo step (a focused field's keystrokes). An
+   * edit session that changed nothing leaves no step. Returns a token for `endEdit`; beginning
+   * a new session closes any open one.
+   */
+  beginEdit: () => number;
+  /** Closes the session `token` opened; a no-op if that session already ended or was replaced. */
+  endEdit: (token: number) => void;
   /** Bumped by "Zoom to fit"; the camera rig refits only when this changes (#57). */
   fitTick: number;
   /** Replaces the editable content with an opened project's document; session state resets. */
@@ -124,6 +137,8 @@ export interface EditorState extends Prefs {
   toggleView: () => void;
 }
 
+export const HISTORY_LIMIT = 100;
+
 export interface Point {
   x: number;
   y: number;
@@ -131,8 +146,43 @@ export interface Point {
 
 export function createEditorStore() {
   return create<EditorState>()((set, get) => {
+    // History is session-only and snapshots the document content the editor owns. A future
+    // connect/disconnect (FL-1) joins by adding `connections` to Snapshot and to loadDocument.
+    interface Snapshot {
+      floor: Floor;
+      equipment: Equipment[];
+    }
+    const snapshot = (): Snapshot => ({ floor: get().floor, equipment: get().equipment });
+    let past: Snapshot[] = [];
+    let future: Snapshot[] = [];
+    /** Set between beginEdit and endEdit; `pushed` once its first write took the snapshot. */
+    let session: { token: number; before: Snapshot; pushed: boolean } | null = null;
+    let nextToken = 0;
+    const syncFlags = () => set({ canUndo: past.length > 0, canRedo: future.length > 0 });
+    /** Call just before a successful document write; one call per undo step. */
+    const record = () => {
+      if (session) {
+        if (session.pushed) return;
+        session.pushed = true;
+      }
+      past.push(session ? session.before : snapshot());
+      if (past.length > HISTORY_LIMIT) past = past.slice(past.length - HISTORY_LIMIT);
+      future = [];
+      syncFlags();
+    };
+    const restore = (to: Snapshot) => {
+      const ids = new Set(to.equipment.map((e) => e.id));
+      set({
+        ...to,
+        selectedIds: get().selectedIds.filter((id) => ids.has(id)),
+        canUndo: past.length > 0,
+        canRedo: future.length > 0,
+      });
+    };
     const mapSelected = (f: (e: Equipment) => Equipment) => {
       const ids = new Set(get().selectedIds);
+      if (!get().equipment.some((e) => ids.has(e.id))) return;
+      record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
     };
     return {
@@ -157,6 +207,7 @@ export function createEditorStore() {
           name: `${type.name} ${sameType}`,
           position: p,
         });
+        record();
         set({ equipment: [...equipment, placed] });
         return placed;
       },
@@ -181,6 +232,13 @@ export function createEditorStore() {
           spacing: floor.gridSpacing,
           enabled: snapEnabled,
         });
+        // A click on an object ends a zero-length drag; it must not leave an empty undo step.
+        const moved = get().equipment.some((e) => {
+          const p = to[e.id];
+          return p && (p.x !== e.position.x || p.y !== e.position.y);
+        });
+        if (!moved) return;
+        record();
         set({
           equipment: get().equipment.map((e) => {
             const p = to[e.id];
@@ -228,6 +286,7 @@ export function createEditorStore() {
             ...(field ? { field } : {}),
           };
         }
+        record();
         set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
         return { ok: true };
       },
@@ -240,10 +299,46 @@ export function createEditorStore() {
       },
       deleteSelected: () => {
         const gone = new Set(get().selectedIds);
+        if (!get().equipment.some((e) => gone.has(e.id))) return;
+        record();
         set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
       },
-      loadDocument: (doc) =>
-        set({ floor: doc.floor, equipment: doc.equipment, selectedIds: [], selectedTypeId: null }),
+      loadDocument: (doc) => {
+        past = [];
+        future = [];
+        session = null;
+        set({
+          floor: doc.floor,
+          equipment: doc.equipment,
+          selectedIds: [],
+          selectedTypeId: null,
+          canUndo: false,
+          canRedo: false,
+        });
+      },
+      canUndo: false,
+      canRedo: false,
+      undo: () => {
+        session = null;
+        const to = past.pop();
+        if (!to) return;
+        future.push(snapshot());
+        restore(to);
+      },
+      redo: () => {
+        session = null;
+        const to = future.pop();
+        if (!to) return;
+        past.push(snapshot());
+        restore(to);
+      },
+      beginEdit: () => {
+        session = { token: ++nextToken, before: snapshot(), pushed: false };
+        return session.token;
+      },
+      endEdit: (token) => {
+        if (session?.token === token) session = null;
+      },
       fitTick: 0,
       viewMode: '3d',
       toggleView: () => set({ viewMode: get().viewMode === '3d' ? '2d' : '3d' }),
@@ -257,6 +352,7 @@ export function createEditorStore() {
           parsed.data.length / parsed.data.gridSpacing > MAX_GRID_LINES
         )
           return { ok: false, error: 'Grid spacing is too small for this floor' };
+        record();
         set({ floor: parsed.data });
         return { ok: true };
       },

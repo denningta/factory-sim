@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { LibraryPanel } from './equipment/LibraryPanel';
 import { LibraryPreview } from './equipment/EquipmentModel';
@@ -7,6 +6,7 @@ import { FloorScene } from './layout/FloorScene';
 import { PropertiesPanel } from './layout/PropertiesPanel';
 import { ViewToolbar } from './layout/ViewToolbar';
 import { useEditorStore } from './layout/editorStore';
+import { useEditorShortcuts } from './layout/shortcuts';
 
 export function Editor({ readOnly = false }: { readOnly?: boolean }) {
   const unit = useEditorStore((s) => s.unit);
@@ -14,17 +14,7 @@ export function Editor({ readOnly = false }: { readOnly?: boolean }) {
   const selectedId = useEditorStore((s) => s.selectedTypeId);
   const selectType = useEditorStore((s) => s.selectType);
   const selected = BASE_EQUIPMENT_TYPES.find((t) => t.id === selectedId);
-  useEffect(() => {
-    if (readOnly) return;
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target;
-      if (t instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') useEditorStore.getState().deleteSelected();
-      if (e.key === 'Escape') useEditorStore.getState().clearSelection();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly]);
+  useEditorShortcuts(readOnly);
   // Wireframe 1: library left, viewport centre, properties right.
   return (
     <div

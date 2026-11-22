@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import {
@@ -26,6 +26,8 @@ function Field({
   extraError,
   onBlur,
   placeholder,
+  beginEdit,
+  endEdit,
 }: {
   label: string;
   value: string;
@@ -34,11 +36,21 @@ function Field({
   extraError?: string | null;
   onBlur?: () => void;
   placeholder?: string;
+  /** One focus-to-blur (or Enter) session is one undo step, however many keystrokes. */
+  beginEdit: () => number;
+  endEdit: (token: number) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorId = useId();
   const shown = error ?? extraError ?? null;
+  // The field can unmount while focused (selection changes); close its session then.
+  const session = useRef(0);
+  const begin = () => {
+    session.current = beginEdit();
+  };
+  const end = () => endEdit(session.current);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
       {label}
@@ -49,11 +61,18 @@ function Field({
         placeholder={placeholder}
         aria-invalid={shown ? 'true' : undefined}
         aria-describedby={shown ? errorId : undefined}
+        onFocus={begin}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return;
+          end();
+          begin();
+        }}
         onChange={(e) => {
           setDraft(e.target.value);
           setError(commit(e.target.value));
         }}
         onBlur={() => {
+          end();
           setDraft(null);
           setError(null);
           onBlur?.();
@@ -88,6 +107,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
     setSelectedRotation,
     updateEquipment,
     deleteSelected,
+    beginEdit,
+    endEdit,
   } = useStore();
   /** Set when a params edit breaks a rule on another field, so both fields show the reason. */
   const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
@@ -110,6 +131,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
       {single ? (
         <>
           <Field
+            beginEdit={beginEdit}
+            endEdit={endEdit}
             key={`name-${first.id}`}
             label="Name"
             value={first.name}
@@ -133,6 +156,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
               ] as const
             ).map(([label, meters, patchOf]) => (
               <Field
+                beginEdit={beginEdit}
+                endEdit={endEdit}
                 key={`${label}-${first.id}`}
                 label={`${label} (${unit})`}
                 value={pos(meters)}
@@ -148,6 +173,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
           <div style={{ display: 'flex', gap: 8 }}>
             {(['x', 'y'] as const).map((axis) => (
               <Field
+                beginEdit={beginEdit}
+                endEdit={endEdit}
                 key={`${axis}-${first.id}`}
                 label={`Position ${axis.toUpperCase()} (${unit})`}
                 value={pos(first.position[axis])}
@@ -170,6 +197,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
             const isSpeed = key === 'speed';
             return (
               <Field
+                beginEdit={beginEdit}
+                endEdit={endEdit}
                 key={`${key}-${first.id}`}
                 label={
                   isSpeed
@@ -200,6 +229,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
       )}
       {/* Keyed by selection so the field re-reads when the selection changes. */}
       <Field
+        beginEdit={beginEdit}
+        endEdit={endEdit}
         key={`rot-${selectedIds.join(',')}`}
         label="Rotation (°)"
         value={same ? formatNumber(toDegrees(first.rotation)) : ''}
