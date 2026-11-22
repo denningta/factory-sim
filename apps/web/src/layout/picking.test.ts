@@ -32,3 +32,28 @@ describe('Dragging from the library places an object at the cursor', () => {
     expect(pointerToFloor(cam, { x: 0, y: 0 })).toBeNull();
   });
 });
+
+describe('Placing, moving and selecting work in the orthographic top-down view', () => {
+  function ortho(x: number, z: number, zoom: number) {
+    const cam = new THREE.OrthographicCamera(-400, 400, 300, -300, 0.1, 1000);
+    cam.zoom = zoom;
+    cam.up.set(0, 0, -1);
+    cam.position.set(x, 50, z);
+    cam.lookAt(x, 0, z);
+    cam.updateMatrixWorld();
+    cam.updateProjectionMatrix();
+    return cam;
+  }
+
+  it('screen centre maps to the floor point under the camera', () => {
+    const p = pointerToFloor(ortho(12, 7, 10), { x: 0, y: 0 });
+    expect(p!.x).toBeCloseTo(12, 6);
+    expect(p!.y).toBeCloseTo(7, 6);
+  });
+
+  it('off-centre pointers scale with zoom: right edge is 400/zoom m right, top edge is 300/zoom m toward plan y−', () => {
+    const p = pointerToFloor(ortho(12, 7, 10), { x: 1, y: 1 });
+    expect(p!.x).toBeCloseTo(12 + 40, 6);
+    expect(p!.y).toBeCloseTo(7 - 30, 6);
+  });
+});

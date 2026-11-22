@@ -77,3 +77,36 @@ export function aspectOf(size: { width: number; height: number }): number | null
   const aspect = size.width / size.height;
   return size.width > 0 && size.height > 0 && Number.isFinite(aspect) ? aspect : null;
 }
+
+/**
+ * Top-down orthographic pose framing the floor and labels in a viewport of the given pixel
+ * size. Camera `up` must be (0, 0, -1) so plan +y points down the screen. `zoom` is pixels per
+ * meter, matching a frustum sized in pixels (what three/fiber gives an ortho camera).
+ */
+export function fitOrtho(opts: FloorSize & { viewport: { width: number; height: number } }): {
+  position: Vec3;
+  target: Vec3;
+  zoom: number;
+} {
+  const b = planBounds(opts);
+  const target: Vec3 = [(b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2];
+  const zoom = Math.min(
+    opts.viewport.width / (b.maxX - b.minX),
+    opts.viewport.height / (b.maxZ - b.minZ),
+  );
+  return { target, position: [target[0], 100, target[2]], zoom: zoom / PAD };
+}
+
+/** What the orbit limits scale from; a placeholder canvas size stands in while it is 0×0. */
+export function fitScale(
+  floor: FloorSize,
+  size: { width: number; height: number },
+): { distance: number; zoom: number } {
+  const usable = aspectOf(size) !== null;
+  const viewport = usable ? size : { width: 800, height: 600 };
+  return {
+    distance: fitCamera({ ...floor, aspect: viewport.width / viewport.height, fovDeg: 45 })
+      .distance,
+    zoom: fitOrtho({ ...floor, viewport }).zoom,
+  };
+}
