@@ -137,6 +137,6 @@ export function partBounds(parts: Part[]): { min: Vec3; max: Vec3 } {
 /** Footprint-independent description of a shape's structure, for telling shapes apart. */
 export function shapeSignature(parts: Part[]): string {
   return parts
-    .map((p) => (p.shape === 'box' ? 'b' : p.radiusTop === p.radiusBottom ? 'c' : 'f') + p.tone)
+    .map((p) => (p.shape === 'box' ? 'b' : p.radiusTop === p.radiusBottom ? 'c' : 'f'))
     .join('');
 }

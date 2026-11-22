@@ -4,6 +4,7 @@ import { pointerToFloor } from './picking';
 
 function topDown(x: number, z: number, height = 10) {
   const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  cam.up.set(0, 0, -1); // looking straight down: the default up vector would be degenerate
   cam.position.set(x, height, z);
   cam.lookAt(x, 0, z);
   cam.updateMatrixWorld();

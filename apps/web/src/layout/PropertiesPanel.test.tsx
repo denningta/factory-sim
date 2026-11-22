@@ -35,6 +35,7 @@ describe('PropertiesPanel', () => {
 
   it('shows position in the display unit (ft), stored as meters', async () => {
     store.getState().setUnit('ft');
+    store.getState().toggleSnap(); // keep the exact typed position
     place(3.048, 0.3048 * 5);
     expect(((await screen.findByLabelText(/position x/i)) as HTMLInputElement).value).toBe('10');
     expect(store.getState().equipment[0]!.position.x).toBe(3.048);
