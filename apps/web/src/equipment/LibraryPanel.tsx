@@ -2,6 +2,9 @@ import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { TYPE_DESCRIPTIONS } from './descriptions';
 import { formatNumber, toDisplay, type DisplayUnit } from '../layout/units';
 
+/** dataTransfer key carrying the dragged type's id from the library to the canvas. */
+export const EQUIPMENT_DRAG_TYPE = 'application/x-factory-sim-type';
+
 interface Props {
   unit: DisplayUnit;
   selectedId: string | null;
@@ -20,6 +23,12 @@ export function LibraryPanel({ unit, selectedId, onSelect }: Props) {
             <button
               type="button"
               onClick={() => onSelect(t.id)}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(EQUIPMENT_DRAG_TYPE, t.id);
+                e.dataTransfer.effectAllowed = 'copy';
+                onSelect(t.id);
+              }}
               aria-pressed={selectedId === t.id}
               style={{
                 width: '100%',

@@ -1,4 +1,5 @@
 import type { Floor } from '@factory-sim/schema';
+import * as THREE from 'three';
 
 /** Guards the renderer against absurd line counts; the UI rejects such spacings too. */
 export const MAX_GRID_LINES = 500;
@@ -41,4 +42,17 @@ export function snapToGrid(
 ): { x: number; y: number } {
   if (!enabled) return p;
   return { x: Math.round(p.x / spacing) * spacing, y: Math.round(p.y / spacing) * spacing };
+}
+
+/** Grid lines as a fresh geometry whose bounding sphere covers the whole floor. */
+export function buildGridGeometry(floor: Floor): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute(
+    'position',
+    new THREE.BufferAttribute(new Float32Array(gridLinePositions(floor)), 3),
+  );
+  // three caches the sphere once computed; a new geometry per floor avoids a stale one that
+  // would frustum-cull lines on a floor that grew (#57).
+  g.computeBoundingSphere();
+  return g;
 }
