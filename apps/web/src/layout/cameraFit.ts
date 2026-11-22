@@ -73,6 +73,7 @@ export function fitCamera(opts: FloorSize & { aspect: number; fovDeg: number }):
 }
 
 /** Canvas aspect for fitCamera, or null while the canvas has no usable size (0×0, NaN). */
-export function aspectOf(_size: { width: number; height: number }): number | null {
-  return 0;
+export function aspectOf(size: { width: number; height: number }): number | null {
+  const aspect = size.width / size.height;
+  return size.width > 0 && size.height > 0 && Number.isFinite(aspect) ? aspect : null;
 }

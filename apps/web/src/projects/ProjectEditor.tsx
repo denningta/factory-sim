@@ -67,13 +67,15 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   }, [id]);
 
   // Closing the tab inside the debounce window would lose the last edits.
-  const unsaved = status !== 'saved';
+  const unsaved = status === 'unsaved' || status === 'saving' || status === 'error';
   useEffect(() => {
     if (!unsaved) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [unsaved]);
+
+  const locked = status === 'stopped' || status === 'conflict';
 
   if (loadError)
     return (
@@ -83,7 +85,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
     );
   if (!ready) return <p style={{ font: '14px sans-serif', padding: 16 }}>Opening…</p>;
   return (
-    <div style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', height: '100vh' }}>
+    <div style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', height: '100%' }}>
       <header style={{ display: 'flex', gap: 12, padding: '6px 12px', font: '14px sans-serif' }}>
         <button onClick={onClose}>← Projects</button>
         <strong>{name}</strong>
@@ -105,7 +107,10 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           </button>
         )}
       </header>
-      <Editor />
+      {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
+      <div inert={locked} style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}>
+        <Editor readOnly={locked} />
+      </div>
     </div>
   );
 }

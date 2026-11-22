@@ -8,13 +8,14 @@ import { PropertiesPanel } from './layout/PropertiesPanel';
 import { ViewToolbar } from './layout/ViewToolbar';
 import { useEditorStore } from './layout/editorStore';
 
-export function Editor() {
+export function Editor({ readOnly = false }: { readOnly?: boolean }) {
   const unit = useEditorStore((s) => s.unit);
   const snap = useEditorStore((s) => s.snapEnabled);
   const selectedId = useEditorStore((s) => s.selectedTypeId);
   const selectType = useEditorStore((s) => s.selectType);
   const selected = BASE_EQUIPMENT_TYPES.find((t) => t.id === selectedId);
   useEffect(() => {
+    if (readOnly) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target;
       if (t instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
@@ -23,14 +24,14 @@ export function Editor() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [readOnly]);
   // Wireframe 1: library left, viewport centre, properties right.
   return (
     <div
       style={{
         display: 'grid',
         gridTemplateColumns: '260px 1fr 280px',
-        height: '100vh',
+        height: '100%',
         minHeight: 0,
       }}
     >
