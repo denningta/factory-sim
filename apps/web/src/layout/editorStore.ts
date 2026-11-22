@@ -121,10 +121,12 @@ export interface EditorState extends Prefs {
   redo: () => void;
   /**
    * Groups every edit until `endEdit` into one undo step (a focused field's keystrokes). An
-   * edit session that changed nothing leaves no step.
+   * edit session that changed nothing leaves no step. Returns a token for `endEdit`; beginning
+   * a new session closes any open one.
    */
-  beginEdit: () => void;
-  endEdit: () => void;
+  beginEdit: () => number;
+  /** Closes the session `token` opened; a no-op if that session already ended or was replaced. */
+  endEdit: (token: number) => void;
   /** Bumped by "Zoom to fit"; the camera rig refits only when this changes (#57). */
   fitTick: number;
   /** Replaces the editable content with an opened project's document; session state resets. */
@@ -154,7 +156,8 @@ export function createEditorStore() {
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
     /** Set between beginEdit and endEdit; `pushed` once its first write took the snapshot. */
-    let session: { before: Snapshot; pushed: boolean } | null = null;
+    let session: { token: number; before: Snapshot; pushed: boolean } | null = null;
+    let nextToken = 0;
     const syncFlags = () => set({ canUndo: past.length > 0, canRedo: future.length > 0 });
     /** Call just before a successful document write; one call per undo step. */
     const record = () => {
@@ -229,6 +232,12 @@ export function createEditorStore() {
           spacing: floor.gridSpacing,
           enabled: snapEnabled,
         });
+        // A click on an object ends a zero-length drag; it must not leave an empty undo step.
+        const moved = get().equipment.some((e) => {
+          const p = to[e.id];
+          return p && (p.x !== e.position.x || p.y !== e.position.y);
+        });
+        if (!moved) return;
         record();
         set({
           equipment: get().equipment.map((e) => {
@@ -324,10 +333,11 @@ export function createEditorStore() {
         restore(to);
       },
       beginEdit: () => {
-        session ??= { before: snapshot(), pushed: false };
+        session = { token: ++nextToken, before: snapshot(), pushed: false };
+        return session.token;
       },
-      endEdit: () => {
-        session = null;
+      endEdit: (token) => {
+        if (session?.token === token) session = null;
       },
       fitTick: 0,
       viewMode: '3d',

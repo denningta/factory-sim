@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { useEditorStore } from './editorStore';
 import { useEditorStore as defaultStore } from './editorStore';
 import { formatNumber, fromDisplay, toDisplay, type DisplayUnit } from './units';
@@ -12,15 +12,20 @@ interface FieldProps {
   /** Returns an error message, or null when the edit was accepted. */
   onCommit: (meters: number) => string | null;
   /** One focus-to-blur (or Enter) session is one undo step. */
-  beginEdit: () => void;
-  endEdit: () => void;
+  beginEdit: () => number;
+  endEdit: (token: number) => void;
 }
 
 /** Keeps the typed text while editing so "1." or "" aren't reformatted under the cursor. */
 function LengthField({ label, meters, unit, onCommit, beginEdit, endEdit }: FieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => endEdit, [endEdit]);
+  const session = useRef(0);
+  const begin = () => {
+    session.current = beginEdit();
+  };
+  const end = () => endEdit(session.current);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {label} ({unit})
@@ -28,11 +33,11 @@ function LengthField({ label, meters, unit, onCommit, beginEdit, endEdit }: Fiel
         type="text"
         inputMode="decimal"
         value={draft ?? formatNumber(toDisplay(meters, unit))}
-        onFocus={beginEdit}
+        onFocus={begin}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return;
-          endEdit();
-          beginEdit();
+          end();
+          begin();
         }}
         onChange={(e) => {
           const text = e.target.value;
@@ -45,7 +50,7 @@ function LengthField({ label, meters, unit, onCommit, beginEdit, endEdit }: Fiel
           );
         }}
         onBlur={() => {
-          endEdit();
+          end();
           setDraft(null);
           setError(null);
         }}

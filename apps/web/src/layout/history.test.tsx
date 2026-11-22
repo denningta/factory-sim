@@ -34,6 +34,16 @@ describe('LE-3 undo and redo: covered edits', () => {
     expect(store.getState().equipment[0]!.position).toEqual({ x: 4, y: 4 });
   });
 
+  it('click-select with no movement adds no history entry', () => {
+    const e = place(4, 4);
+    store.getState().undo();
+    store.getState().redo();
+    store.getState().selectEquipment(e.id, false);
+    store.getState().dragSelected({ [e.id]: { x: 4, y: 4 } }, e.id, { x: 0, y: 0 });
+    store.getState().undo();
+    expect(store.getState().equipment).toEqual([]); // the undo reverted the placing
+  });
+
   it('undoes rotating', () => {
     const e = place();
     store.getState().selectEquipment(e.id, false);
@@ -114,19 +124,29 @@ describe('LE-3 history depth', () => {
 describe('LE-3 coalescing', () => {
   it('beginEdit/endEdit makes many writes one step', () => {
     const e = place();
-    store.getState().beginEdit();
+    const token = store.getState().beginEdit();
     for (const n of ['1', '12', '12.5'])
       store.getState().updateEquipment(e.id, { height: Number(n) });
-    store.getState().endEdit();
+    store.getState().endEdit(token);
     store.getState().undo();
     expect(store.getState().equipment[0]!.height).toBe(e.height);
     expect(store.getState().equipment).toHaveLength(1);
   });
 
+  it('endEdit closes only its own session', () => {
+    const e = place();
+    const stale = store.getState().beginEdit();
+    store.getState().beginEdit(); // a newer session replaces it
+    store.getState().endEdit(stale); // must not close the newer one
+    store.getState().updateEquipment(e.id, { height: 2 });
+    store.getState().updateEquipment(e.id, { height: 3 });
+    store.getState().undo();
+    expect(store.getState().equipment[0]!.height).toBe(e.height); // both writes were one step
+  });
+
   it('an edit session that changed nothing leaves no step', () => {
     place();
-    store.getState().beginEdit();
-    store.getState().endEdit();
+    store.getState().endEdit(store.getState().beginEdit());
     store.getState().undo();
     expect(store.getState().equipment).toEqual([]);
   });

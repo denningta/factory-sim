@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import {
@@ -37,15 +37,20 @@ function Field({
   onBlur?: () => void;
   placeholder?: string;
   /** One focus-to-blur (or Enter) session is one undo step, however many keystrokes. */
-  beginEdit: () => void;
-  endEdit: () => void;
+  beginEdit: () => number;
+  endEdit: (token: number) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorId = useId();
   const shown = error ?? extraError ?? null;
   // The field can unmount while focused (selection changes); close its session then.
-  useEffect(() => endEdit, [endEdit]);
+  const session = useRef(0);
+  const begin = () => {
+    session.current = beginEdit();
+  };
+  const end = () => endEdit(session.current);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
       {label}
@@ -56,18 +61,18 @@ function Field({
         placeholder={placeholder}
         aria-invalid={shown ? 'true' : undefined}
         aria-describedby={shown ? errorId : undefined}
-        onFocus={beginEdit}
+        onFocus={begin}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return;
-          endEdit();
-          beginEdit();
+          end();
+          begin();
         }}
         onChange={(e) => {
           setDraft(e.target.value);
           setError(commit(e.target.value));
         }}
         onBlur={() => {
-          endEdit();
+          end();
           setDraft(null);
           setError(null);
           onBlur?.();
