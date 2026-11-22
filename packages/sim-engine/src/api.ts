@@ -18,11 +18,13 @@
  *   inside `request`/`release`/`put`/`get`, so callbacks never nest. The unit or item
  *   is reserved the moment the grant is decided, so nobody else can take it while the
  *   callback event is pending.
- * - Bit-exact everywhere (ADR-0007): code that affects results uses only + − × ÷,
- *   comparisons, integer/bitwise ops and `Math.floor`/`Math.sqrt` etc. that IEEE 754
- *   or the spec define exactly. `Math.log`, `exp`, `pow`, `sin`… are
- *   implementation-approximated in ECMAScript and may differ in the last bit between
- *   engines, so the engine ships its own versions built from exact operations.
+ * - Bit-exact everywhere (ADR-0007): code that affects results uses only + − × ÷ %,
+ *   comparisons, integer/bitwise ops, and the exactly specified `Math.abs`, `sign`,
+ *   `floor`, `ceil`, `round`, `trunc`, `fround`, `sqrt`, `min`, `max`, `imul`, `clz32`.
+ *   `Math.log`, `exp`, `pow`, trig and the `**` operator are implementation-approximated
+ *   in ECMAScript and may differ in the last bit between engines, so the engine ships
+ *   its own versions built from exact operations. Lint enforces this in
+ *   `packages/sim-engine/src` (tests excluded).
  *
  * Misuse (negative or non-finite delays, `runUntil` into the past or from inside an
  * event, releasing a unit not held) throws an Error: these are programming bugs, not
@@ -136,7 +138,7 @@ export interface SimulationOptions {
 export interface Simulation {
   readonly now: SimTime;
   readonly rng: Rng;
-  /** Events still on the calendar. */
+  /** Events still on the calendar, excluding cancelled ones. */
   readonly pendingEvents: number;
 
   /**
@@ -144,7 +146,7 @@ export interface Simulation {
    * first among events at the same time; default 0.
    */
   schedule(delay: SimTime, action: () => void, priority?: number): EventHandle;
-  /** Runs the next event. Returns false if the calendar was empty. */
+  /** Runs the next event. Returns false if the calendar was empty. Throws if called from inside an event. */
   step(): boolean;
   /**
    * Runs every event with time ≤ `time` (including ones scheduled at `time` while doing
