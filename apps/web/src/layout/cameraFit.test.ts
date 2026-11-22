@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { aspectOf, fitCamera, fitOrtho, labelLayout, planBounds } from './cameraFit';
+import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout, planBounds } from './cameraFit';
 
 const FOV = 45;
 
@@ -140,5 +140,19 @@ describe('Zoom-to-fit frames the whole floor (top-down 2D)', () => {
     expect(fit.position[0]).toBeCloseTo(fit.target[0]);
     expect(fit.position[2]).toBeCloseTo(fit.target[2]);
     expect(fit.position[1]).toBeGreaterThan(0);
+  });
+});
+
+describe('fitScale feeds the orbit limits', () => {
+  it('is finite and positive for a 0×0 canvas and for a real one', () => {
+    for (const size of [
+      { width: 0, height: 0 },
+      { width: 800, height: 600 },
+    ]) {
+      const s = fitScale({ width: 30, length: 20 }, size);
+      expect(s.distance).toBeGreaterThan(0);
+      expect(s.zoom).toBeGreaterThan(0);
+      expect(Number.isFinite(s.distance + s.zoom)).toBe(true);
+    }
   });
 });

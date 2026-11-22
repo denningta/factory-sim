@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { useEditorStore } from './editorStore';
 import { buildGridGeometry } from './gridLayout';
 import { EquipmentLayer, FloorInteraction, LibraryDropTarget } from './EquipmentLayer';
-import { aspectOf, fitCamera, fitOrtho, labelLayout } from './cameraFit';
+import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout } from './cameraFit';
 import { controlSettings } from './viewControls';
 import { formatLength } from './units';
 
@@ -116,9 +116,30 @@ function CameraRig() {
   return null;
 }
 
+/** Orbit controls; the limits follow the fitted pose, so they depend on floor and canvas size. */
+function Controls() {
+  const viewMode = useEditorStore((s) => s.viewMode);
+  const floor = useEditorStore((s) => s.floor);
+  const size = useThree((s) => s.size);
+  const settings = controlSettings(viewMode, fitScale(floor, size));
+  // The left button selects and drags equipment; see controlSettings.
+  return (
+    <OrbitControls
+      key={viewMode}
+      makeDefault
+      enableRotate={settings.enableRotate}
+      mouseButtons={settings.mouseButtons}
+      maxPolarAngle={settings.maxPolarAngle}
+      minDistance={settings.minDistance}
+      maxDistance={settings.maxDistance}
+      minZoom={settings.minZoom}
+      maxZoom={settings.maxZoom}
+    />
+  );
+}
+
 export function FloorScene() {
   const viewMode = useEditorStore((s) => s.viewMode);
-  const settings = controlSettings(viewMode);
   return (
     <Canvas>
       {viewMode === '3d' ? (
@@ -135,18 +156,7 @@ export function FloorScene() {
       <FloorInteraction />
       <LibraryDropTarget />
       <CameraRig />
-      {/* The left button selects and drags equipment; see controlSettings. */}
-      <OrbitControls
-        key={viewMode}
-        makeDefault
-        enableRotate={settings.enableRotate}
-        mouseButtons={settings.mouseButtons}
-        maxPolarAngle={settings.maxPolarAngle}
-        minDistance={settings.minDistance}
-        maxDistance={settings.maxDistance}
-        minZoom={settings.minZoom}
-        maxZoom={settings.maxZoom}
-      />
+      <Controls />
     </Canvas>
   );
 }

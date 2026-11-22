@@ -96,3 +96,17 @@ export function fitOrtho(opts: FloorSize & { viewport: { width: number; height: 
   );
   return { target, position: [target[0], 100, target[2]], zoom: zoom / PAD };
 }
+
+/** What the orbit limits scale from; a placeholder canvas size stands in while it is 0×0. */
+export function fitScale(
+  floor: FloorSize,
+  size: { width: number; height: number },
+): { distance: number; zoom: number } {
+  const usable = aspectOf(size) !== null;
+  const viewport = usable ? size : { width: 800, height: 600 };
+  return {
+    distance: fitCamera({ ...floor, aspect: viewport.width / viewport.height, fovDeg: 45 })
+      .distance,
+    zoom: fitOrtho({ ...floor, viewport }).zoom,
+  };
+}
