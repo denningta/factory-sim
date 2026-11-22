@@ -16,9 +16,9 @@ issue: 21
 
 ## Acceptance criteria
 
-- [x] Time-boxed to 3 days
-- [x] Prototype renders 200 equipment objects and 500 moving parts at 30+ fps on a typical work laptop
-- [x] Write-up recommends an approach (instancing, level of detail)
+- [ ] Time-boxed to 3 days
+- [ ] Prototype renders 200 equipment objects and 500 moving parts at 30+ fps on a typical work laptop
+- [ ] Write-up recommends an approach (instancing, level of detail)
 
 ## Spike output
 
