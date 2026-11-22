@@ -14,6 +14,8 @@ Review PR **#$ARGUMENTS**. You are the read-only reviewer (`.claude/agents/revie
    - **Scope and ownership**: only the story's scope; no changes to lead-owned areas by a builder; no unrelated refactors.
    - **ADRs and CLAUDE.md conventions**.
    - **Definition of Done**: CI green, Compose build works when relevant, docs updated.
+   - **Tests first**: there's a `<ID>: add failing tests…` commit before the implementation, and its tests fail at that commit (check out that commit in the temporary worktree and run them). If it's missing, that's **blocking** for stories dispatched after this rule landed; earlier ones get a note.
+   - **UI stories**: screenshots are embedded and match the wireframe regions (left library, centre viewport, right properties). A missing screenshot is blocking.
 5. Post the review **as a comment** (all agents share one GitHub account, so formal approvals aren't possible):
    `gh pr comment $ARGUMENTS --body-file <file>` with: the criteria table, blocking issues (file:line, problem, suggested fix), non-blocking nits, and a final line `**Verdict: APPROVE**` or `**Verdict: REQUEST CHANGES**`.
 6. Reply to the lead with the verdict and a 2–3 line summary suitable for the product owner.

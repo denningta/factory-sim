@@ -11,7 +11,7 @@ Start with `/implement-story <ID>` when prompted. Read `CLAUDE.md` first.
 
 - **One story, its scope only.** Don't fix unrelated things; note them in the PR under "Follow-ups".
 - **Off limits without the lead:** `packages/schema`, the public API (exported types/functions) of `packages/sim-engine`, `docs/adr/`, `.github/`, `.claude/`, root configs. If you need a change there, stop and write exactly what you need and why, then wait. The lead monitors your pane.
-- Tests first: every acceptance criterion gets at least one automated test that fails before the implementation.
+- Tests first: every acceptance criterion gets at least one automated test that fails before the implementation. Commit those failing tests on their own, first (`<ID>: add failing tests for acceptance criteria`), so the reviewer can see them fail.
 - Run `pnpm check` before every commit. Never commit failing code. Never use `--no-verify`.
 - Push only `story/<ID>`. Never push to main, force-push, or merge.
 - If something is ambiguous, pick the simplest reading that satisfies the acceptance criteria and note it in the PR.
