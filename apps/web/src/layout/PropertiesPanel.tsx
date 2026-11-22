@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
-import { formatNumber, fromDisplay, toDisplay } from './units';
+import { formatLength, formatNumber, fromDisplay, toDisplay } from './units';
 
 type Store = typeof defaultStore;
 
@@ -16,14 +16,20 @@ function Field({
   label,
   value,
   commit,
+  extraError,
+  onBlur,
 }: {
   label: string;
   value: string;
   commit: (text: string) => string | null;
+  /** A reason set from outside, e.g. the other field of a rule that spans two fields. */
+  extraError?: string | null;
+  onBlur?: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorId = useId();
+  const shown = error ?? extraError ?? null;
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
       {label}
@@ -31,8 +37,8 @@ function Field({
         type="text"
         inputMode="decimal"
         value={draft ?? value}
-        aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-invalid={shown ? 'true' : undefined}
+        aria-describedby={shown ? errorId : undefined}
         onChange={(e) => {
           setDraft(e.target.value);
           setError(commit(e.target.value));
@@ -40,11 +46,12 @@ function Field({
         onBlur={() => {
           setDraft(null);
           setError(null);
+          onBlur?.();
         }}
       />
-      {error && (
+      {shown && (
         <span id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
-          {error}
+          {shown}
         </span>
       )}
     </label>
@@ -73,6 +80,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
     updateEquipment,
     deleteSelected,
   } = useStore();
+  /** Set when a params edit breaks a rule on another field, so both fields show the reason. */
+  const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
   if (!first) {
@@ -128,7 +137,11 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
                   const r = updateEquipment(first.id, {
                     position: { [axis]: fromDisplay(n, unit) },
                   });
-                  return r.ok ? null : r.error;
+                  if (r.ok) return null;
+                  // The store words bounds in meters; say it in the display unit.
+                  return r.bounds
+                    ? `${axis.toUpperCase()} must be on the floor (0 to ${formatLength(r.bounds.max, unit)})`
+                    : r.error;
                 }}
               />
             ))}
@@ -142,8 +155,13 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
                 const n = parseNumber(t);
                 if (typeof n === 'string') return n;
                 const r = updateEquipment(first.id, { params: { [key]: n } });
+                setLinked(
+                  !r.ok && r.field && r.field !== key ? { key: r.field, message: r.error } : null,
+                );
                 return r.ok ? null : r.error;
               }}
+              extraError={linked?.key === key ? linked.message : null}
+              onBlur={() => setLinked(null)}
             />
           ))}
         </>

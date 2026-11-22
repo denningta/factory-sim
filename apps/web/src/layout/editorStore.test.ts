@@ -110,7 +110,10 @@ describe('updateEquipment (WS-1)', () => {
   it('explains the batch size rule', () => {
     const { s, e } = placed();
     const r = s.getState().updateEquipment(e.id, { params: { batchSize: 2 } });
-    expect(r).toEqual({ ok: false, error: expect.stringMatching(/batch size cannot exceed/i) });
+    expect(r).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/batch size cannot exceed/i),
+    });
   });
 
   it('reports off-floor positions as structured bounds in meters', () => {

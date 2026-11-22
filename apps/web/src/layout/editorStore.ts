@@ -186,10 +186,17 @@ export function createEditorStore() {
         const position = { ...current.position, ...patch.position };
         if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
           return { ok: false, error: 'Enter a number' };
-        if (position.x < 0 || position.x > floor.width)
-          return { ok: false, error: `X must be on the floor (0 to ${floor.width} m)` };
-        if (position.y < 0 || position.y > floor.length)
-          return { ok: false, error: `Y must be on the floor (0 to ${floor.length} m)` };
+        for (const [axis, max] of [
+          ['x', floor.width],
+          ['y', floor.length],
+        ] as const) {
+          if (position[axis] < 0 || position[axis] > max)
+            return {
+              ok: false,
+              error: `${axis.toUpperCase()} must be on the floor (0 to ${max} m)`,
+              bounds: { axis, max },
+            };
+        }
         const next = {
           ...current,
           name: patch.name ?? current.name,
@@ -198,7 +205,11 @@ export function createEditorStore() {
         };
         // The schema owns the rules (positive ints, batch size <= capacity, no unknown keys).
         const parsed = equipmentSchema.safeParse(next);
-        if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0]!;
+          const field = issue.path[0] === 'params' ? String(issue.path[1]) : undefined;
+          return { ok: false, error: issue.message, ...(field ? { field } : {}) };
+        }
         set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
         return { ok: true };
       },
