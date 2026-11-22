@@ -52,11 +52,12 @@ export function equipmentParts(
       // Cabinet with a machine block on top and a signal tower: a manned work cell.
       const cab = h * 0.55;
       const mach = h * 0.35;
+      const tower = cyl(w * 0.04, w * 0.04, h - cab, cab, 0.5);
       return [
         slab(w, cab, l, 0, 0, 0, 0.85),
         slab(w * 0.6, mach, l * 0.6, cab, 0, l * 0.1, 1.1),
-        cyl(w * 0.04, w * 0.04, h - cab - mach, cab + mach, 0.5),
-      ].map((p, i) => (i === 2 ? moveTo(p, w * 0.35, -l * 0.35) : p));
+        { ...tower, position: [w * 0.4, tower.position[1], -l * 0.35] },
+      ];
     }
     case 'buffer': {
       // Open rack: four posts, three shelves, a crate on each shelf.
@@ -109,10 +110,6 @@ export function equipmentParts(
       ];
     }
   }
-}
-
-function moveTo(p: Part, x: number, z: number): Part {
-  return { ...p, position: [x, p.position[1], z] };
 }
 
 /** Axis-aligned bounds of all parts (cylinders by their bounding box). */
