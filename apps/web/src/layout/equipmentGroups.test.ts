@@ -29,4 +29,14 @@ describe('Clearance checks (LE-5) use the real footprint', () => {
     store.getState().placeEquipment('base-workstation', { x: 8, y: 8 });
     expect(groupEquipment(store.getState().equipment)).toHaveLength(1);
   });
+
+  it('same-size instances with different colors render in separate groups', () => {
+    const store = createEditorStore();
+    store.getState().placeEquipment('base-workstation', { x: 2, y: 2 });
+    store.getState().placeEquipment('base-workstation', { x: 8, y: 8 });
+    const [a, b] = store.getState().equipment;
+    const groups = groupEquipment([a!, { ...b!, color: '#ff0000' }]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.color).sort()).toEqual([a!.color, '#ff0000'].sort());
+  });
 });
