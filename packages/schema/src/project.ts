@@ -1,43 +1,24 @@
 import { z } from 'zod';
+import { color, equipmentSchema, id, meters } from './equipment';
 
 /**
- * Project document, schema version 1 (ADR-0006, ADR-0009, ADR-0010).
+ * Project document, schema version 2 (ADR-0006, ADR-0009, ADR-0010).
+ * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
-const id = z.string().min(1);
-/** Meters, strictly positive. */
-const meters = z.number().positive();
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
-
-export const EQUIPMENT_BEHAVIORS = ['workstation', 'buffer', 'conveyor', 'source', 'sink'] as const;
 
 export const floorSchema = z.strictObject({
   width: meters,
   length: meters,
   gridSpacing: meters,
-});
-
-/** Floor-plan coordinates in meters; the renderer maps y onto its ground axis. */
-const pointSchema = z.strictObject({ x: z.number(), y: z.number() });
-
-/** An instance placed on the floor. It copies its type's settings (ADR-0010). */
-export const equipmentSchema = z.strictObject({
-  id,
-  name: z.string(),
-  typeId: id,
-  behavior: z.enum(EQUIPMENT_BEHAVIORS),
-  position: pointSchema,
-  /** Radians about the vertical axis. */
-  rotation: z.number(),
-  footprint: z.strictObject({ width: meters, length: meters }),
-  height: meters,
 });
 
 /** Directed material flow from one piece of equipment to another. */
@@ -50,7 +31,7 @@ export const productSchema = z.strictObject({
   /** Surrounding whitespace is trimmed so " A-100" and "A-100" count as the same part. */
   partNumber: z.string().trim().min(1),
   name: z.string().min(1),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a color like #3b82f6'),
+  color,
   /** Ordered operations; each step points at a workstation. */
   routing: z.array(routingStepSchema),
 });
@@ -143,8 +124,6 @@ export const projectSchema = projectShape.superRefine(checkReferences);
 
 export type Project = z.infer<typeof projectSchema>;
 export type Floor = Project['floor'];
-export type Equipment = Project['equipment'][number];
-export type EquipmentBehavior = Equipment['behavior'];
 export type Connection = Project['connections'][number];
 export type Product = Project['products'][number];
 export type RoutingStep = Product['routing'][number];

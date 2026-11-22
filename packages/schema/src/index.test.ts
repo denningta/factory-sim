@@ -6,6 +6,10 @@ import {
   createUpgrader,
   loadProject,
   validateProject,
+  BASE_EQUIPMENT_TYPES,
+  instantiate,
+  type Equipment,
+  type EquipmentBehavior,
   type Project,
 } from './index';
 
@@ -52,17 +56,9 @@ function sampleProject(): Project {
   };
 }
 
-function eq(id: string, behavior: Project['equipment'][number]['behavior'], x: number) {
-  return {
-    id,
-    name: id.toUpperCase(),
-    typeId: `base-${behavior}`,
-    behavior,
-    position: { x, y: 5 },
-    rotation: 0,
-    footprint: { width: 2, length: 1.5 },
-    height: 1.2,
-  };
+function eq(id: string, behavior: EquipmentBehavior, x: number): Equipment {
+  const type = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === behavior)!;
+  return instantiate(type, { id, name: id.toUpperCase(), position: { x, y: 5 } });
 }
 
 function expectInvalid(input: unknown, ...fragments: string[]) {
