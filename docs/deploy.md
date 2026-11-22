@@ -1,9 +1,10 @@
 # Deploying with Docker Compose
 
 ```bash
-cp .env.example .env     # then set real secrets (see below)
+cp .env.example .env       # first time only; then set real secrets (see below)
+set -a; . ./.env; set +a   # load .env into this shell
 docker compose up -d     # app + postgres; app on http://localhost:${APP_PORT}
-curl "localhost:${APP_PORT:-8080}/health"   # export APP_PORT first if you changed it in .env
+curl "localhost:${APP_PORT:-8080}/health"
 ```
 
 - Postgres has a healthcheck; the app starts only once it is healthy.
