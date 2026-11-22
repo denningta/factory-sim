@@ -9,13 +9,15 @@ import {
 /**
  * Project document, schema version 2 (ADR-0006, ADR-0009, ADR-0010).
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
+ * v3: equipment has `ports`; connections join an output port to an input port and carry a
+ *     `capacity` (FL-1, FL-2).
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
@@ -26,8 +28,19 @@ export const floorSchema = z.strictObject({
   gridSpacing: meters,
 });
 
-/** Directed material flow from one piece of equipment to another. */
-export const connectionSchema = z.strictObject({ id, from: id, to: id });
+const portRefSchema = z.strictObject({ equipmentId: id, portId: id });
+
+/** Directed material flow from an output port to an input port (FL-1). */
+export const connectionSchema = z.strictObject({
+  id,
+  from: portRefSchema,
+  to: portRefSchema,
+  /**
+   * Parts that can wait on this connection (FL-2): 0 = no buffer (direct hand-off; the
+   * upstream station blocks until downstream takes the part), `null` = unlimited.
+   */
+  capacity: z.number().int().nonnegative().nullable(),
+});
 
 export const routingStepSchema = z.strictObject({ id, stationId: id });
 
@@ -92,11 +105,35 @@ function checkReferences(p: ProjectShape, ctx: z.RefinementCtx): void {
       issue(path, `Equipment "${stationId}" is a ${station.behavior}, not a workstation`);
   };
 
+  const linked = new Set<string>();
   p.connections.forEach((c, i) => {
-    if (c.from === c.to)
-      issue(['connections', i], `A connection cannot connect "${c.from}" to itself`);
-    if (!equipment.has(c.from)) issue(['connections', i, 'from'], `Unknown equipment "${c.from}"`);
-    if (!equipment.has(c.to)) issue(['connections', i, 'to'], `Unknown equipment "${c.to}"`);
+    if (c.from.equipmentId === c.to.equipmentId)
+      issue(['connections', i], `A connection cannot connect "${c.from.equipmentId}" to itself`);
+    for (const [end, kind] of [
+      ['from', 'output'],
+      ['to', 'input'],
+    ] as const) {
+      const ref = c[end];
+      const e = equipment.get(ref.equipmentId);
+      if (!e) {
+        issue(['connections', i, end, 'equipmentId'], `Unknown equipment "${ref.equipmentId}"`);
+        continue;
+      }
+      const port = e.ports.find((pt) => pt.id === ref.portId);
+      if (!port)
+        issue(
+          ['connections', i, end, 'portId'],
+          `"${ref.equipmentId}" has no port "${ref.portId}"`,
+        );
+      else if (port.kind !== kind)
+        issue(
+          ['connections', i, end, 'portId'],
+          `Port "${ref.portId}" on "${ref.equipmentId}" is an ${port.kind}, expected an ${kind}`,
+        );
+    }
+    const key = JSON.stringify([c.from, c.to]);
+    if (linked.has(key)) issue(['connections', i], 'These two ports are already connected');
+    linked.add(key);
   });
 
   const partNumbers = new Set<string>();
@@ -130,6 +167,7 @@ export const projectSchema = projectShape.superRefine(checkReferences);
 export type Project = z.infer<typeof projectSchema>;
 export type Floor = Project['floor'];
 export type Connection = Project['connections'][number];
+export type PortRef = Connection['from'];
 export type Product = Project['products'][number];
 export type RoutingStep = Product['routing'][number];
 export type Duration = z.infer<typeof durationSchema>;

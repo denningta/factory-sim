@@ -23,3 +23,5 @@ issue: 23
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- Products already exist in the schema (`id, partNumber, name, color, routing`); part-number uniqueness is enforced there (trimmed). AC3 ('a run needs at least one product'): there's no run button until SE-2, so add a pure `preRunIssues(project)` in `apps/web` returning `[{ code: 'no_products', message }]`. SE-5 extends it into the full pre-run check.
