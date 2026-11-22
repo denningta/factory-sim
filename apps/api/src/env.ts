@@ -15,7 +15,10 @@ const envSchema = z.object({
   SESSION_SECRET: z
     .string()
     .min(1, 'is required')
-    .refine((v) => v !== SECRET_PLACEHOLDER, 'is still the .env.example placeholder; set a long random value'),
+    .refine(
+      (v) => v !== SECRET_PLACEHOLDER,
+      'is still the .env.example placeholder; set a long random value',
+    ),
 });
 
 export interface AppEnv {

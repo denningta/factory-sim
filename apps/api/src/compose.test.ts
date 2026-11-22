@@ -40,7 +40,8 @@ describe('docker-compose.yml', () => {
 });
 
 describe('deployment hardening (PL-7)', () => {
-  const root = (p: string) => readFileSync(fileURLToPath(new URL(`../../../${p}`, import.meta.url)), 'utf8');
+  const root = (p: string) =>
+    readFileSync(fileURLToPath(new URL(`../../../${p}`, import.meta.url)), 'utf8');
 
   it('AC2: the app image switches to the non-root node user', () => {
     const users = root('Dockerfile').match(/^USER\s+(\S+)/gm) ?? [];
