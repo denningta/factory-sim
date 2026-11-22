@@ -90,6 +90,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         <span
           role="status"
           style={{
+            marginLeft: 'auto',
             color:
               status === 'conflict' || status === 'error' || status === 'stopped'
                 ? '#b91c1c'
