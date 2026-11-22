@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   BASE_EQUIPMENT_TYPES,
   createProject,
+  equipmentSchema,
   floorSchema,
   instantiate,
   type Equipment,
@@ -53,6 +54,24 @@ const normalizeRadians = (r: number) => {
 };
 
 export type SetFloorResult = { ok: true } | { ok: false; error: string };
+export type UpdateEquipmentResult =
+  | { ok: true }
+  | {
+      ok: false;
+      /** Default (SI) wording; the UI may reformat it from `bounds` in the display unit. */
+      error: string;
+      /** Set when a position is off the floor: the axis and the floor limit in meters. */
+      bounds?: { axis: 'x' | 'y'; max: number };
+      /** The params key a schema rule failed on (e.g. `batchSize` when capacity is lowered). */
+      field?: string;
+    };
+
+/** The properties WS-1 edits. Position is meters; params are validated per behavior. */
+export interface EquipmentPatch {
+  name?: string;
+  position?: Partial<Point>;
+  params?: Record<string, number>;
+}
 
 export interface EditorState extends Prefs {
   /** Project document content; always meters (ADR-0006). */
@@ -80,6 +99,11 @@ export interface EditorState extends Prefs {
    * anchor snaps to the grid and the rest keep their offset from it.
    */
   dragSelected: (starts: Record<string, Point>, anchorId: string, delta: Point) => void;
+  /**
+   * Edits one equipment's name, position or params. Validates with the schema (plus: name
+   * non-blank, position on the floor); on failure nothing changes and the reason is returned.
+   */
+  updateEquipment: (id: string, patch: EquipmentPatch) => UpdateEquipmentResult;
   /** Adds degrees to every selected item's rotation. */
   rotateSelected: (degrees: number) => void;
   /** Sets every selected item's rotation to a typed angle in degrees. */
@@ -155,6 +179,42 @@ export function createEditorStore() {
             return p ? { ...e, position: p } : e;
           }),
         });
+      },
+      updateEquipment: (id, patch) => {
+        const { equipment, floor } = get();
+        const current = equipment.find((e) => e.id === id);
+        if (!current) return { ok: false, error: 'Equipment not found' };
+        if (patch.name !== undefined && patch.name.trim() === '')
+          return { ok: false, error: 'Name cannot be empty' };
+        const position = { ...current.position, ...patch.position };
+        if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
+          return { ok: false, error: 'Enter a number' };
+        for (const [axis, max] of [
+          ['x', floor.width],
+          ['y', floor.length],
+        ] as const) {
+          if (position[axis] < 0 || position[axis] > max)
+            return {
+              ok: false,
+              error: `${axis.toUpperCase()} must be on the floor (0 to ${max} m)`,
+              bounds: { axis, max },
+            };
+        }
+        const next = {
+          ...current,
+          name: patch.name ?? current.name,
+          position,
+          params: { ...current.params, ...patch.params },
+        };
+        // The schema owns the rules (positive ints, batch size <= capacity, no unknown keys).
+        const parsed = equipmentSchema.safeParse(next);
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0]!;
+          const field = issue.path[0] === 'params' ? String(issue.path[1]) : undefined;
+          return { ok: false, error: issue.message, ...(field ? { field } : {}) };
+        }
+        set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
+        return { ok: true };
       },
       rotateSelected: (degrees) => {
         mapSelected((e) => ({ ...e, rotation: normalizeRadians(e.rotation + toRadians(degrees)) }));
