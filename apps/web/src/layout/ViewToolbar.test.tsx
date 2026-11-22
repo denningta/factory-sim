@@ -14,3 +14,16 @@ describe('ViewToolbar', () => {
     expect(store.getState().fitTick).toBe(1);
   });
 });
+
+describe('One click toggles an orthographic top-down view', () => {
+  it('one click on the view button switches 3D → 2D and a second click switches back', async () => {
+    const store = createEditorStore();
+    render(<ViewToolbar useStore={store} />);
+    const user = userEvent.setup();
+    expect(store.getState().viewMode).toBe('3d');
+    await user.click(await screen.findByRole('button', { name: /2d top-down/i }));
+    expect(store.getState().viewMode).toBe('2d');
+    await user.click(await screen.findByRole('button', { name: /3d view/i }));
+    expect(store.getState().viewMode).toBe('3d');
+  });
+});

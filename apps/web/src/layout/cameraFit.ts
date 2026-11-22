@@ -77,3 +77,12 @@ export function aspectOf(size: { width: number; height: number }): number | null
   const aspect = size.width / size.height;
   return size.width > 0 && size.height > 0 && Number.isFinite(aspect) ? aspect : null;
 }
+
+/** Top-down orthographic pose that frames the floor and labels; see fitOrtho. */
+export function fitOrtho(_opts: FloorSize & { viewport: { width: number; height: number } }): {
+  position: Vec3;
+  target: Vec3;
+  zoom: number;
+} {
+  throw new Error('not implemented');
+}

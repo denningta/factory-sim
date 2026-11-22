@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { aspectOf, fitCamera, labelLayout, planBounds } from './cameraFit';
+import { aspectOf, fitCamera, fitOrtho, labelLayout, planBounds } from './cameraFit';
 
 const FOV = 45;
 
@@ -91,5 +91,54 @@ describe('aspectOf: the camera is never fitted to an unusable canvas size', () =
     expect(aspect).toBe(2);
     const fit = fitCamera({ width: 30, length: 20, aspect: aspect!, fovDeg: FOV });
     expect([...fit.position, ...fit.target, fit.distance].every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('Zoom-to-fit frames the whole floor (top-down 2D)', () => {
+  const floors = [
+    { width: 30, length: 20 },
+    { width: 10, length: 80 },
+    { width: 200, length: 5 },
+  ];
+  const viewports = [
+    { width: 800, height: 600 },
+    { width: 300, height: 900 },
+    { width: 1600, height: 400 },
+  ];
+  for (const floor of floors)
+    for (const viewport of viewports) {
+      it(`${floor.width} × ${floor.length} m in ${viewport.width}×${viewport.height}px keeps floor and labels in view, tightly`, () => {
+        const fit = fitOrtho({ ...floor, viewport });
+        const aspect = viewport.width / viewport.height;
+        const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 5000);
+        // Same frustum sizing three/fiber gives an ortho camera: 1 world unit = `zoom` px.
+        cam.left = -viewport.width / 2;
+        cam.right = viewport.width / 2;
+        cam.top = viewport.height / 2;
+        cam.bottom = -viewport.height / 2;
+        cam.zoom = fit.zoom;
+        cam.up.set(0, 0, -1);
+        cam.position.set(...fit.position);
+        cam.lookAt(...fit.target);
+        cam.updateMatrixWorld();
+        cam.updateProjectionMatrix();
+        expect(aspect).toBeGreaterThan(0);
+        const b = planBounds(floor);
+        let max = 0;
+        for (const x of [b.minX, b.maxX])
+          for (const z of [b.minZ, b.maxZ]) {
+            const p = new THREE.Vector3(x, 0, z).project(cam);
+            max = Math.max(max, Math.abs(p.x), Math.abs(p.y));
+          }
+        expect(max).toBeLessThanOrEqual(1);
+        expect(max).toBeGreaterThan(0.9);
+      });
+    }
+
+  it('looks straight down', () => {
+    const fit = fitOrtho({ width: 30, length: 20, viewport: { width: 800, height: 600 } });
+    expect(fit.position[0]).toBeCloseTo(fit.target[0]);
+    expect(fit.position[2]).toBeCloseTo(fit.target[2]);
+    expect(fit.position[1]).toBeGreaterThan(0);
   });
 });
