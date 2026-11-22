@@ -90,7 +90,7 @@ describe('loadDocument resets session state (SC-1, review N4)', () => {
     store.getState().selectEquipment(a.id, false);
     store.getState().selectType('base-sink');
     const other = createEditorStore();
-    const b = other.getState().placeEquipment('base-buffer', { x: 6, y: 6 })!;
+    const b = { ...other.getState().placeEquipment('base-buffer', { x: 6, y: 6 })!, id: 'eq-9' };
     store.getState().loadDocument({ ...createProject(), equipment: [b] });
     expect(store.getState().selectedTypeId).toBeNull();
     expect(store.getState().selectedIds).toEqual([]);
