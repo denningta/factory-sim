@@ -127,3 +127,29 @@ describe('docs (#64)', () => {
     expect(read('.env.example')).toContain('TRUST_PROXY');
   });
 });
+
+describe('web app polish (PL-8 review)', () => {
+  it('N1: HEAD on a client route gets the index.html headers, not a 404', async () => {
+    const t = await testApp({ webRoot: webRoot() });
+    const res = await t.app.inject({ method: 'HEAD', url: '/projects/42' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+  });
+
+  it('N2: assets are cached immutably and index.html is revalidated', async () => {
+    const t = await testApp({ webRoot: webRoot() });
+    const asset = await t.call('GET', '/assets/app.js');
+    expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    for (const url of ['/', '/projects/42']) {
+      expect((await t.call('GET', url)).headers['cache-control']).toBe('no-cache');
+    }
+  });
+
+  it('N3: deploy.md says the gateway example is safe only with the 127.0.0.1 binding', () => {
+    const doc = readFileSync(
+      fileURLToPath(new URL('../../../docs/deploy.md', import.meta.url)),
+      'utf8',
+    );
+    expect(doc).toMatch(/safe only[^\n]*127\.0\.0\.1/);
+  });
+});
