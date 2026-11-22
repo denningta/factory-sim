@@ -1,6 +1,6 @@
 # ADR-0002: Frontend: React + React Three Fiber
 
-- **Status:** Accepted (signed off 2026-11-21; performance confirmed by the PL-5 spike, see ADR-0014)
+- **Status:** Accepted (signed off 2026-11-21; performance confirmed by the PL-5 spike on UHD 630 / Chromium, weaker-machine rerun pending; see ADR-0014)
 - **Date:** 2026-11-21
 
 ## Context
