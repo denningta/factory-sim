@@ -32,14 +32,19 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
       source: { color: '#6b7f99', params: {} },
       sink: { color: '#7a6b99', params: {} },
     };
-    const equipment = Array.isArray(doc.equipment) ? doc.equipment : [];
+    // Only rewrite what this step understands; anything malformed is left for validation
+    // to report, never silently "repaired" into valid but empty data.
+    if (!Array.isArray(doc.equipment)) return { ...doc, schemaVersion: 2 };
     return {
       ...doc,
       schemaVersion: 2,
-      equipment: equipment.map((e: unknown) => {
-        if (typeof e !== 'object' || e === null) return e; // left for validation to report
+      equipment: doc.equipment.map((e: unknown) => {
+        if (typeof e !== 'object' || e === null) return e;
         const behavior = (e as { behavior?: unknown }).behavior;
-        const defaults = typeof behavior === 'string' ? v1Defaults[behavior] : undefined;
+        const defaults =
+          typeof behavior === 'string' && Object.hasOwn(v1Defaults, behavior)
+            ? v1Defaults[behavior]
+            : undefined;
         return defaults ? { ...defaults, ...e } : e;
       }),
     };

@@ -9,28 +9,36 @@ import { z } from 'zod';
  * Input/output points (EQ-4, FL-1) are added by a later schema version.
  */
 
-export const id = z.string().min(1);
+export const idSchema = z.string().min(1);
 /** Meters, strictly positive. */
-export const meters = z.number().positive();
-export const color = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a color like #3b82f6');
+export const metersSchema = z.number().positive();
+export const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a color like #3b82f6');
 const positiveInt = z.number().int().positive();
 
 export const EQUIPMENT_BEHAVIORS = ['workstation', 'buffer', 'conveyor', 'source', 'sink'] as const;
 
 /** Simulation parameters per behavior. SI units. */
 export const behaviorParamsSchemas = {
-  workstation: z.strictObject({
-    /** Units processed at the same time (WS-3). */
-    capacity: positiveInt,
-    /** Units that must accumulate before processing starts (WS-3). */
-    batchSize: positiveInt,
-  }),
+  workstation: z
+    .strictObject({
+      /** Units processed at the same time (WS-3). */
+      capacity: positiveInt,
+      /** Units that must accumulate before processing starts (WS-3); processed together. */
+      batchSize: positiveInt,
+    })
+    .refine((p) => p.batchSize <= p.capacity, {
+      message: 'Batch size cannot exceed capacity: a batch is processed together',
+      path: ['batchSize'],
+    }),
   buffer: z.strictObject({
     /** Maximum units held. */
     capacity: positiveInt,
   }),
   conveyor: z.strictObject({
-    /** Belt speed in m/s. Travel distance is the footprint length. */
+    /**
+     * Belt speed in m/s. Until input/output points exist (EQ-4), travel distance is the
+     * footprint length; afterwards the engine derives it from the points.
+     */
     speed: z.number().positive(),
   }),
   source: z.strictObject({}),
@@ -64,18 +72,18 @@ function withBehavior<S extends z.core.$ZodLooseShape>(shape: S) {
   ]);
 }
 
-export const footprintSchema = z.strictObject({ width: meters, length: meters });
+export const footprintSchema = z.strictObject({ width: metersSchema, length: metersSchema });
 
 /** The settings a type defines and an instance copies. */
 const typeSettings = {
   footprint: footprintSchema,
-  height: meters,
-  color,
+  height: metersSchema,
+  color: colorSchema,
 };
 
 /** A library entry (EQ-1 built-in or EQ-3 user-defined). */
 export const equipmentTypeSchema = withBehavior({
-  id,
+  id: idSchema,
   name: z.string().trim().min(1),
   ...typeSettings,
 });
@@ -85,10 +93,10 @@ export const pointSchema = z.strictObject({ x: z.number(), y: z.number() });
 
 /** An instance placed on the floor, with its own copy of the type's settings. */
 export const equipmentSchema = withBehavior({
-  id,
+  id: idSchema,
   name: z.string(),
   /** The library type it was created from; used to offer "update instances" (EQ-3). */
-  typeId: id,
+  typeId: idSchema,
   position: pointSchema,
   /** Radians about the vertical axis. */
   rotation: z.number(),

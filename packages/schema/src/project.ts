@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { color, equipmentSchema, id, meters } from './equipment';
+import {
+  colorSchema as color,
+  equipmentSchema,
+  idSchema as id,
+  metersSchema as meters,
+} from './equipment';
 
 /**
  * Project document, schema version 2 (ADR-0006, ADR-0009, ADR-0010).

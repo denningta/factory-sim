@@ -26,6 +26,16 @@ describe('equipment types (ADR-0010, EQ-1 contract)', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects a workstation batch size larger than its capacity', () => {
+    const ws = { ...BASE_EQUIPMENT_TYPES[0]!, params: { capacity: 2, batchSize: 3 } };
+    const result = equipmentTypeSchema.safeParse(ws);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues[0]?.path).toEqual(['params', 'batchSize']);
+    expect(
+      equipmentTypeSchema.safeParse({ ...ws, params: { capacity: 3, batchSize: 3 } }).success,
+    ).toBe(true);
+  });
+
   it('rejects non-integer capacity and non-positive conveyor speed', () => {
     const ws = { ...BASE_EQUIPMENT_TYPES[0]!, params: { capacity: 1.5, batchSize: 1 } };
     const conv = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'conveyor')!;
@@ -117,6 +127,24 @@ describe('schema v1 → v2 upgrade (real chain)', () => {
       params: { speed: 0.2 },
     });
     expect(result.project.connections).toEqual(v1.connections);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['a string', 'junk'],
+    ['an object', {}],
+  ])('rejects a v1 document whose equipment is %s instead of emptying it', (_label, value) => {
+    const result = loadProject({ ...v1, equipment: value });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('equipment');
+  });
+
+  it('does not treat inherited keys such as "constructor" as a behavior', () => {
+    const result = loadProject({
+      ...v1,
+      equipment: [{ ...v1.equipment[0], behavior: 'constructor' }],
+    });
+    expect(result.ok).toBe(false);
   });
 
   it('reports invalid v1 equipment through validation instead of crashing', () => {
