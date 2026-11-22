@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createProject, floorSchema, type Floor } from '@factory-sim/schema';
+import { createProject, floorSchema, type Equipment, type Floor } from '@factory-sim/schema';
 import { MAX_GRID_LINES } from './gridLayout';
 import type { DisplayUnit } from './units';
 
@@ -48,6 +48,34 @@ export interface EditorState extends Prefs {
   /** The library type to preview and, with LE-2, to place. Session-only, not a preference. */
   selectedTypeId: string | null;
   selectType: (typeId: string | null) => void;
+  /** Placed equipment; part of the project document (meters, radians). */
+  equipment: Equipment[];
+  /** Ids of the selected equipment; session-only. */
+  selectedIds: string[];
+  /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
+  placeEquipment: (typeId: string, point: Point) => Equipment | null;
+  selectEquipment: (id: string, additive: boolean) => void;
+  /** Selects equipment whose center lies in the rectangle (meters, any corner order). */
+  selectInRect: (a: Point, b: Point, additive: boolean) => void;
+  clearSelection: () => void;
+  /**
+   * Drags the selection: `delta` is relative to `starts` (positions when the drag began). The
+   * anchor snaps to the grid and the rest keep their offset from it.
+   */
+  dragSelected: (starts: Record<string, Point>, anchorId: string, delta: Point) => void;
+  /** Adds degrees to every selected item's rotation. */
+  rotateSelected: (degrees: number) => void;
+  /** Sets every selected item's rotation to a typed angle in degrees. */
+  setSelectedRotation: (degrees: number) => void;
+  deleteSelected: () => void;
+  /** Bumped by "Zoom to fit"; the camera rig refits only when this changes (#57). */
+  fitTick: number;
+  requestFit: () => void;
+}
+
+export interface Point {
+  x: number;
+  y: number;
 }
 
 export function createEditorStore() {
@@ -56,6 +84,36 @@ export function createEditorStore() {
     floor: createProject().floor,
     selectedTypeId: null,
     selectType: (selectedTypeId) => set({ selectedTypeId }),
+    equipment: [],
+    selectedIds: [],
+    placeEquipment: () => {
+      throw new Error('not implemented');
+    },
+    selectEquipment: () => {
+      throw new Error('not implemented');
+    },
+    selectInRect: () => {
+      throw new Error('not implemented');
+    },
+    clearSelection: () => {
+      throw new Error('not implemented');
+    },
+    dragSelected: () => {
+      throw new Error('not implemented');
+    },
+    rotateSelected: () => {
+      throw new Error('not implemented');
+    },
+    setSelectedRotation: () => {
+      throw new Error('not implemented');
+    },
+    deleteSelected: () => {
+      throw new Error('not implemented');
+    },
+    fitTick: 0,
+    requestFit: () => {
+      throw new Error('not implemented');
+    },
     setFloor: (patch) => {
       const next = { ...get().floor, ...patch };
       const parsed = floorSchema.safeParse(next);

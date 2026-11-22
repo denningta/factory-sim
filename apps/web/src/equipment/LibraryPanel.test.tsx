@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
-import { LibraryPanel } from './LibraryPanel';
+import { EQUIPMENT_DRAG_TYPE, LibraryPanel } from './LibraryPanel';
 import { TYPE_DESCRIPTIONS } from './descriptions';
 
 afterEach(cleanup);
@@ -51,5 +51,16 @@ describe('LibraryPanel', () => {
     render(<LibraryPanel unit="m" selectedId={null} onSelect={onSelect} />);
     await userEvent.setup().click(screen.getByRole('button', { name: /conveyor/i }));
     expect(onSelect).toHaveBeenCalledWith('base-conveyor');
+  });
+
+  it('Dragging from the library carries the type id for the canvas to place', () => {
+    render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} />);
+    const items = screen.getAllByRole('listitem');
+    const data: Record<string, string> = {};
+    const dataTransfer = { setData: (k: string, v: string) => (data[k] = v), effectAllowed: '' };
+    const button = within(items[1]!).getByRole('button');
+    expect(button.getAttribute('draggable')).toBe('true');
+    fireEvent.dragStart(button, { dataTransfer });
+    expect(data[EQUIPMENT_DRAG_TYPE]).toBe(BASE_EQUIPMENT_TYPES[1]!.id);
   });
 });

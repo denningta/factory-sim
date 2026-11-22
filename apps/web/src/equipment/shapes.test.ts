@@ -8,6 +8,12 @@ describe('Each type renders as a distinct, recognizable 3D shape', () => {
     expect(new Set(sigs).size).toBe(BASE_EQUIPMENT_TYPES.length);
   });
 
+  it('shape signatures compare geometry only, not tone (#57)', () => {
+    const parts = equipmentParts(BASE_EQUIPMENT_TYPES[0]!);
+    const retoned = parts.map((p) => ({ ...p, tone: p.tone * 0.5 }));
+    expect(shapeSignature(retoned)).toBe(shapeSignature(parts));
+  });
+
   it('every shape has several parts, not a single plain box', () => {
     for (const t of BASE_EQUIPMENT_TYPES) expect(equipmentParts(t).length).toBeGreaterThan(2);
   });
