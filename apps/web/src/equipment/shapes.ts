@@ -81,13 +81,14 @@ export function equipmentParts(
       const belt = h * 0.12;
       const legH = h - belt - h * 0.1;
       // Keep the legs (thickness `rail` along z) inside the footprint on short, wide belts.
-      const legZ = Math.min(0.45 * l, l / 2 - rail / 2);
+      const leg = Math.min(rail, l);
+      const legZ = Math.min(0.45 * l, l / 2 - leg / 2);
       const parts: Part[] = [slab(w - 2 * rail, belt, l, legH, 0, 0, 0.55)];
       for (const s of [-1, 1])
         parts.push(slab(rail, h - legH, l, legH, s * (w / 2 - rail / 2), 0, 1));
       for (const s of [-1, 1])
         for (const z of [-legZ, legZ])
-          parts.push(slab(rail, legH, rail, 0, s * (w / 2 - rail / 2), z, 0.7));
+          parts.push(slab(rail, legH, leg, 0, s * (w / 2 - rail / 2), z, 0.7));
       return parts;
     }
     case 'source': {

@@ -127,8 +127,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
           <div style={{ display: 'flex', gap: 8 }}>
             {(
               [
-                ['Width', first.footprint.width, (m: number) => ({ footprint: { width: m } })],
                 ['Length', first.footprint.length, (m: number) => ({ footprint: { length: m } })],
+                ['Width', first.footprint.width, (m: number) => ({ footprint: { width: m } })],
                 ['Height', first.height, (m: number) => ({ height: m })],
               ] as const
             ).map(([label, meters, patchOf]) => (
