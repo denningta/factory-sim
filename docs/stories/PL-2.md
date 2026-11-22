@@ -16,11 +16,12 @@ issue: 18
 
 ## Acceptance criteria
 
-- [x] Postgres data lives in a named volume
-- [x] Recreating or upgrading containers keeps all projects
-- [x] Schema migrations run automatically on startup and are safe to run twice
+- [ ] Postgres data lives in a named volume
+- [ ] Recreating or upgrading containers keeps all projects
+- [ ] Schema migrations run automatically on startup and are safe to run twice
 
 ## Notes
 
 - Added a minimal Drizzle `projects` table (`apps/api/src/db/schema.ts`) and migration `apps/api/drizzle/0000_init.sql`; `apps/api/src/main.ts` runs `migrateDatabase` before listening. Drizzle's journal table makes re-runs a no-op.
 - Verified in Docker: `down` + `up` and `up --force-recreate` kept a row; the journal had one entry after multiple startups.
+- Document validation (`loadProject` on read, `validateProject` on write) happens at the API boundary in SC-1; the column is typed `unknown` so nothing bypasses it.
