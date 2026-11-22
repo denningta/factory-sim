@@ -1,3 +1,5 @@
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 import { migrateDatabase } from './db/migrate';
 import { loadEnv, type AppEnv } from './env';
 import { buildServer } from './server';
@@ -16,5 +18,6 @@ const { port, databaseUrl } = config;
 // Migrate before listening so the healthcheck only passes once the schema is current.
 await migrateDatabase(databaseUrl);
 
-await buildServer().listen({ port, host: '0.0.0.0' });
+const pool = new pg.Pool({ connectionString: databaseUrl });
+await buildServer({ db: drizzle(pool), config }).listen({ port, host: '0.0.0.0' });
 console.log(`api listening on :${port}`);

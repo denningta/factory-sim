@@ -13,6 +13,9 @@ describe('loadEnv', () => {
       port: 8080,
       databaseUrl: valid.DATABASE_URL,
       sessionSecret: valid.SESSION_SECRET,
+      sessionIdleHours: 8,
+      sessionMaxDays: 7,
+      cookieSecure: false,
     });
   });
 
@@ -41,5 +44,26 @@ describe('loadEnv', () => {
     expect(() =>
       loadEnv({ ...valid, SESSION_SECRET: 'change-me-to-a-long-random-string' }),
     ).toThrow(/SESSION_SECRET.*placeholder/);
+  });
+});
+
+describe('loadEnv session settings (PL-6)', () => {
+  it('AC3: session limits and cookie flag are configurable', () => {
+    const env = loadEnv({
+      ...valid,
+      SESSION_IDLE_HOURS: '0.5',
+      SESSION_MAX_DAYS: '2',
+      COOKIE_SECURE: 'true',
+    });
+    expect(env).toMatchObject({ sessionIdleHours: 0.5, sessionMaxDays: 2, cookieSecure: true });
+  });
+
+  it.each([
+    ['SESSION_IDLE_HOURS', '0'],
+    ['SESSION_IDLE_HOURS', 'soon'],
+    ['SESSION_MAX_DAYS', '-1'],
+    ['COOKIE_SECURE', 'yes'],
+  ])('AC3: refuses %s=%j', (key, value) => {
+    expect(() => loadEnv({ ...valid, [key]: value })).toThrow(new RegExp(key));
   });
 });
