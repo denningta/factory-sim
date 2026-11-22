@@ -1,35 +1,78 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
-import { formatNumber, toDisplay } from './units';
+import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { formatNumber, fromDisplay, toDisplay } from './units';
 
 type Store = typeof defaultStore;
 
 const toDegrees = (rad: number) => (rad * 180) / Math.PI;
 
-/** Keeps the typed text while editing so "4." or "" aren't reformatted under the cursor. */
-function AngleField({ degrees, onCommit }: { degrees: number; onCommit: (d: number) => void }) {
+/**
+ * A text field that commits each keystroke through `commit`, which returns an error reason or
+ * null. Invalid text stays visible with its reason; the store never receives it. On blur the
+ * field reverts to the stored value.
+ */
+function Field({
+  label,
+  value,
+  commit,
+}: {
+  label: string;
+  value: string;
+  commit: (text: string) => string | null;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      Rotation (°)
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+      {label}
       <input
         type="text"
         inputMode="decimal"
-        value={draft ?? formatNumber(degrees)}
+        value={draft ?? value}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? errorId : undefined}
         onChange={(e) => {
           setDraft(e.target.value);
-          const n = Number(e.target.value);
-          if (e.target.value.trim() !== '' && Number.isFinite(n)) onCommit(n);
+          setError(commit(e.target.value));
         }}
-        onBlur={() => setDraft(null)}
+        onBlur={() => {
+          setDraft(null);
+          setError(null);
+        }}
       />
+      {error && (
+        <span id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
+          {error}
+        </span>
+      )}
     </label>
   );
 }
 
+/** Parses typed text as a finite number, or returns the reason it can't be. */
+function parseNumber(text: string): number | string {
+  const n = Number(text);
+  return text.trim() === '' || !Number.isFinite(n) ? 'Enter a number' : n;
+}
+
+const PARAM_LABELS: Record<string, string> = {
+  capacity: 'Capacity (units)',
+  batchSize: 'Batch size (units)',
+  speed: 'Speed (m/s)',
+};
+
 export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store }) {
-  const { equipment, selectedIds, unit, rotateSelected, setSelectedRotation, deleteSelected } =
-    useStore();
+  const {
+    equipment,
+    selectedIds,
+    unit,
+    rotateSelected,
+    setSelectedRotation,
+    updateEquipment,
+    deleteSelected,
+  } = useStore();
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
   if (!first) {
@@ -46,26 +89,80 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
   return (
     <section aria-label="Properties" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <h2>Properties</h2>
-      <p style={{ margin: 0 }}>
-        <strong>{single ? first.name : `${selected.length} selected`}</strong>
-      </p>
-      {single && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-            Position X ({unit})
-            <input readOnly value={pos(first.position.x)} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-            Position Y ({unit})
-            <input readOnly value={pos(first.position.y)} />
-          </label>
-        </div>
+      {single ? (
+        <>
+          <Field
+            key={`name-${first.id}`}
+            label="Name"
+            value={first.name}
+            commit={(t) => {
+              const r = updateEquipment(first.id, { name: t });
+              return r.ok ? null : r.error;
+            }}
+          />
+          <p style={{ margin: 0 }}>
+            Type:{' '}
+            <span data-testid="type">
+              {BASE_EQUIPMENT_TYPES.find((t) => t.id === first.typeId)?.name ?? first.typeId}
+            </span>
+          </p>
+          {/* Read-only here; editing dimensions is EQ-2. */}
+          <p style={{ margin: 0 }}>
+            Dimensions:{' '}
+            <span data-testid="dimensions">
+              {[first.footprint.width, first.footprint.length, first.height]
+                .map((m) => formatNumber(toDisplay(m, unit)))
+                .join(' × ')}{' '}
+              {unit} (W × L × H)
+            </span>
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['x', 'y'] as const).map((axis) => (
+              <Field
+                key={`${axis}-${first.id}`}
+                label={`Position ${axis.toUpperCase()} (${unit})`}
+                value={pos(first.position[axis])}
+                commit={(t) => {
+                  const n = parseNumber(t);
+                  if (typeof n === 'string') return n;
+                  const r = updateEquipment(first.id, {
+                    position: { [axis]: fromDisplay(n, unit) },
+                  });
+                  return r.ok ? null : r.error;
+                }}
+              />
+            ))}
+          </div>
+          {Object.entries(first.params).map(([key, v]) => (
+            <Field
+              key={`${key}-${first.id}`}
+              label={PARAM_LABELS[key] ?? key}
+              value={String(v)}
+              commit={(t) => {
+                const n = parseNumber(t);
+                if (typeof n === 'string') return n;
+                const r = updateEquipment(first.id, { params: { [key]: n } });
+                return r.ok ? null : r.error;
+              }}
+            />
+          ))}
+        </>
+      ) : (
+        <p style={{ margin: 0 }}>
+          <strong>{`${selected.length} selected`}</strong>
+        </p>
       )}
       {/* Keyed by selection so the field re-reads when the selection changes. */}
-      <AngleField
-        key={selectedIds.join(',')}
-        degrees={same ? toDegrees(first.rotation) : 0}
-        onCommit={setSelectedRotation}
+      <Field
+        key={`rot-${selectedIds.join(',')}`}
+        label="Rotation (°)"
+        value={formatNumber(same ? toDegrees(first.rotation) : 0)}
+        commit={(t) => {
+          const n = parseNumber(t);
+          if (typeof n === 'string') return n;
+          setSelectedRotation(n);
+          return null;
+        }}
       />
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={() => rotateSelected(-90)}>

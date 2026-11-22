@@ -27,7 +27,7 @@ describe('PropertiesPanel', () => {
   it('Position and rotation show in the properties panel', async () => {
     const e = place(4, 7);
     store.getState().setSelectedRotation(90);
-    expect(await screen.findByText(e.name)).toBeTruthy();
+    expect(((await screen.findByLabelText(/^name/i)) as HTMLInputElement).value).toBe(e.name);
     expect((screen.getByLabelText(/position x/i) as HTMLInputElement).value).toBe('4');
     expect((screen.getByLabelText(/position y/i) as HTMLInputElement).value).toBe('7');
     expect((screen.getByLabelText(/rotation/i) as HTMLInputElement).value).toBe('90');

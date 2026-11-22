@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   BASE_EQUIPMENT_TYPES,
   createProject,
+  equipmentSchema,
   floorSchema,
   instantiate,
   type Equipment,
@@ -166,8 +167,30 @@ export function createEditorStore() {
           }),
         });
       },
-      updateEquipment: () => {
-        throw new Error('not implemented');
+      updateEquipment: (id, patch) => {
+        const { equipment, floor } = get();
+        const current = equipment.find((e) => e.id === id);
+        if (!current) return { ok: false, error: 'Equipment not found' };
+        if (patch.name !== undefined && patch.name.trim() === '')
+          return { ok: false, error: 'Name cannot be empty' };
+        const position = { ...current.position, ...patch.position };
+        if (!Number.isFinite(position.x) || !Number.isFinite(position.y))
+          return { ok: false, error: 'Enter a number' };
+        if (position.x < 0 || position.x > floor.width)
+          return { ok: false, error: `X must be on the floor (0 to ${floor.width} m)` };
+        if (position.y < 0 || position.y > floor.length)
+          return { ok: false, error: `Y must be on the floor (0 to ${floor.length} m)` };
+        const next = {
+          ...current,
+          name: patch.name ?? current.name,
+          position,
+          params: { ...current.params, ...patch.params },
+        };
+        // The schema owns the rules (positive ints, batch size <= capacity, no unknown keys).
+        const parsed = equipmentSchema.safeParse(next);
+        if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+        set({ equipment: equipment.map((e) => (e.id === id ? parsed.data : e)) });
+        return { ok: true };
       },
       rotateSelected: (degrees) => {
         mapSelected((e) => ({ ...e, rotation: normalizeRadians(e.rotation + toRadians(degrees)) }));
