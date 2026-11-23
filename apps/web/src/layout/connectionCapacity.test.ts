@@ -44,3 +44,34 @@ describe('FL-2 updateConnection capacity', () => {
     expect(capacity()).toBe(7);
   });
 });
+
+describe('FL-4 updateConnection transfer', () => {
+  const transfer = () => store.getState().connections[0]!.transfer;
+
+  it('accepts instant, fixed time and calculated (speed) transfers', () => {
+    for (const t of [
+      { kind: 'fixed' as const, time: { kind: 'fixed' as const, value: 4 } },
+      { kind: 'speed' as const, speed: 0.5 },
+      { kind: 'instant' as const },
+    ]) {
+      expect(store.getState().updateConnection(id, { transfer: t })).toEqual({ ok: true });
+      expect(transfer()).toEqual(t);
+    }
+  });
+
+  it('rejects a zero speed and a negative time, leaving the connection unchanged', () => {
+    const bad = [
+      { kind: 'speed' as const, speed: 0 },
+      { kind: 'fixed' as const, time: { kind: 'fixed' as const, value: -1 } },
+    ];
+    for (const t of bad)
+      expect(store.getState().updateConnection(id, { transfer: t }).ok).toBe(false);
+    expect(transfer()).toEqual({ kind: 'instant' });
+  });
+
+  it('is undoable', () => {
+    store.getState().updateConnection(id, { transfer: { kind: 'speed', speed: 1 } });
+    store.getState().undo();
+    expect(transfer()).toEqual({ kind: 'instant' });
+  });
+});
