@@ -50,6 +50,51 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
       }),
     };
   },
+  // v2 → v3: equipment gets default ports; connections join those ports, capacity 0.
+  2: (doc) => {
+    const v2Ports: Record<string, { id: string; kind: string; u: number; v: number }[]> = {
+      source: [{ id: 'out', kind: 'output', u: 0, v: 0.5 }],
+      sink: [{ id: 'in', kind: 'input', u: 0, v: -0.5 }],
+      workstation: [
+        { id: 'in', kind: 'input', u: 0, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
+      buffer: [
+        { id: 'in', kind: 'input', u: 0, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
+      conveyor: [
+        { id: 'in', kind: 'input', u: 0, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
+    };
+    const next: Record<string, unknown> = { ...doc, schemaVersion: 3 };
+    if (Array.isArray(doc.equipment)) {
+      next.equipment = doc.equipment.map((e: unknown) => {
+        if (typeof e !== 'object' || e === null) return e;
+        const behavior = (e as { behavior?: unknown }).behavior;
+        const ports =
+          typeof behavior === 'string' && Object.hasOwn(v2Ports, behavior)
+            ? v2Ports[behavior]
+            : undefined;
+        return ports ? { ports, ...e } : e;
+      });
+    }
+    if (Array.isArray(doc.connections)) {
+      next.connections = doc.connections.map((c: unknown) => {
+        if (typeof c !== 'object' || c === null) return c;
+        const { from, to } = c as { from?: unknown; to?: unknown };
+        if (typeof from !== 'string' || typeof to !== 'string') return c;
+        return {
+          ...c,
+          from: { equipmentId: from, portId: 'out' },
+          to: { equipmentId: to, portId: 'in' },
+          capacity: 0,
+        };
+      });
+    }
+    return next;
+  },
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({

@@ -23,3 +23,6 @@ issue: 9
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Contract:** `connection.capacity` is `0` (no buffer: direct hand-off, upstream blocks) or a positive integer, or `null` for unlimited. Buffer objects' capacity is `params.capacity` (positive integer). **Product owner (2026-11-22): buffer objects always have a finite capacity the user sets** (WS-1 properties panel). Only connections may be unlimited.
+- The two-station test model (AC3) runs on the SE-1 kernel (`Queue` with finite capacity gives blocking). Building it may need the line-model API, so ask the lead before adding to `packages/sim-engine`'s public API.

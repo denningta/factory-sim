@@ -24,11 +24,7 @@ function sampleProject(): Project {
       eq('s2', 'workstation', 10),
       eq('snk', 'sink', 15),
     ],
-    connections: [
-      { id: 'c1', from: 'src', to: 's1' },
-      { id: 'c2', from: 's1', to: 's2' },
-      { id: 'c3', from: 's2', to: 'snk' },
-    ],
+    connections: [link('c1', 'src', 's1'), link('c2', 's1', 's2'), link('c3', 's2', 'snk')],
     products: [
       {
         id: 'pA',
@@ -53,6 +49,16 @@ function sampleProject(): Project {
       { productId: 'pA', stationId: 's2', time: { kind: 'fixed', value: 45 } },
       { productId: 'pB', stationId: 's1', time: { kind: 'fixed', value: 40 } },
     ],
+  };
+}
+
+/** A default output → input connection with no buffer. */
+function link(id: string, from: string, to: string): Project['connections'][number] {
+  return {
+    id,
+    from: { equipmentId: from, portId: 'out' },
+    to: { equipmentId: to, portId: 'in' },
+    capacity: 0,
   };
 }
 
@@ -129,17 +135,45 @@ describe('PL-3 AC2: saves are validated; invalid data is rejected with a clear m
 
   it('rejects a connection from an object to itself', () => {
     const p = sampleProject();
-    p.connections.push({ id: 'c4', from: 's1', to: 's1' });
+    p.connections.push(link('c4', 's1', 's1'));
     expectInvalid(p, 'connections[3]', 'cannot connect "s1" to itself');
+  });
+
+  it('connects an output port to an input port only', () => {
+    const p = sampleProject();
+    p.connections[1]!.from.portId = 'in'; // s1 has an input called "in"
+    p.connections[2]!.to.portId = 'nope';
+    expectInvalid(
+      p,
+      'connections[1].from.portId',
+      'is an input, expected an output',
+      'connections[2].to.portId',
+      'has no port "nope"',
+    );
+  });
+
+  it('rejects connecting the same two ports twice', () => {
+    const p = sampleProject();
+    p.connections.push(link('c4', 'src', 's1'));
+    expectInvalid(p, 'connections[3]', 'already connected');
+  });
+
+  it('accepts unlimited and positive connection capacities, rejects negative', () => {
+    const p = sampleProject();
+    p.connections[0]!.capacity = null;
+    p.connections[1]!.capacity = 5;
+    expect(validateProject(p).ok).toBe(true);
+    p.connections[2]!.capacity = -1;
+    expectInvalid(p, 'connections[2].capacity');
   });
 
   it('rejects references to unknown equipment', () => {
     const p = sampleProject();
-    p.connections[0]!.to = 'ghost';
+    p.connections[0]!.to.equipmentId = 'ghost';
     p.products[0]!.routing[0]!.stationId = 'nowhere';
     expectInvalid(
       p,
-      'connections[0].to',
+      'connections[0].to.equipmentId',
       '"ghost"',
       'products[0].routing[0].stationId',
       '"nowhere"',
