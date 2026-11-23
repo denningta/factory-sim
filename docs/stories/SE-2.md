@@ -23,3 +23,8 @@ issue: 29
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- SE-3 already built play/pause/reset/speed in `RunSession`; SE-2 adds `step` and `runToEnd` to the UI, clamps speed to 1–1000×, and tests the 20-station week.
+- `runToEnd()` = animation off + play, so the host's frame loop runs it in 8 ms slices without freezing the UI.
+- The engine-level timing benchmark (`line.perf.test.ts`, `BENCH=1`) already exists; the web test also runs the full week through the session.
+- Reset keeps the Animate setting, so after Run to end → Reset animation stays off until the user re-checks Animate (the checkbox shows the state).

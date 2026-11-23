@@ -31,8 +31,11 @@ interface Track {
 }
 
 export function createTechTracks(geometry: LineGeometry, techs: readonly TechInfo[]): TechTracks {
+  // A tech with no station has nowhere to be drawn.
   const tracks = new Map<string, Track>(
-    techs.map((info) => [info.id, { info, walks: [], cursor: 0 }]),
+    techs
+      .filter((info) => info.homeId !== undefined)
+      .map((info) => [info.id, { info, walks: [], cursor: 0 }]),
   );
   const center = (id: string | undefined): Pt =>
     (id !== undefined && geometry.equipment.get(id)?.center) || { x: 0, z: 0 };

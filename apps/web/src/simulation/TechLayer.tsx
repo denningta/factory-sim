@@ -7,16 +7,16 @@ import type { RunSession } from './runSession';
 const BODY_HEIGHT = 1.7;
 const BODY_RADIUS = 0.3;
 const LABEL_HEIGHT = 1.1;
-const WALKING_COLOR = '#f59e0b';
-const STANDING_COLOR = '#4f46e5';
+const WALKING_COLOR = '#9333ea';
+const STANDING_COLOR = '#475569';
 
 /**
  * A tech is a capsule with its name floating above, drawn at the sim clock's pose (like parts,
  * ADR-0008). Few techs, so one small group each, moved through refs: no React state per frame.
  */
 export function TechLayer({ session }: { session: RunSession }) {
-  // Who exists doesn't change during a run, only where they are.
-  const techs = useMemo(() => session.techPoses(0), [session]);
+  // Re-read when animation is toggled (Running re-renders on that); empty while it's off.
+  const techs = session.techPoses(0);
   return (
     <>
       {techs.map((t) => (
@@ -32,7 +32,9 @@ function TechMarker({ session, id, name }: { session: RunSession; id: string; na
   useEffect(() => () => material.dispose(), [material]);
   useFrame(() => {
     const pose = session.techPoses(session.now).find((p) => p.techId === id);
-    if (!group.current || !pose) return;
+    if (!group.current) return;
+    group.current.visible = !!pose;
+    if (!pose) return;
     group.current.position.set(pose.x, 0, pose.z);
     material.color.set(pose.state === 'walking' ? WALKING_COLOR : STANDING_COLOR);
   });
