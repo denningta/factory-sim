@@ -31,3 +31,6 @@ _Added by the lead or builder during the story: design decisions, open questions
 - **AC3 reading:** when a user changes their own password, all their sessions _except the current one_ end. When an admin resets someone's password, _all_ of that user's sessions end.
 - A wrong current password answers `unauthorized`. The sign-in throttle (`rate_limited`) also applies to the change endpoint, so it can't be used to guess passwords.
 - An admin changing their _own_ password uses the change flow (current password required), not the reset.
+- **Builder:** UI is deliberately minimal and unstyled (per the issue comment): an "Account" button on the project list opens `AccountPage` with the change-password form and, for admins, a user list with a per-user "Reset password" action (hidden for the admin's own row). No wireframe covers it.
+- **Builder:** a non-JSON body is now mapped from Fastify's `FST_ERR_CTP_INVALID_MEDIA_TYPE` to `unsupported_media_type` (415).
+- **Builder:** the change endpoint reserves a throttle attempt per `email|ip` before verifying and clears it on success, same as login.
