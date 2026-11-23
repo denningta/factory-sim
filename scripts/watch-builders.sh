@@ -9,7 +9,7 @@ while sleep 20; do
   cur=$(snap)
   while read -r name status; do
     was=$(awk -v n="$name" '$1==n{print $2}' <<<"$prev")
-    if [ "$status" = blocked ] || { [ "$was" = working ] && [ "$status" != working ]; }; then
+    if { [ "$status" = blocked ] && [ "$was" != blocked ]; } || { [ "$was" = working ] && [ "$status" != working ]; }; then
       echo "TRANSITION $name: ${was:-new} -> $status"
       herdr agent read "$name" --source recent-unwrapped --lines 40 2>/dev/null | grep -E "PR READY|PR UPDATED|\?$|blocked|lead" | tail -3
       exit 0
