@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { preRunIssues } from './preRunIssues';
+import { CycleTimeGrid } from './CycleTimeGrid';
 import { RoutingEditor } from './RoutingEditor';
 
 type Store = typeof defaultStore;
@@ -85,7 +86,8 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
   const { products, addProduct, updateProduct, deleteProduct, beginEdit, endEdit } = useStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = products.find((p) => p.id === selectedId) ?? products[0];
-  const issues = preRunIssues({ products });
+  const { cycleTimes, equipment } = useStore();
+  const issues = preRunIssues({ products, cycleTimes, equipment });
   const edit = (field: 'partNumber' | 'name') => (text: string) => {
     const r = updateProduct(selected!.id, { [field]: text });
     return r.ok ? null : r.error;
@@ -180,6 +182,7 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
       </section>
       <div style={{ padding: 24, background: '#f9fafb' }}>
         {selected && <RoutingEditor product={selected} useStore={useStore} />}
+        <CycleTimeGrid useStore={useStore} />
       </div>
     </div>
   );
