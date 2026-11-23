@@ -27,7 +27,7 @@ export async function testApp(
   });
   await app.ready();
 
-  type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   const call = (method: Method, url: string, body?: unknown, cookie?: string, ip?: string) =>
     app.inject({
       method,

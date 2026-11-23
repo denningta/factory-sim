@@ -64,6 +64,15 @@ export const api = {
   logout: async (): Promise<void> => request('POST', '/api/auth/logout', null),
   session: async (): Promise<User> =>
     (await request('GET', '/api/auth/session', sessionResponseSchema)).user,
+  changePassword: async (_currentPassword: string, _newPassword: string): Promise<void> => {
+    throw new Error('not implemented');
+  },
+  listUsers: async (): Promise<User[]> => {
+    throw new Error('not implemented');
+  },
+  resetPassword: async (_userId: string, _newPassword: string): Promise<void> => {
+    throw new Error('not implemented');
+  },
   listProjects: async (): Promise<ProjectSummary[]> =>
     (await request('GET', '/api/projects', projectListResponseSchema)).projects,
   createProject: async (name: string): Promise<ProjectDetail> =>

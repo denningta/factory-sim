@@ -49,4 +49,27 @@ describe('api client', () => {
     );
     await expect(api.listProjects()).resolves.toEqual([]);
   });
+
+  it('AC1: changePassword POSTs both passwords to /api/auth/password', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.changePassword('old', 'a brand new passphrase');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/auth/password');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      currentPassword: 'old',
+      newPassword: 'a brand new passphrase',
+    });
+  });
+
+  it('AC2: resetPassword PUTs the new password to /api/users/:id/password', async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await api.resetPassword('u1', 'a brand new passphrase');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/users/u1/password');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ newPassword: 'a brand new passphrase' });
+  });
 });
