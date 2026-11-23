@@ -70,12 +70,14 @@ describe('PR-3 each cell takes a fixed time', () => {
 describe('PR-3 missing cycle times are flagged before a run', () => {
   it('reports missing_cycle_times until every used cell is filled', () => {
     const { saw, cnc, p1, p2 } = setup();
+    // Unstaffed manual stations (TE-1) are covered in the TE-1 tests.
     const issues = () =>
       preRunIssues({
         products: s().products,
         cycleTimes: s().cycleTimes,
         equipment: s().equipment,
-      });
+        technicians: s().technicians,
+      }).filter((i) => i.code === 'missing_cycle_times');
     expect(issues()).toEqual([
       { code: 'missing_cycle_times', message: expect.stringMatching(/3 cycle times.*missing/i) },
     ]);

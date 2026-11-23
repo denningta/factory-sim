@@ -86,8 +86,8 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
   const { products, addProduct, updateProduct, deleteProduct, beginEdit, endEdit } = useStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = products.find((p) => p.id === selectedId) ?? products[0];
-  const { cycleTimes, equipment } = useStore();
-  const issues = preRunIssues({ products, cycleTimes, equipment });
+  const { cycleTimes, equipment, technicians } = useStore();
+  const issues = preRunIssues({ products, cycleTimes, equipment, technicians });
   const edit = (field: 'partNumber' | 'name') => (text: string) => {
     const r = updateProduct(selected!.id, { [field]: text });
     return r.ok ? null : r.error;

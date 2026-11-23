@@ -6,13 +6,16 @@ import {
   floorSchema,
   connectionSchema,
   projectSchema,
+  technicianSchema,
   instantiate,
   type Connection,
   type CycleTime,
   type Equipment,
   type PortRef,
   type Floor,
+  type Labor,
   type Product,
+  type Technician,
   type Project,
   type RoutingStep,
 } from '@factory-sim/schema';
@@ -20,6 +23,9 @@ import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
 import type { DisplayUnit } from './units';
 import type { ViewMode } from './viewControls';
+
+/** m/s; a typical walking pace (TE-1). */
+const DEFAULT_WALK_SPEED = 1.2;
 
 const PREFS_KEY = 'factory-sim:editor-prefs';
 
@@ -83,6 +89,8 @@ export interface EquipmentPatch {
   name?: string;
   position?: Partial<Point>;
   params?: Record<string, number>;
+  /** Workstation labor mode (TE-1); validated with the rest of the equipment. */
+  labor?: Labor;
   /** Meters. */
   footprint?: { width?: number; length?: number };
   /** Meters. */
@@ -120,6 +128,15 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Technicians; part of the project document (TE-1). */
+  technicians: Technician[];
+  /** Adds a technician named "Tech N" with the default walk speed (1.2 m/s). */
+  addTechnician: () => Technician;
+  /** Validates name (non-blank) and walk speed (m/s, > 0); on failure nothing changes. */
+  updateTechnician: (id: string, patch: { name?: string; walkSpeed?: number }) => ProductResult;
+  deleteTechnician: (id: string) => void;
+  /** Assigns or unassigns a tech to a workstation; other equipment is rejected. */
+  setTechnicianStation: (techId: string, stationId: string, assigned: boolean) => ProductResult;
   /** Cycle times keyed by (product, station); part of the project document (seconds, PR-3). */
   cycleTimes: CycleTime[];
   /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
@@ -215,6 +232,7 @@ export function createEditorStore() {
       products: Product[];
       connections: Connection[];
       cycleTimes: CycleTime[];
+      technicians: Technician[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -222,6 +240,7 @@ export function createEditorStore() {
       products: get().products,
       connections: get().connections,
       cycleTimes: get().cycleTimes,
+      technicians: get().technicians,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -333,6 +352,61 @@ export function createEditorStore() {
             get().cycleTimes,
           ),
         });
+      },
+      technicians: [],
+      addTechnician: () => {
+        const { technicians } = get();
+        const used = new Set(technicians.map((t) => t.id));
+        const names = new Set(technicians.map((t) => t.name));
+        // Count up past anything taken so deleting a tech never makes a default collide.
+        let n = technicians.length + 1;
+        while (used.has(`tech-${n}`) || names.has(`Tech ${n}`)) n++;
+        const tech: Technician = {
+          id: `tech-${n}`,
+          name: `Tech ${n}`,
+          walkSpeed: DEFAULT_WALK_SPEED,
+          stationIds: [],
+        };
+        record();
+        set({ technicians: [...technicians, tech] });
+        return tech;
+      },
+      updateTechnician: (id, patch) => {
+        const current = get().technicians.find((t) => t.id === id);
+        if (!current) return { ok: false, error: 'Technician not found' };
+        // The schema owns the rules and trims the name; we only word the errors.
+        const parsed = technicianSchema.safeParse({ ...current, ...patch });
+        if (!parsed.success)
+          return {
+            ok: false,
+            error:
+              parsed.error.issues[0]!.path[0] === 'name'
+                ? 'Name cannot be empty'
+                : 'Walk speed must be greater than 0',
+          };
+        record();
+        set({ technicians: get().technicians.map((t) => (t.id === id ? parsed.data : t)) });
+        return { ok: true };
+      },
+      deleteTechnician: (id) => {
+        if (!get().technicians.some((t) => t.id === id)) return;
+        record();
+        set({ technicians: get().technicians.filter((t) => t.id !== id) });
+      },
+      setTechnicianStation: (techId, stationId, assigned) => {
+        const tech = get().technicians.find((t) => t.id === techId);
+        if (!tech) return { ok: false, error: 'Technician not found' };
+        const error = notAStation(stationId);
+        if (error) return { ok: false, error };
+        if (tech.stationIds.includes(stationId) === assigned) return { ok: true };
+        const stationIds = assigned
+          ? [...tech.stationIds, stationId]
+          : tech.stationIds.filter((id) => id !== stationId);
+        record();
+        set({
+          technicians: get().technicians.map((t) => (t.id === techId ? { ...t, stationIds } : t)),
+        });
+        return { ok: true };
       },
       addProduct: () => {
         const { products } = get();
@@ -531,7 +605,11 @@ export function createEditorStore() {
           ...current,
           name: patch.name ?? current.name,
           position,
-          params: { ...current.params, ...patch.params },
+          params: {
+            ...current.params,
+            ...patch.params,
+            ...(patch.labor ? { labor: patch.labor } : {}),
+          },
           footprint: { ...current.footprint, ...patch.footprint },
           height: patch.height ?? current.height,
         };
@@ -578,6 +656,12 @@ export function createEditorStore() {
           ),
           // Likewise a cycle time at one (PR-3).
           cycleTimes: get().cycleTimes.filter((c) => !gone.has(c.stationId)),
+          // And a technician assigned to it (TE-1).
+          technicians: get().technicians.map((t) =>
+            t.stationIds.some((id) => gone.has(id))
+              ? { ...t, stationIds: t.stationIds.filter((id) => !gone.has(id)) }
+              : t,
+          ),
           selectedIds: [],
           selectedConnectionId: null,
           pendingFrom: null,
@@ -654,6 +738,7 @@ export function createEditorStore() {
           equipment: doc.equipment,
           products: doc.products,
           cycleTimes: doc.cycleTimes,
+          technicians: doc.technicians,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,
