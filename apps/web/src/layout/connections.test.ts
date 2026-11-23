@@ -11,8 +11,8 @@ const inp = (equipmentId: string) => ({ equipmentId, portId: 'in' });
 beforeEach(() => {
   localStorage.clear();
   store = createEditorStore();
-  a = store.getState().placeEquipment('workstation', { x: 5, y: 5 })!.id;
-  b = store.getState().placeEquipment('workstation', { x: 10, y: 5 })!.id;
+  a = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 })!.id;
+  b = store.getState().placeEquipment('base-workstation', { x: 10, y: 5 })!.id;
 });
 
 describe('FL-1 connections', () => {

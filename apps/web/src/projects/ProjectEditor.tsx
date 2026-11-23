@@ -48,11 +48,11 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             setStop(s === 'stopped' || s === 'conflict' ? (err ?? null) : null);
           },
           save: async () => {
-            const { floor, equipment, products } = useEditorStore.getState();
+            const { floor, equipment, products, connections } = useEditorStore.getState();
             // A deleted product's cycle times would reference an unknown product.
             const known = new Set(products.map((p) => p.id));
             const cycleTimes = base.cycleTimes.filter((c) => known.has(c.productId));
-            const document = { ...base, floor, equipment, products, cycleTimes };
+            const document = { ...base, floor, equipment, products, connections, cycleTimes };
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
             base = document;
@@ -62,7 +62,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           if (
             s.floor !== prev.floor ||
             s.equipment !== prev.equipment ||
-            s.products !== prev.products
+            s.products !== prev.products ||
+            s.connections !== prev.connections
           )
             saver?.markDirty();
         });

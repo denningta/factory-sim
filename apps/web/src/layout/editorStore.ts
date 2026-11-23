@@ -6,6 +6,7 @@ import {
   floorSchema,
   projectSchema,
   instantiate,
+  validateProject,
   type Connection,
   type Equipment,
   type PortRef,
@@ -180,17 +181,18 @@ export interface Point {
 
 export function createEditorStore() {
   return create<EditorState>()((set, get) => {
-    // History is session-only and snapshots the document content the editor owns. A future
-    // connect/disconnect (FL-1) joins by adding `connections` to Snapshot and to loadDocument.
+    // History is session-only and snapshots the document content the editor owns.
     interface Snapshot {
       floor: Floor;
       equipment: Equipment[];
       products: Product[];
+      connections: Connection[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
       equipment: get().equipment,
       products: get().products,
+      connections: get().connections,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -214,6 +216,10 @@ export function createEditorStore() {
       set({
         ...to,
         selectedIds: get().selectedIds.filter((id) => ids.has(id)),
+        selectedConnectionId: to.connections.some((c) => c.id === get().selectedConnectionId)
+          ? get().selectedConnectionId
+          : null,
+        pendingFrom: null,
         canUndo: past.length > 0,
         canRedo: future.length > 0,
       });
@@ -316,8 +322,9 @@ export function createEditorStore() {
       },
       selectEquipment: (id, additive) => {
         const { selectedIds } = get();
-        if (!additive) return set({ selectedIds: [id] });
+        if (!additive) return set({ selectedIds: [id], selectedConnectionId: null });
         set({
+          selectedConnectionId: null,
           selectedIds: selectedIds.includes(id)
             ? selectedIds.filter((s) => s !== id)
             : [...selectedIds, id],
@@ -328,7 +335,7 @@ export function createEditorStore() {
         const base = additive ? get().selectedIds : [];
         set({ selectedIds: [...base, ...hit.filter((id) => !base.includes(id))] });
       },
-      clearSelection: () => set({ selectedIds: [] }),
+      clearSelection: () => set({ selectedIds: [], selectedConnectionId: null, pendingFrom: null }),
       dragSelected: (starts, anchorId, delta) => {
         const { floor, snapEnabled } = get();
         const to = dragTargets(starts, anchorId, delta, {
@@ -402,22 +409,64 @@ export function createEditorStore() {
       },
       deleteSelected: () => {
         const gone = new Set(get().selectedIds);
-        if (!get().equipment.some((e) => gone.has(e.id))) return;
+        const { selectedConnectionId, connections } = get();
+        const dropped = (c: Connection) =>
+          c.id === selectedConnectionId ||
+          gone.has(c.from.equipmentId) ||
+          gone.has(c.to.equipmentId);
+        if (!get().equipment.some((e) => gone.has(e.id)) && !connections.some(dropped)) return;
         record();
-        set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
+        set({
+          equipment: get().equipment.filter((e) => !gone.has(e.id)),
+          connections: connections.filter((c) => !dropped(c)),
+          selectedIds: [],
+          selectedConnectionId: null,
+          pendingFrom: null,
+        });
       },
       connections: [],
       selectedConnectionId: null,
       pendingFrom: null,
-      clickPort: () => {
-        throw new Error('not implemented');
+      clickPort: (ref) => {
+        const { pendingFrom, equipment } = get();
+        const kind = equipment
+          .find((e) => e.id === ref.equipmentId)
+          ?.ports.find((p) => p.id === ref.portId)?.kind;
+        if (!kind) return { ok: false, error: 'Unknown port' };
+        if (!pendingFrom) {
+          if (kind !== 'output') return { ok: false, error: 'Start from an output port' };
+          set({ pendingFrom: ref, selectedIds: [], selectedConnectionId: null });
+          return { ok: true };
+        }
+        if (kind === 'output') {
+          // Picking another output restarts the connection from there.
+          set({ pendingFrom: ref });
+          return { ok: true };
+        }
+        const result = get().connect(pendingFrom, ref);
+        // A rejected target keeps the start so the user can pick another input.
+        if (result.ok) set({ pendingFrom: null });
+        return result;
       },
-      connect: () => {
-        throw new Error('not implemented');
+      connect: (from, to) => {
+        const { connections, equipment, floor } = get();
+        const taken = new Set(connections.map((c) => c.id));
+        let n = connections.length + 1;
+        while (taken.has(`cn-${n}`)) n++;
+        const next = [...connections, { id: `cn-${n}`, from, to, capacity: 0 }];
+        // The schema owns the rules: no self-link, output→input only, no duplicates.
+        const parsed = validateProject({ ...createProject(), floor, equipment, connections: next });
+        if (!parsed.ok) {
+          // The schema message is a bulleted list headed by a preamble; show just the reason.
+          const reason = parsed.error.split('\n').find((l) => l.startsWith('- '));
+          return { ok: false, error: reason ? reason.replace(/^- (\S+: )?/, '') : parsed.error };
+        }
+        record();
+        set({ connections: next, selectedConnectionId: `cn-${n}`, selectedIds: [] });
+        return { ok: true };
       },
-      selectConnection: () => {
-        throw new Error('not implemented');
-      },
+      selectConnection: (id) =>
+        set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {
         past = [];
         future = [];
@@ -426,7 +475,10 @@ export function createEditorStore() {
           floor: doc.floor,
           equipment: doc.equipment,
           products: doc.products,
+          connections: doc.connections,
           selectedIds: [],
+          selectedConnectionId: null,
+          pendingFrom: null,
           selectedTypeId: null,
           canUndo: false,
           canRedo: false,
