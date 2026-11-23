@@ -18,6 +18,8 @@ import {
   type Labor,
   type Product,
   type Technician,
+  type Demand,
+  type Release,
   type Project,
   type RoutingStep,
 } from '@factory-sim/schema';
@@ -101,6 +103,8 @@ export interface EquipmentPatch {
 
 export type RoutingStepResult = { ok: true; step: RoutingStep } | { ok: false; error: string };
 
+export type ReleaseMode = 'fixed' | 'random' | 'sequence';
+
 export type ProductResult = { ok: true } | { ok: false; error: string; field?: string };
 
 /** The fields PR-1 edits; the routing is PR-2's. */
@@ -130,6 +134,22 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Demand per product (PR-4); part of the project document. */
+  demand: Demand;
+  /** Release rule (PR-4); part of the project document. */
+  release: Release;
+  /** Seconds per shift (read-only here); turns per-shift demand into a release interval. */
+  shiftLength: number;
+  /** Switches between units per shift and % of mix, converting the values. */
+  setDemandBasis: (basis: Demand['basis']) => void;
+  /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
+  setDemandValue: (productId: string, value: number) => ProductResult;
+  /** Fixed interval = `smooth` product order; random = by mix; sequence = repeating pattern. */
+  setReleaseMode: (mode: ReleaseMode) => void;
+  /** Seconds between releases (a fixed interval). */
+  setReleaseInterval: (seconds: number) => ProductResult;
+  /** The repeating heijunka pattern, as product ids. */
+  setReleasePattern: (productIds: string[]) => ProductResult;
   /** Technicians; part of the project document (TE-1). */
   technicians: Technician[];
   /** Adds a technician named "Tech N" with the default walk speed (1.2 m/s). */
@@ -394,6 +414,24 @@ export function createEditorStore() {
         });
       },
       technicians: [],
+      demand: { basis: 'mix', items: [] },
+      release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
+      shiftLength: 28800,
+      setDemandBasis: () => {
+        throw new Error('not implemented');
+      },
+      setDemandValue: () => {
+        throw new Error('not implemented');
+      },
+      setReleaseMode: () => {
+        throw new Error('not implemented');
+      },
+      setReleaseInterval: () => {
+        throw new Error('not implemented');
+      },
+      setReleasePattern: () => {
+        throw new Error('not implemented');
+      },
       addTechnician: () => {
         const { technicians } = get();
         const used = new Set(technicians.map((t) => t.id));
