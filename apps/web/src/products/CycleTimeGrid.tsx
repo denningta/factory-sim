@@ -252,6 +252,11 @@ function DurationCell({
           })}
         </div>
       )}
+      {params.length > 0 && (
+        <span aria-hidden="true" style={{ color: '#6b7280', fontSize: 11 }}>
+          {params.map((p) => p.label.toLowerCase()).join(' · ')}
+        </span>
+      )}
       {error && (
         <div id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
           {error}
