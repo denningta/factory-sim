@@ -24,3 +24,4 @@ issue: 10
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - Runs on the line model (SE-6): at a split, route each part by its next routing step using the PR-2 reachability function. 'No path' becomes a `ModelIssue` with code `no_path` (`compileLine` fails).
+- FL-3 builder: SE-6's `compileLine` already resolves each product's route by shortest path through buffers/conveyors (never across another workstation) and reports `no_path`, so split routing worked before this story. FL-3 adds the split-topology tests only; no engine change.
