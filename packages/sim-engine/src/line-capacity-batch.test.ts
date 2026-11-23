@@ -30,10 +30,13 @@ const started = (events: LineEvent[]) =>
 
 /** Max number of parts being processed at once, from each partStarted's [t, endsAt) interval. */
 function peakInProcess(events: LineEvent[]) {
-  const edges = started(events).flatMap((e) => [
-    { t: e.t, d: 1 },
-    { t: (expect(e.endsAt).toBeDefined(), e.endsAt!), d: -1 },
-  ]);
+  const edges = started(events).flatMap((e) => {
+    if (e.endsAt === undefined) throw new Error(`partStarted for part ${e.partId} has no endsAt`);
+    return [
+      { t: e.t, d: 1 },
+      { t: e.endsAt, d: -1 },
+    ];
+  });
   // Ends sort before starts at the same instant: a freed slot is reusable immediately.
   edges.sort((x, y) => x.t - y.t || x.d - y.d);
   let now = 0;
