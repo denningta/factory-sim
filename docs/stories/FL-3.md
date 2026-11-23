@@ -4,7 +4,7 @@ epic: Flow & connections
 points: 5
 priority: Must
 sprint: 4
-depends_on: [PR-2, FL-1]
+depends_on: [PR-2, FL-1, SE-6]
 builder_model: sonnet
 owner: builder
 issue: 10

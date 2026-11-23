@@ -4,7 +4,7 @@ epic: Products & routings
 points: 5
 priority: Must
 sprint: 4
-depends_on: [PR-1]
+depends_on: [PR-1, SE-6]
 builder_model: sonnet
 owner: builder
 issue: 26

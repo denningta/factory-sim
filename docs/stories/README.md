@@ -41,16 +41,17 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [FL-2](FL-2.md) | Flow & connections  | 3   | Must     | FL-1       |
 | [PL-9](PL-9.md) | Platform            | 3   | Must     | PL-6       |
 
-## Sprint 4: Configure the line: distributions, techs, release rules, routing at splits (25 pts)
+## Sprint 4: Configure the line: distributions, techs, release rules, routing at splits (33 pts)
 
-| ID              | Epic                | Pts | Priority | Depends on |
-| --------------- | ------------------- | --- | -------- | ---------- |
-| [PR-4](PR-4.md) | Products & routings | 5   | Must     | PR-1       |
-| [WS-2](WS-2.md) | Workstation config  | 5   | Must     | PR-3       |
-| [WS-3](WS-3.md) | Workstation config  | 3   | Must     | SE-1       |
-| [TE-1](TE-1.md) | Technicians         | 5   | Must     | WS-1       |
-| [FL-3](FL-3.md) | Flow & connections  | 5   | Must     | PR-2, FL-1 |
-| [FL-4](FL-4.md) | Flow & connections  | 2   | Should   | FL-1       |
+| ID              | Epic                | Pts | Priority | Depends on       |
+| --------------- | ------------------- | --- | -------- | ---------------- |
+| [SE-6](SE-6.md) | Simulation engine   | 8   | Must     | SE-1, PR-3, FL-2 |
+| [PR-4](PR-4.md) | Products & routings | 5   | Must     | PR-1, SE-6       |
+| [WS-2](WS-2.md) | Workstation config  | 5   | Must     | PR-3             |
+| [WS-3](WS-3.md) | Workstation config  | 3   | Must     | SE-1, SE-6       |
+| [TE-1](TE-1.md) | Technicians         | 5   | Must     | WS-1             |
+| [FL-3](FL-3.md) | Flow & connections  | 5   | Must     | PR-2, FL-1, SE-6 |
+| [FL-4](FL-4.md) | Flow & connections  | 2   | Should   | FL-1, SE-6       |
 
 ## Sprint 5: Run it: animation, run controls, walking techs, pre-run checks (24 pts)
 
