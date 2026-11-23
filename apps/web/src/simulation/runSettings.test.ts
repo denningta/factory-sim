@@ -38,7 +38,8 @@ describe('SE-4: run settings', () => {
 });
 
 function line() {
-  const s = createEditorStore().getState();
+  const store = createEditorStore();
+  const s = store.getState();
   const src = s.placeEquipment('base-source', { x: 0, y: 0 })!;
   const ws = s.placeEquipment('base-workstation', { x: 6, y: 0 })!;
   const sink = s.placeEquipment('base-sink', { x: 12, y: 0 })!;
@@ -50,7 +51,7 @@ function line() {
   s.setReleaseInterval(4);
   const t = s.addTechnician();
   s.setTechnicianStation(t.id, ws.id, true);
-  return { ...createProject(), ...pick(s) };
+  return { ...createProject(), ...pick(store.getState()) };
 }
 const pick = (s: ReturnType<ReturnType<typeof createEditorStore>['getState']>) => ({
   floor: s.floor,

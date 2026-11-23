@@ -440,8 +440,11 @@ export function createEditorStore() {
       demand: { basis: 'mix', items: [] },
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
-      setShiftLength: () => {
-        throw new Error('not implemented');
+      setShiftLength: (seconds) => {
+        if (!(Number.isFinite(seconds) && seconds > 0)) return;
+        record();
+        set({ shiftLength: seconds });
+        set(intervalFor(get().demand));
       },
       setDemandBasis: (basis) => {
         const { demand, products } = get();

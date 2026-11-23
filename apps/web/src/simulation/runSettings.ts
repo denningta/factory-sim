@@ -18,15 +18,20 @@ export const DEFAULT_RUN_SETTINGS: RunSettings = {
 };
 
 /** Why the settings can't run, or null. */
-export function validateRunSettings(_s: RunSettings): string | null {
-  throw new Error('not implemented');
+export function validateRunSettings(s: RunSettings): string | null {
+  if (!(Number.isFinite(s.warmUpHours) && s.warmUpHours >= 0)) return 'Warm-up must be 0 or more';
+  if (!(Number.isFinite(s.runLength) && s.runLength > 0)) return 'Run length must be more than 0';
+  if (s.seedMode === 'fixed' && !Number.isSafeInteger(s.seed)) return 'Seed must be a whole number';
+  return null;
 }
 
 /** Engine options in seconds; `seed` is the one used, so a random draw can be shown and re-run. */
 export function toRunOptions(
-  _s: RunSettings,
-  _shiftLength: number,
-  _random: () => number = Math.random,
+  s: RunSettings,
+  shiftLength: number,
+  random: () => number = Math.random,
 ): { options: RunOptions; seed: number } {
-  throw new Error('not implemented');
+  const seed = s.seedMode === 'random' ? Math.floor(random() * 2 ** 31) : s.seed;
+  const unit = s.runUnit === 'shifts' ? shiftLength : 3600;
+  return { options: { seed, warmUp: s.warmUpHours * 3600, runLength: s.runLength * unit }, seed };
 }

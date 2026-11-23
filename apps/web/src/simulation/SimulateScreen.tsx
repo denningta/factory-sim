@@ -4,11 +4,11 @@ import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
 import { PartLayer } from './PartLayer';
+import { RunSettingsPanel } from './RunSettingsPanel';
 import { createRunSession, type RunSessionResult } from './runSession';
+import { DEFAULT_RUN_SETTINGS, toRunOptions, type RunSettings } from './runSettings';
 
 const SPEEDS = [1, 10, 100, 1000];
-/** SE-4 adds run length and seed settings; until then a run is one 8 h shift. */
-const SHIFT_SECONDS = 8 * 3600;
 
 function currentProject(): Project {
   const s = useEditorStore.getState();
@@ -32,14 +32,34 @@ const clock = (t: number) => {
   return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 };
 
-/** Wireframe 3 (simulation run), SE-3 part: the 3D line with parts moving through it. */
+/** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
 export function SimulateScreen() {
-  const result = useMemo<RunSessionResult>(
-    () => createRunSession(currentProject(), { seed: 1, warmUp: 0, runLength: SHIFT_SECONDS }),
-    [],
+  const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
+  // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
+  const [applied, setApplied] = useState(() =>
+    toRunOptions(DEFAULT_RUN_SETTINGS, useEditorStore.getState().shiftLength),
   );
-  if (!result.ok) return <Issues issues={result.issues} />;
-  return <Running session={result.session} />;
+  const result = useMemo<RunSessionResult>(
+    () => createRunSession(currentProject(), applied.options),
+    [applied],
+  );
+  const apply = (next: RunSettings, shiftLength: number) => {
+    useEditorStore.getState().setShiftLength(shiftLength);
+    setSettings(next);
+    setApplied(toRunOptions(next, shiftLength));
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 240px', height: '100%' }}>
+      {result.ok ? <Running session={result.session} /> : <Issues issues={result.issues} />}
+      <RunSettingsPanel
+        key="settings"
+        initial={settings}
+        shiftLength={useEditorStore.getState().shiftLength}
+        seedUsed={applied.seed}
+        onApply={apply}
+      />
+    </div>
+  );
 }
 
 function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>['session'] }) {
