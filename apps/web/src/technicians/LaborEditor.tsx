@@ -35,7 +35,7 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
         <span>{label}</span>
         <DurationEditor
           name={label}
-          fixedLabel={label}
+          fixedLabel={`${label} (s)`}
           time={labor[key]}
           setTime={(d) => updateEquipment(equipmentId, { labor: { ...labor, [key]: d } })}
           // Handling times are required, so clearing the field is ignored.
