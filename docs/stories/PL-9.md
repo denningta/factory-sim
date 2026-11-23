@@ -26,7 +26,8 @@ _Added by the lead with product-owner approval (2026-11-22), from the review of 
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- The lead adds the request shapes to `packages/schema/src/http.ts` before this story starts (`newPasswordSchema` already exists).
+- **Contract (lead):** `changePasswordRequestSchema` (`POST /api/auth/password`) and `resetPasswordRequestSchema` (`PUT /api/users/:id/password`, admin) are in `packages/schema/src/http.ts`, both answering 204. An admin resetting their own account gets 403; they use the change flow.
+- Also in scope: answer non-JSON bodies with the new `unsupported_media_type` (415) code instead of `validation` (`apps/api/src/http-error.ts`, from the PL-6 review).
 - **AC3 reading:** when a user changes their own password, all their sessions _except the current one_ end. When an admin resets someone's password, _all_ of that user's sessions end.
 - A wrong current password answers `unauthorized`. The sign-in throttle (`rate_limited`) also applies to the change endpoint, so it can't be used to guess passwords.
 - An admin changing their _own_ password uses the change flow (current password required), not the reset.
