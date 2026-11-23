@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { Field, parseNumber } from './Field';
 import { LaborEditor } from '../technicians/LaborEditor';
-import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { BASE_EQUIPMENT_TYPES, type Connection, type Equipment } from '@factory-sim/schema';
+import { portWorldPosition } from './ports';
 import {
   formatLength,
   formatNumber,
@@ -22,8 +23,16 @@ const PARAM_LABELS: Record<string, string> = {
 };
 
 /** FL-2: how many parts can wait on a connection. Finite size is a positive integer. */
-function ConnectionCapacity({ useStore }: { useStore: Store }) {
-  const { connections, selectedConnectionId, updateConnection, beginEdit, endEdit } = useStore();
+function ConnectionProperties({ useStore }: { useStore: Store }) {
+  const {
+    connections,
+    equipment,
+    unit,
+    selectedConnectionId,
+    updateConnection,
+    beginEdit,
+    endEdit,
+  } = useStore();
   const conn = connections.find((c) => c.id === selectedConnectionId);
   if (!conn) return null;
   const mode = conn.capacity === null ? 'unlimited' : conn.capacity === 0 ? 'none' : 'finite';
@@ -64,8 +73,99 @@ function ConnectionCapacity({ useStore }: { useStore: Store }) {
           }}
         />
       )}
+      {transferTime(conn, distanceOf(conn, equipment))}
     </section>
   );
+
+  // A plain function, not a component: a nested component would remount (and drop focus) per render.
+  function transferTime(conn: Connection, distance: number | null) {
+    const t = conn.transfer;
+    const speedUnit = unit === 'ft' ? 'ft/min' : 'm/s';
+    const pickKind = (k: Connection['transfer']['kind']) => {
+      if (k === t.kind) return;
+      if (k === 'instant') updateConnection(conn.id, { transfer: { kind: 'instant' } });
+      // Start from a valid value so the stored transfer always matches the radio.
+      if (k === 'fixed')
+        updateConnection(conn.id, {
+          transfer: { kind: 'fixed', time: { kind: 'fixed', value: 1 } },
+        });
+      if (k === 'speed') updateConnection(conn.id, { transfer: { kind: 'speed', speed: 1 } });
+    };
+    const radio = (k: Connection['transfer']['kind'], text: string) => (
+      <label style={{ display: 'flex', gap: 6 }}>
+        <input
+          type="radio"
+          name="conn-transfer"
+          checked={t.kind === k}
+          onChange={() => pickKind(k)}
+        />
+        {text}
+      </label>
+    );
+    return (
+      <>
+        <fieldset style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <legend>Transfer time</legend>
+          {radio('instant', 'Instant')}
+          {radio('fixed', 'Fixed time')}
+          {radio('speed', 'From distance and speed')}
+        </fieldset>
+        {t.kind === 'fixed' && t.time.kind === 'fixed' && (
+          <Field
+            beginEdit={beginEdit}
+            endEdit={endEdit}
+            key={`tt-${conn.id}`}
+            label="Transfer time (s)"
+            value={String(t.time.value)}
+            commit={(text) => {
+              const n = parseNumber(text);
+              if (typeof n === 'string') return n;
+              const r = updateConnection(conn.id, {
+                transfer: { kind: 'fixed', time: { kind: 'fixed', value: n } },
+              });
+              return r.ok ? null : r.error;
+            }}
+          />
+        )}
+        {t.kind === 'speed' && (
+          <>
+            <Field
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+              key={`ts-${conn.id}`}
+              label={`Speed (${speedUnit})`}
+              value={formatNumber(speedToDisplay(t.speed, unit))}
+              commit={(text) => {
+                const n = parseNumber(text);
+                if (typeof n === 'string') return n;
+                const r = updateConnection(conn.id, {
+                  transfer: { kind: 'speed', speed: speedFromDisplay(n, unit) },
+                });
+                return r.ok ? null : r.error;
+              }}
+            />
+            {distance !== null && (
+              <p>
+                Distance {formatLength(distance, unit)} → {formatNumber(distance / t.speed)} s
+              </p>
+            )}
+          </>
+        )}
+      </>
+    );
+  }
+}
+
+/** Port-to-port distance in meters, as the engine computes it; null if an end is missing. */
+function distanceOf(conn: Connection, equipment: readonly Equipment[]): number | null {
+  const at = (ref: Connection['from']) => {
+    const e = equipment.find((q) => q.id === ref.equipmentId);
+    const port = e?.ports.find((q) => q.id === ref.portId);
+    return e && port ? portWorldPosition(e, port) : null;
+  };
+  const a = at(conn.from);
+  const b = at(conn.to);
+  return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : null;
 }
 
 export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store }) {
@@ -85,7 +185,7 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
   const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
-  if (!first && selectedConnectionId) return <ConnectionCapacity useStore={useStore} />;
+  if (!first && selectedConnectionId) return <ConnectionProperties useStore={useStore} />;
   if (!first) {
     return (
       <section aria-label="Properties">

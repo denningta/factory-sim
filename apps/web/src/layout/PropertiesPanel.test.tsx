@@ -325,7 +325,7 @@ describe('FL-4 connection transfer time', () => {
     await user.type(speed, '0.5');
     expect(transfer()).toEqual({ kind: 'speed', speed: 0.5 });
     // The calculated time is shown so the engineer sees what the speed means.
-    expect(screen.getByText(/distance/i).textContent).toMatch(/s\b/);
+    expect(screen.getByText(/^distance/i).textContent).toMatch(/s\b/);
     await user.click(screen.getByRole('radio', { name: /instant/i }));
     expect(transfer()).toEqual({ kind: 'instant' });
   });

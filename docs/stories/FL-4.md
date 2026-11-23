@@ -24,3 +24,4 @@ issue: 11
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - **Contract (schema v4):** `connection.transfer = {kind: 'instant'} | {kind: 'fixed', time: Duration} | {kind: 'speed', speed}`; distance is between the two ports' world positions (the FL-1 helper). AC2 'parts in transit count as WIP' is in SE-6's `RunStats.averageWip`.
+- **Builder (FL-4):** Properties panel for a selected connection gains a "Transfer time" group: Instant / Fixed time (seconds) / From distance and speed (speed in ft/min or m/s per display unit; shows the port-to-port distance and resulting time). `updateConnection` now takes `{capacity?, transfer?}`. Fixed time is edited as a plain `fixed` duration; other distributions stay in the schema but have no UI. AC2 was already delivered by SE-6; FL-4 adds an engine regression test (Little's law check).
