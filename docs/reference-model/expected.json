@@ -1,0 +1,86 @@
+{
+  "description": "Expected results for model.json. Derived by hand (see README.md): S3 Weld is the bottleneck at 86 s per part averaged over the A A B A B pattern, upstream is saturated, downstream has slack. Working fractions follow from throughput × work per part, independent of tie-breaking rules.",
+  "run": {
+    "warmUp": 3600,
+    "runLength": 86400,
+    "seed": 1
+  },
+  "seeds": [1, 2, 3, 4, 5],
+  "throughputPerHour": {
+    "total": {
+      "value": 41.860465,
+      "relTol": 0.01
+    },
+    "A": {
+      "value": 25.116279,
+      "relTol": 0.02
+    },
+    "B": {
+      "value": 16.744186,
+      "relTol": 0.02
+    }
+  },
+  "stations": {
+    "s1": {
+      "working": {
+        "value": 0.44186,
+        "absTol": 0.01
+      },
+      "starved": {
+        "max": 0.01
+      }
+    },
+    "s2": {
+      "working": {
+        "value": 0.383721,
+        "absTol": 0.01
+      }
+    },
+    "s3": {
+      "working": {
+        "min": 0.99
+      }
+    },
+    "s4": {
+      "working": {
+        "value": 0.27907,
+        "absTol": 0.01
+      },
+      "blocked": {
+        "max": 0.01
+      }
+    },
+    "s5": {
+      "working": {
+        "value": 0.325581,
+        "absTol": 0.01
+      },
+      "blocked": {
+        "max": 0.01
+      }
+    }
+  },
+  "techs": {
+    "tech-1": {
+      "working": {
+        "value": 0.511628,
+        "absTol": 0.01
+      }
+    },
+    "tech-2": {
+      "working": {
+        "min": 0.99
+      }
+    },
+    "tech-3": {
+      "working": {
+        "value": 0.604651,
+        "absTol": 0.01
+      }
+    }
+  },
+  "littlesLaw": {
+    "relTol": 0.05
+  },
+  "bottleneck": "s3"
+}
