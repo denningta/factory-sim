@@ -194,8 +194,11 @@ export interface EditorState extends Prefs {
   clickPort: (ref: PortRef) => ConnectResult;
   connect: (from: PortRef, to: PortRef) => ConnectResult;
   selectConnection: (id: string | null) => void;
-  /** Sets a connection's capacity (0 = no buffer, n, or null = unlimited); schema-validated. */
-  updateConnection: (id: string, patch: { capacity: number | null }) => UpdateConnectionResult;
+  /** Sets a connection's capacity (0 = no buffer, n, null = unlimited) and/or transfer time (FL-4); schema-validated. */
+  updateConnection: (
+    id: string,
+    patch: Partial<Pick<Connection, 'capacity' | 'transfer'>>,
+  ) => UpdateConnectionResult;
   /** Ids being dragged right now (empty otherwise); their ports and arrows are hidden. */
   draggingIds: string[];
   setDragging: (ids: string[]) => void;

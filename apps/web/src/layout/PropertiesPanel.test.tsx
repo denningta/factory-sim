@@ -302,3 +302,63 @@ describe('FL-2 connection capacity', () => {
     expect(store.getState().connections[0]!.capacity).toBe(1);
   });
 });
+
+describe('FL-4 connection transfer time', () => {
+  const connect = () => {
+    const a = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 })!.id;
+    const b = store.getState().placeEquipment('base-workstation', { x: 10, y: 5 })!.id;
+    store.getState().connect({ equipmentId: a, portId: 'out' }, { equipmentId: b, portId: 'in' });
+  };
+  const transfer = () => store.getState().connections[0]!.transfer;
+
+  it('Transfer time can be fixed, or calculated from distance and speed', async () => {
+    const user = userEvent.setup();
+    connect();
+    await user.click(await screen.findByRole('radio', { name: /fixed time/i }));
+    const time = screen.getByLabelText(/transfer time \(s\)/i);
+    await user.clear(time);
+    await user.type(time, '6');
+    await user.tab(); // the duration editor commits on blur or Enter
+    expect(transfer()).toEqual({ kind: 'fixed', time: { kind: 'fixed', value: 6 } });
+    await user.click(screen.getByRole('radio', { name: /distance and speed/i }));
+    const speed = screen.getByLabelText(/speed \(m\/s\)/i);
+    await user.clear(speed);
+    await user.type(speed, '0.5');
+    expect(transfer()).toEqual({ kind: 'speed', speed: 0.5 });
+    // The calculated time is shown so the engineer sees what the speed means.
+    expect(screen.getByText(/^distance/i).textContent).toMatch(/s\b/);
+    await user.click(screen.getByRole('radio', { name: /instant/i }));
+    expect(transfer()).toEqual({ kind: 'instant' });
+  });
+
+  it('in ft mode the speed is entered in ft/min and stored in m/s', async () => {
+    const user = userEvent.setup();
+    store.getState().setUnit('ft');
+    connect();
+    await user.click(await screen.findByRole('radio', { name: /distance and speed/i }));
+    const speed = screen.getByLabelText(/speed \(ft\/min\)/i);
+    await user.clear(speed);
+    await user.type(speed, '100');
+    expect((transfer() as { speed: number }).speed).toBeCloseTo(0.508, 3);
+  });
+
+  it('a non-fixed transfer time stays visible and editable', async () => {
+    connect();
+    store.getState().updateConnection(store.getState().connections[0]!.id, {
+      transfer: { kind: 'fixed', time: { kind: 'normal', mean: 5, stdDev: 1 } },
+    });
+    expect(await screen.findByDisplayValue('5')).toBeTruthy();
+  });
+
+  it('shows an inline error for a bad speed and does not write it', async () => {
+    const user = userEvent.setup();
+    connect();
+    await user.click(await screen.findByRole('radio', { name: /distance and speed/i }));
+    const speed = screen.getByLabelText(/speed \(m\/s\)/i);
+    await user.clear(speed);
+    await user.type(speed, '0');
+    expect((await screen.findByRole('alert')).textContent).toBeTruthy();
+    expect(transfer().kind).toBe('speed');
+    expect((transfer() as { speed: number }).speed).toBeGreaterThan(0);
+  });
+});

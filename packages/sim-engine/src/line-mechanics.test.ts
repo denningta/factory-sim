@@ -68,6 +68,17 @@ describe('transfers and conveyors', () => {
     expect(move).toMatchObject({ arrivesAt: move!.t + 5 });
   });
 
+  it('FL-4: parts in transit on a connection count as WIP', () => {
+    const base = runLine(single({})).stats.total.averageWip;
+    const slow = runLine(
+      single({ links: { 1: { transfer: { kind: 'fixed', time: fixed(20) } } } }),
+    );
+    // Little's law: the extra WIP is throughput × transit time.
+    const extra = (slow.stats.total.throughputPerHour / 3600) * 20;
+    expect(extra).toBeGreaterThan(0.1);
+    expect(slow.stats.total.averageWip - base).toBeCloseTo(extra, 1);
+  });
+
   it('carries parts across a conveyor at belt speed (footprint length 3 m)', () => {
     const { stats, events } = runLine(single({ inserts: { 0: { conveyorSpeed: 0.5 } } }));
     expect(stats.total.averageLeadTime).toBeCloseTo(36, 9);
