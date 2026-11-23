@@ -6,7 +6,9 @@ import {
   floorSchema,
   projectSchema,
   instantiate,
+  type Connection,
   type Equipment,
+  type PortRef,
   type Floor,
   type Product,
   type Project,
@@ -135,6 +137,15 @@ export interface EditorState extends Prefs {
   /** Sets every selected item's rotation to a typed angle in degrees. */
   setSelectedRotation: (degrees: number) => void;
   deleteSelected: () => void;
+  /** Connections; part of the project document. */
+  connections: Connection[];
+  selectedConnectionId: string | null;
+  /** The output port picked as the start of a connection being drawn; session-only. */
+  pendingFrom: PortRef | null;
+  /** First click an output (sets `pendingFrom`), then an input (connects). Esc cancels. */
+  clickPort: (ref: PortRef) => ConnectResult;
+  connect: (from: PortRef, to: PortRef) => ConnectResult;
+  selectConnection: (id: string | null) => void;
   /** Session-only edit history (LE-3). */
   canUndo: boolean;
   canRedo: boolean;
@@ -157,6 +168,8 @@ export interface EditorState extends Prefs {
   viewMode: ViewMode;
   toggleView: () => void;
 }
+
+export type ConnectResult = { ok: true } | { ok: false; error: string };
 
 export const HISTORY_LIMIT = 100;
 
@@ -392,6 +405,18 @@ export function createEditorStore() {
         if (!get().equipment.some((e) => gone.has(e.id))) return;
         record();
         set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
+      },
+      connections: [],
+      selectedConnectionId: null,
+      pendingFrom: null,
+      clickPort: () => {
+        throw new Error('not implemented');
+      },
+      connect: () => {
+        throw new Error('not implemented');
+      },
+      selectConnection: () => {
+        throw new Error('not implemented');
       },
       loadDocument: (doc) => {
         past = [];
