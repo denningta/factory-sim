@@ -341,7 +341,17 @@ describe('schema v4 (Sprint 4 contract)', () => {
       ],
     };
     expect(validateProject(p).ok).toBe(true);
-    p.demand.items[1]!.value = 30;
+    p.products.push({ ...p.products[1]!, id: 'pC', partNumber: 'C-300', routing: [] });
+    p.demand.items = ['pA', 'pB', 'pC'].map((productId) => ({ productId, value: 33.33 }));
+    expect(validateProject(p).ok).toBe(true);
+    p.products.pop();
+    p.demand = {
+      basis: 'mix',
+      items: [
+        { productId: 'pA', value: 60 },
+        { productId: 'pB', value: 30 },
+      ],
+    };
     expectInvalid(p, 'demand.items', 'add up to 100');
     p.demand = {
       basis: 'perShift',

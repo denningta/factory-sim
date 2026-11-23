@@ -97,7 +97,7 @@ export const demandSchema = z
     (d) =>
       d.basis !== 'mix' ||
       d.items.length === 0 ||
-      Math.abs(d.items.reduce((sum, i) => sum + i.value, 0) - 100) < 0.01,
+      Math.abs(d.items.reduce((sum, i) => sum + i.value, 0) - 100) <= 0.05, // 3 × 33.33 is fine
     { message: 'Mix percentages must add up to 100', path: ['items'] },
   );
 
