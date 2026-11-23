@@ -523,6 +523,9 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     setEventsEnabled(enabled) {
       eventsEnabled = enabled;
     },
+    wip() {
+      throw new Error('not implemented');
+    },
     stats(): RunStats {
       const to = Math.max(warmUp, Math.min(sim.now, endTime));
       const window = to - warmUp;

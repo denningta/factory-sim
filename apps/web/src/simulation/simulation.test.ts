@@ -4,6 +4,7 @@ import { compileLine, createRun, type LineEvent, type Run } from '@factory-sim/s
 import { createEditorStore } from '../layout/editorStore';
 import { buildLineGeometry, createPartTracks, type LineGeometry } from './partTracks';
 import { createPlayback } from './playback';
+import { createRunSession } from './runSession';
 
 const A = { x: 0, z: 0 };
 const B = { x: 10, z: 0 };
@@ -237,6 +238,8 @@ describe('SE-3 AC3: animation can be turned off for speed', () => {
     while (!off.run.done && ticks++ < 10_000) off.advance(1 / 60);
     expect(off.run.done).toBe(true);
     expect(off.tracks.at(off.run.now)).toHaveLength(0);
+    // The engine itself records nothing while off (this fails if setEventsEnabled is dropped).
+    expect(off.run.drainEvents()).toEqual([]);
 
     const ref = newRun(project);
     ref.runUntil(ref.endTime);
@@ -259,5 +262,103 @@ describe('SE-3 AC3: animation can be turned off for speed', () => {
     pb.animate = true;
     for (let i = 0; i < 600; i++) pb.advance(1 / 60);
     expect(pb.tracks.at(pb.run.now).length).toBeGreaterThan(0);
+  });
+
+  it('turning it back on re-seeds parts already in the line from wip()', () => {
+    const { project, geometry: g, colors: c } = realLine();
+    const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
+    pb.animate = false;
+    pb.advance(1 / 60); // 60 sim seconds with a congested line
+    const inLine = pb.run.wip().length;
+    expect(inLine).toBeGreaterThan(3);
+    pb.animate = true;
+    expect(pb.run.drainEvents()).toEqual([]); // nothing new yet: only the seed shows them
+    expect(pb.tracks.at(pb.run.now)).toHaveLength(inLine);
+  });
+
+  it('events appear again after turning animation back on', () => {
+    const { project, geometry: g, colors: c } = realLine();
+    const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
+    pb.animate = false;
+    pb.advance(1 / 60);
+    pb.animate = true;
+    pb.run.runUntil(pb.run.now + 10);
+    expect(pb.run.drainEvents().length).toBeGreaterThan(0);
+  });
+});
+
+describe('RunSession: the interface SE-2, SE-4 and AN-1 build on', () => {
+  const session = (opts = { seed: 1, warmUp: 0, runLength: 1000 }) =>
+    createRunSession(realLine().project, opts);
+
+  it('rejects a model that does not compile, with its issues', () => {
+    const r = createRunSession(createProject(), { seed: 1, warmUp: 0, runLength: 10 });
+    expect(r.ok).toBe(false);
+  });
+
+  it('play advances with frames, pause holds the clock', () => {
+    const r = session();
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    s.setSpeed(10);
+    s.frame(1);
+    expect(s.now).toBe(0); // paused
+    s.play();
+    expect(s.playing).toBe(true);
+    s.frame(1);
+    expect(s.now).toBeCloseTo(10);
+    s.pause();
+    s.frame(1);
+    expect(s.now).toBeCloseTo(10);
+  });
+
+  it('step moves to the next change and shows parts; reset starts over; seed from the caller', () => {
+    const r = session();
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    s.step();
+    expect(s.poses(s.now).length).toBeGreaterThan(0);
+    const stats = () => JSON.stringify(s.stats());
+    s.play();
+    s.frame(5);
+    const after = stats();
+    s.reset();
+    expect(s.now).toBe(0);
+    expect(s.playing).toBe(false);
+    s.play();
+    s.frame(5);
+    expect(stats()).toBe(after); // same seed ⇒ same run
+  });
+
+  it('stops playing at the end of the run, and subscribers are told of changes', () => {
+    const r = session({ seed: 1, warmUp: 0, runLength: 30 });
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    let calls = 0;
+    const off = s.subscribe(() => calls++);
+    s.setSpeed(100);
+    s.play();
+    s.frame(1);
+    expect(s.done).toBe(true);
+    expect(s.playing).toBe(false);
+    expect(calls).toBeGreaterThan(0);
+    off();
+  });
+
+  it('animation off keeps results the same and shows no parts', () => {
+    const r = session();
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    s.setAnimate(false);
+    s.play();
+    for (let i = 0; i < 1000 && !s.done; i++) s.frame(1 / 60);
+    expect(s.done).toBe(true);
+    expect(s.poses(s.now)).toHaveLength(0);
+    const ref = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!ref.ok) throw new Error('compile');
+    ref.session.setSpeed(1000);
+    ref.session.play();
+    for (let i = 0; i < 100000 && !ref.session.done; i++) ref.session.frame(1);
+    expect(s.stats()).toEqual(ref.session.stats());
   });
 });

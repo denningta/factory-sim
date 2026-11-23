@@ -129,6 +129,15 @@ export type LineEvent =
     }
   | { t: SimTime; type: 'techState'; techId: string; state: TechState };
 
+/** A part currently in the line, with the latest event that places it (ADR-0008). */
+export interface PartInLine {
+  partId: number;
+  productId: string;
+  releasedAt: SimTime;
+  /** Latest positional event for this part, recorded even while events are disabled. */
+  last: Extract<LineEvent, { type: 'partReleased' | 'partMoved' | 'partEntered' | 'partStarted' }>;
+}
+
 /** Flow figures for one product, or for all products. Statistics cover the measured window. */
 export interface FlowStats {
   released: number;
@@ -178,6 +187,8 @@ export interface Run {
    */
   drainEvents(): LineEvent[];
   setEventsEnabled(enabled: boolean): void;
+  /** Every part released and not yet exited, by partId ascending. For re-seeding the renderer when animation is turned back on (SE-3 AC3). */
+  wip(): PartInLine[];
   /** Live statistics for the window so far (AN-1 AC3). Cheap enough to call every frame. */
   stats(): RunStats;
 }
