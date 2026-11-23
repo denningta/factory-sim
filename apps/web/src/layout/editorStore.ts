@@ -4,6 +4,7 @@ import {
   createProject,
   equipmentSchema,
   floorSchema,
+  connectionSchema,
   projectSchema,
   instantiate,
   type Connection,
@@ -63,6 +64,7 @@ const normalizeRadians = (r: number) => {
   return t - n < 1e-9 ? 0 : n;
 };
 
+export type UpdateConnectionResult = { ok: true } | { ok: false; error: string };
 export type SetFloorResult = { ok: true } | { ok: false; error: string };
 export type UpdateEquipmentResult =
   | { ok: true }
@@ -167,6 +169,8 @@ export interface EditorState extends Prefs {
   clickPort: (ref: PortRef) => ConnectResult;
   connect: (from: PortRef, to: PortRef) => ConnectResult;
   selectConnection: (id: string | null) => void;
+  /** Sets a connection's capacity (0 = no buffer, n, or null = unlimited); schema-validated. */
+  updateConnection: (id: string, patch: { capacity: number | null }) => UpdateConnectionResult;
   /** Ids being dragged right now (empty otherwise); their ports and arrows are hidden. */
   draggingIds: string[];
   setDragging: (ids: string[]) => void;
@@ -623,6 +627,19 @@ export function createEditorStore() {
       },
       draggingIds: [],
       setDragging: (draggingIds) => set({ draggingIds }),
+      updateConnection: (id, patch) => {
+        const { connections } = get();
+        const current = connections.find((c) => c.id === id);
+        if (!current) return { ok: false, error: 'Connection not found' };
+        const updated = { ...current, ...patch };
+        // The schema owns the rule; validating only this connection keeps its message on point.
+        const parsed = connectionSchema.safeParse(updated);
+        if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+        const next = connections.map((c) => (c.id === id ? updated : c));
+        record();
+        set({ connections: next });
+        return { ok: true };
+      },
       selectConnection: (id) =>
         set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {

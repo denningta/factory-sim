@@ -98,6 +98,53 @@ const PARAM_LABELS: Record<string, string> = {
   batchSize: 'Batch size (units)',
 };
 
+/** FL-2: how many parts can wait on a connection. Finite size is a positive integer. */
+function ConnectionCapacity({ useStore }: { useStore: Store }) {
+  const { connections, selectedConnectionId, updateConnection, beginEdit, endEdit } = useStore();
+  const conn = connections.find((c) => c.id === selectedConnectionId);
+  if (!conn) return null;
+  const mode = conn.capacity === null ? 'unlimited' : conn.capacity === 0 ? 'none' : 'finite';
+  const pick = (m: 'none' | 'finite' | 'unlimited') => {
+    if (m === 'none') updateConnection(conn.id, { capacity: 0 });
+    if (m === 'unlimited') updateConnection(conn.id, { capacity: null });
+    // Finite starts at 1 so the stored value always matches the radio; the user edits it next.
+    if (m === 'finite' && mode !== 'finite') updateConnection(conn.id, { capacity: 1 });
+  };
+  const radio = (m: 'none' | 'finite' | 'unlimited', text: string) => (
+    <label style={{ display: 'flex', gap: 6 }}>
+      <input type="radio" name="conn-capacity" checked={mode === m} onChange={() => pick(m)} />
+      {text}
+    </label>
+  );
+  return (
+    <section aria-label="Properties" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h2>Properties</h2>
+      <fieldset style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <legend>Buffer on this connection</legend>
+        {radio('none', 'No buffer (0)')}
+        {radio('finite', 'Finite')}
+        {radio('unlimited', 'Unlimited')}
+      </fieldset>
+      {mode === 'finite' && (
+        <Field
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+          key={`cap-${conn.id}`}
+          label="Buffer size (units)"
+          value={String(conn.capacity)}
+          commit={(t) => {
+            const n = parseNumber(t);
+            if (typeof n === 'string') return n;
+            if (n < 1) return 'Enter a whole number, 1 or more';
+            const r = updateConnection(conn.id, { capacity: n });
+            return r.ok ? null : r.error;
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
 export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store }) {
   const {
     equipment,
@@ -109,11 +156,13 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
     deleteSelected,
     beginEdit,
     endEdit,
+    selectedConnectionId,
   } = useStore();
   /** Set when a params edit breaks a rule on another field, so both fields show the reason. */
   const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
+  if (!first && selectedConnectionId) return <ConnectionCapacity useStore={useStore} />;
   if (!first) {
     return (
       <section aria-label="Properties">

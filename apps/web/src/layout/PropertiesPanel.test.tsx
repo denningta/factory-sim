@@ -249,3 +249,49 @@ describe('PropertiesPanel', () => {
     });
   });
 });
+
+describe('FL-2 connection capacity', () => {
+  const connect = () => {
+    const a = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 })!.id;
+    const b = store.getState().placeEquipment('base-workstation', { x: 10, y: 5 })!.id;
+    store.getState().connect({ equipmentId: a, portId: 'out' }, { equipmentId: b, portId: 'in' });
+    return store.getState().connections[0]!.id;
+  };
+
+  it('a selected connection offers No buffer, Finite and Unlimited; the buffer form has no Unlimited', async () => {
+    connect();
+    expect(await screen.findByRole('radio', { name: /no buffer/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /finite/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /unlimited/i })).toBeTruthy();
+    const buf = store.getState().placeEquipment('base-buffer', { x: 20, y: 20 })!;
+    store.getState().selectEquipment(buf.id, true);
+    expect(await screen.findByLabelText(/capacity/i)).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: /unlimited/i })).toBeNull();
+  });
+
+  it('I can set each mode and the store follows', async () => {
+    const user = userEvent.setup();
+    connect();
+    const cap = () => store.getState().connections[0]!.capacity;
+    await user.click(await screen.findByRole('radio', { name: /unlimited/i }));
+    expect(cap()).toBeNull();
+    await user.click(screen.getByRole('radio', { name: /finite/i }));
+    const size = screen.getByLabelText(/buffer size/i);
+    await user.clear(size);
+    await user.type(size, '4');
+    expect(cap()).toBe(4);
+    await user.click(screen.getByRole('radio', { name: /no buffer/i }));
+    expect(cap()).toBe(0);
+  });
+
+  it('shows an inline error for a bad finite size and does not write it', async () => {
+    const user = userEvent.setup();
+    connect();
+    await user.click(await screen.findByRole('radio', { name: /finite/i }));
+    const size = screen.getByLabelText(/buffer size/i);
+    await user.clear(size);
+    await user.type(size, '1.5');
+    expect((await screen.findByRole('alert')).textContent).toBeTruthy();
+    expect(store.getState().connections[0]!.capacity).toBe(1);
+  });
+});
