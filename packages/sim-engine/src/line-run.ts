@@ -15,6 +15,7 @@ import type { CompiledLine, Leg, ProductDef, StationDef } from './line-compile';
 import type {
   FlowStats,
   LineEvent,
+  PartInLine,
   Run,
   RunOptions,
   RunStats,
@@ -95,8 +96,26 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   let events: LineEvent[] = [];
   /** Counts events whether recorded or not, so `step()` works with events off. */
   let emitted = 0;
+  /** Parts in the line and their latest positional event; kept even while events are off. */
+  const inLine = new Map<number, PartInLine>();
   const emit = (event: LineEvent) => {
     emitted++;
+    if (event.type === 'partReleased')
+      inLine.set(event.partId, {
+        partId: event.partId,
+        productId: event.productId,
+        releasedAt: event.t,
+        last: event,
+      });
+    else if (event.type === 'partExited') inLine.delete(event.partId);
+    else if (
+      event.type === 'partMoved' ||
+      event.type === 'partEntered' ||
+      event.type === 'partStarted'
+    ) {
+      const p = inLine.get(event.partId);
+      if (p) p.last = event;
+    }
     if (eventsEnabled) events.push(event);
   };
   const defer = (action: () => void) => void sim.schedule(0, action);
@@ -524,7 +543,8 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       eventsEnabled = enabled;
     },
     wip() {
-      throw new Error('not implemented');
+      // Copies, so a caller can't see later events change what it holds.
+      return [...inLine.values()].map((p) => ({ ...p })).sort((a, b) => a.partId - b.partId);
     },
     stats(): RunStats {
       const to = Math.max(warmUp, Math.min(sim.now, endTime));

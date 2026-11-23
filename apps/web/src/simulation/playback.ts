@@ -9,6 +9,8 @@ export interface Playback {
   animate: boolean;
   /** Advances by one frame of `wallSeconds`; the sim clock is the only clock parts use. */
   advance(wallSeconds: number): void;
+  /** Runs to the next visible change (single step). */
+  step(): void;
 }
 
 export interface PlaybackOptions {
@@ -30,6 +32,7 @@ export function createPlayback(
   const nowMs = options.nowMs ?? (() => performance.now());
   const tracks = createPartTracks(geometry, colors);
   let animate = true;
+  tracks.ingest(run.drainEvents()); // the t = 0 events recorded when the run was created
   const pb: Playback = {
     run,
     tracks,
@@ -41,8 +44,9 @@ export function createPlayback(
       if (on === animate) return;
       animate = on;
       run.setEventsEnabled(on);
-      // Parts released while off were never recorded; whatever is in flight can't be drawn.
       tracks.clear();
+      // Events weren't recorded while off, so ask the engine which parts are in the line.
+      if (on) tracks.seed(run.wip());
     },
     advance(wallSeconds) {
       if (animate) {
@@ -53,6 +57,10 @@ export function createPlayback(
       const start = nowMs();
       do run.runUntil(run.now + OFF_CHUNK);
       while (!run.done && nowMs() - start < sliceMs);
+    },
+    step() {
+      run.step();
+      if (animate) tracks.ingest(run.drainEvents());
     },
   };
   return pb;

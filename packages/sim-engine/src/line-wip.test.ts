@@ -44,6 +44,7 @@ describe('SE-3 AC3: Run.wip() lists the parts in the line', () => {
     const on = newRun();
     on.runUntil(137);
     const off = newRun();
+    off.drainEvents(); // the t = 0 events recorded at creation
     off.setEventsEnabled(false);
     off.runUntil(137);
     expect(off.drainEvents()).toEqual([]);

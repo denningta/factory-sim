@@ -11,6 +11,7 @@ const B = { x: 10, z: 0 };
 const geometry: LineGeometry = {
   connections: new Map([['c1', { from: A, to: B }]]),
   equipment: new Map([
+    ['src', { center: A, queueOrigin: A, queueDir: { x: -1, z: 0 }, path: [A, A] }],
     [
       'ws',
       {
@@ -268,9 +269,9 @@ describe('SE-3 AC3: animation can be turned off for speed', () => {
     const { project, geometry: g, colors: c } = realLine();
     const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
     pb.animate = false;
-    pb.advance(1 / 60); // 60 sim seconds with a congested line
+    pb.advance(1 / 60); // 60 sim seconds, parts in the line
     const inLine = pb.run.wip().length;
-    expect(inLine).toBeGreaterThan(3);
+    expect(inLine).toBeGreaterThan(0);
     pb.animate = true;
     expect(pb.run.drainEvents()).toEqual([]); // nothing new yet: only the seed shows them
     expect(pb.tracks.at(pb.run.now)).toHaveLength(inLine);

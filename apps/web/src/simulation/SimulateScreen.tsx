@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { createProject, type Project } from '@factory-sim/schema';
-import { compileLine, createRun, type ModelIssue } from '@factory-sim/sim-engine';
+import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
-import { PartLayer, type PlaybackControl } from './PartLayer';
-import { createPlayback } from './playback';
-import { buildLineGeometry } from './partTracks';
+import { PartLayer } from './PartLayer';
+import { createRunSession, type RunSessionResult } from './runSession';
 
 const SPEEDS = [1, 10, 100, 1000];
 /** SE-4 adds run length and seed settings; until then a run is one 8 h shift. */
@@ -26,19 +25,6 @@ function currentProject(): Project {
   };
 }
 
-function build() {
-  const compiled = compileLine(currentProject());
-  if (!compiled.ok) return { issues: compiled.issues };
-  const s = useEditorStore.getState();
-  const run = createRun(compiled.model, { seed: 1, warmUp: 0, runLength: SHIFT_SECONDS });
-  const playback = createPlayback(
-    run,
-    buildLineGeometry(s.equipment, s.connections),
-    new Map(s.products.map((p) => [p.id, p.color])),
-  );
-  return { playback };
-}
-
 const clock = (t: number) => {
   const h = Math.floor(t / 3600);
   const m = Math.floor((t % 3600) / 60);
@@ -48,40 +34,23 @@ const clock = (t: number) => {
 
 /** Wireframe 3 (simulation run), SE-3 part: the 3D line with parts moving through it. */
 export function SimulateScreen() {
-  const [version, setVersion] = useState(0);
-  const built = useMemo(() => build(), [version]);
-  const control = useRef<PlaybackControl | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(10);
-  const [animate, setAnimate] = useState(true);
-  const [now, setNow] = useState(0);
+  const result = useMemo<RunSessionResult>(
+    () => createRunSession(currentProject(), { seed: 1, warmUp: 0, runLength: SHIFT_SECONDS }),
+    [],
+  );
+  if (!result.ok) return <Issues issues={result.issues} />;
+  return <Running session={result.session} />;
+}
 
-  if (built.playback) {
-    control.current ??= { playback: built.playback, playing: false };
-    control.current.playback = built.playback;
-  }
-  useEffect(() => {
-    if (control.current) control.current.playing = playing;
-  }, [playing]);
-  useEffect(() => {
-    if (built.playback) {
-      built.playback.speed = speed;
-      built.playback.animate = animate;
-    }
-  }, [built, speed, animate]);
+function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>['session'] }) {
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
+  const [now, setNow] = useState(0);
+  useEffect(() => session.subscribe(rerender), [session]);
   // The clock readout is text, not per-frame React state: poll it a few times a second.
   useEffect(() => {
-    const id = setInterval(() => {
-      const pb = control.current?.playback;
-      if (!pb) return;
-      setNow(pb.run.now);
-      if (pb.run.done) setPlaying(false);
-    }, 200);
+    const id = setInterval(() => setNow(session.now), 200);
     return () => clearInterval(id);
-  }, []);
-
-  if (!built.playback) return <Issues issues={built.issues ?? []} />;
-  const playback = built.playback;
+  }, [session]);
   return (
     <div style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', height: '100%' }}>
       <div
@@ -95,19 +64,20 @@ export function SimulateScreen() {
           font: '14px sans-serif',
         }}
       >
-        <button onClick={() => setPlaying((p) => !p)}>{playing ? 'Pause' : 'Play'}</button>
+        <button onClick={() => (session.playing ? session.pause() : session.play())}>
+          {session.playing ? 'Pause' : 'Play'}
+        </button>
         <button
           onClick={() => {
-            setPlaying(false);
+            session.reset();
             setNow(0);
-            setVersion((v) => v + 1);
           }}
         >
           Reset
         </button>
         <label>
           Speed{' '}
-          <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+          <select value={session.speed} onChange={(e) => session.setSpeed(Number(e.target.value))}>
             {SPEEDS.map((v) => (
               <option key={v} value={v}>
                 {v}×
@@ -116,16 +86,20 @@ export function SimulateScreen() {
           </select>
         </label>
         <label>
-          <input type="checkbox" checked={animate} onChange={(e) => setAnimate(e.target.checked)} />{' '}
+          <input
+            type="checkbox"
+            checked={session.animate}
+            onChange={(e) => session.setAnimate(e.target.checked)}
+          />{' '}
           Animate
         </label>
         <span role="timer" aria-label="Simulation clock">
           {clock(now)}
-          {playback.run.done ? ' (finished)' : ''}
+          {session.done ? ' (finished)' : ''}
         </span>
       </div>
       <FloorScene interactive={false}>
-        <PartLayer control={control as { current: PlaybackControl }} />
+        <PartLayer session={session} />
       </FloorScene>
     </div>
   );

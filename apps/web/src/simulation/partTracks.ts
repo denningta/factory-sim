@@ -1,5 +1,5 @@
 import type { Connection, Equipment, PortRef } from '@factory-sim/schema';
-import type { LineEvent } from '@factory-sim/sim-engine';
+import type { LineEvent, PartInLine } from '@factory-sim/sim-engine';
 import { portWorldPosition } from '../layout/ports';
 
 export interface Pt {
@@ -36,9 +36,11 @@ export interface PartTracks {
   /** Appends engine events (time order). Parts whose release was never seen are ignored. */
   ingest(events: readonly LineEvent[]): void;
   /**
-   * Poses of every part on the floor at sim time `t`. Any `t` gives the right picture; the
-   * per-part cursor is only a cache. A part that has exited is forgotten once drawn gone.
+   * Poses of every part on the floor at sim time `t`. The per-part cursor is only a cache, so
+   * `t` may go back, except past a part's exit: an exited part is forgotten once drawn gone.
    */
+  /** Replaces the tracks with the parts in the line now (animation turned back on). */
+  seed(wip: readonly PartInLine[]): void;
   at(t: number): PartPose[];
   clear(): void;
 }
@@ -108,86 +110,82 @@ export function createPartTracks(
 ): PartTracks {
   const parts = new Map<number, Part>();
 
-  const ingest = (events: readonly LineEvent[]) => {
-    for (const ev of events) {
-      if (ev.type === 'partReleased') {
-        const center = geometry.equipment.get(ev.sourceId)?.center;
-        const part: Part = {
-          id: ev.partId,
-          color: colors.get(ev.productId) ?? '#9ca3af',
-          keys: [],
-          cursor: 0,
-        };
-        if (center)
-          part.keys.push({
-            t: ev.t,
-            kind: 'at',
-            at: center,
-            state: 'processing',
-            equipmentId: ev.sourceId,
-          });
-        else part.keys.push({ t: ev.t, kind: 'gone' });
-        parts.set(ev.partId, part);
-        continue;
+  /** The keyframe an event places a part at; undefined if the geometry is unknown. */
+  const keyFor = (ev: LineEvent): Key | undefined => {
+    switch (ev.type) {
+      case 'partReleased': {
+        const at = geometry.equipment.get(ev.sourceId)?.center;
+        return at && { t: ev.t, kind: 'at', at, state: 'processing', equipmentId: ev.sourceId };
       }
-      if (
-        ev.type !== 'partMoved' &&
-        ev.type !== 'partEntered' &&
-        ev.type !== 'partStarted' &&
-        ev.type !== 'partExited'
-      )
-        continue;
-      const part = parts.get(ev.partId);
-      if (!part) continue;
-      if (ev.type === 'partMoved') {
-        const seg =
-          'connectionId' in ev.via
-            ? geometry.connections.get(ev.via.connectionId)
-            : geometry.equipment.get(ev.via.equipmentId) &&
-              (() => {
-                const [from, to] = geometry.equipment.get(
-                  (ev.via as { equipmentId: string }).equipmentId,
-                )!.path;
-                return { from, to };
-              })();
-        if (seg)
-          part.keys.push({
-            t: ev.t,
-            kind: 'segment',
-            t1: ev.arrivesAt,
-            from: seg.from,
-            to: seg.to,
-          });
-      } else if (ev.type === 'partEntered') {
+      case 'partMoved': {
+        let seg: { from: Pt; to: Pt } | undefined;
+        if ('connectionId' in ev.via) {
+          seg = geometry.connections.get(ev.via.connectionId);
+        } else {
+          const g = geometry.equipment.get(ev.via.equipmentId);
+          if (g) seg = { from: g.path[0], to: g.path[1] };
+        }
+        return seg && { t: ev.t, kind: 'segment', t1: ev.arrivesAt, from: seg.from, to: seg.to };
+      }
+      case 'partEntered': {
         const g = geometry.equipment.get(ev.equipmentId);
-        if (g)
-          part.keys.push({
+        return (
+          g && {
             t: ev.t,
             kind: 'at',
             at: g.queueOrigin,
             state: 'queued',
             equipmentId: ev.equipmentId,
-          });
-      } else if (ev.type === 'partStarted') {
+          }
+        );
+      }
+      case 'partStarted': {
         const g = geometry.equipment.get(ev.equipmentId);
-        if (g)
-          part.keys.push({
+        return (
+          g && {
             t: ev.t,
             kind: 'at',
             at: g.center,
             state: 'processing',
             equipmentId: ev.equipmentId,
-          });
-      } else {
-        part.keys.push({ t: ev.t, kind: 'gone' });
+          }
+        );
       }
+      case 'partExited':
+        return { t: ev.t, kind: 'gone' };
+      default:
+        return undefined;
+    }
+  };
+
+  const addPart = (partId: number, productId: string, first: Key) =>
+    parts.set(partId, {
+      id: partId,
+      color: colors.get(productId) ?? '#9ca3af',
+      keys: [first],
+      cursor: 0,
+    });
+
+  const ingest = (events: readonly LineEvent[]) => {
+    for (const ev of events) {
+      const key = keyFor(ev);
+      if (!key) continue;
+      if (ev.type === 'partReleased') addPart(ev.partId, ev.productId, key);
+      else if ('partId' in ev) parts.get(ev.partId)?.keys.push(key);
+    }
+  };
+
+  const seed = (wip: readonly PartInLine[]) => {
+    for (const p of wip) {
+      const key = keyFor(p.last);
+      if (key) addPart(p.partId, p.productId, key);
     }
   };
 
   const at = (t: number): PartPose[] => {
     const poses: PartPose[] = [];
     // Waiting parts per station, in arrival order, to assign queue slots.
-    const queues = new Map<string, PartPose[]>();
+    const queues = new Map<string, { pose: PartPose; since: number }[]>();
     for (const part of parts.values()) {
       const { keys } = part;
       if (keys[0]!.t > t) continue;
@@ -221,7 +219,7 @@ export function createPartTracks(
       poses.push(pose);
       if (k.state === 'queued') {
         const q = queues.get(k.equipmentId) ?? [];
-        q.push(pose);
+        q.push({ pose, since: k.t });
         queues.set(k.equipmentId, q);
       }
     }
@@ -229,8 +227,8 @@ export function createPartTracks(
       const dir = geometry.equipment.get(equipmentId)!.queueDir;
       // Map iteration is release order, which is arrival order closely enough; sort by the
       // entry time so a later arrival always stands behind an earlier one.
-      q.sort((a, b) => entryTime(a.partId) - entryTime(b.partId) || a.partId - b.partId);
-      q.forEach((p, slot) => {
+      q.sort((a, b) => a.since - b.since || a.pose.partId - b.pose.partId);
+      q.forEach(({ pose: p }, slot) => {
         p.x += dir.x * slot * QUEUE_SPACING;
         p.z += dir.z * slot * QUEUE_SPACING;
       });
@@ -238,14 +236,9 @@ export function createPartTracks(
     return poses;
   };
 
-  const entryTime = (partId: number): number => {
-    const part = parts.get(partId)!;
-    const k = part.keys[part.cursor]!;
-    return k.t;
-  };
-
   return {
     ingest,
+    seed,
     at,
     clear: () => parts.clear(),
   };
