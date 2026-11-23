@@ -90,3 +90,13 @@ export function log(input: number): number {
   }
   return k === 0 ? f - s * (f - R) : dk * ln2Hi - (s * (f - R) - dk * ln2Lo - f);
 }
+
+/** e^x from exact operations only. Stub until SE-6 lands. */
+export function exp(_x: number): number {
+  throw new Error('Not implemented yet (SE-6)');
+}
+
+/** [sin x, cos x] from exact operations only. Stub until SE-6 lands. */
+export function sinCos(_x: number): [sin: number, cos: number] {
+  throw new Error('Not implemented yet (SE-6)');
+}
