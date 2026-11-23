@@ -5,5 +5,7 @@
  * No DOM, Node or rendering dependencies: runs in a Web Worker and in worker threads.
  */
 export type * from './api';
+export type * from './line-api';
 export { createSimulation } from './simulation';
 export { createRng } from './rng';
+export { compileLine, createRun } from './line';
