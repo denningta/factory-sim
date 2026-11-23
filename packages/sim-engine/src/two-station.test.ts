@@ -54,6 +54,7 @@ function run(opts: { c1: number; c2: number; capacity: number; horizon: number }
         s1Make();
       };
       if (buffer) {
+        // Valid only because S1 is the single putter: a full queue means this put waits.
         s1BlockedSince = buffer.length >= buffer.capacity ? sim.now : undefined;
         buffer.put(part, unblock);
       } else if (s2WaitingForHandoff) {
@@ -108,7 +109,7 @@ describe('FL-2: connection capacity blocks and starves stations', () => {
     const small = run({ c1: 1, c2: 3, capacity: 1, horizon: 300 });
     const big = run({ c1: 1, c2: 3, capacity: 50, horizon: 300 });
     expect(big.s1Blocked).toBeLessThan(small.s1Blocked);
-    expect(big.done).toBeLessThanOrEqual(small.done + 1);
+    expect(Math.abs(big.done - small.done)).toBeLessThanOrEqual(1);
   });
 
   it('an unlimited connection never blocks the upstream station', () => {

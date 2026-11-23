@@ -556,8 +556,22 @@ export function createEditorStore() {
       },
       draggingIds: [],
       setDragging: (draggingIds) => set({ draggingIds }),
-      updateConnection: () => {
-        throw new Error('not implemented');
+      updateConnection: (id, patch) => {
+        const { connections, equipment, floor } = get();
+        if (!connections.some((c) => c.id === id))
+          return { ok: false, error: 'Connection not found' };
+        const next = connections.map((c) => (c.id === id ? { ...c, ...patch } : c));
+        // The schema owns the rule (null, or a non-negative integer).
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor,
+          equipment,
+          connections: next,
+        });
+        if (!parsed.success) return { ok: false, error: 'Enter a whole number, 1 or more' };
+        record();
+        set({ connections: next });
+        return { ok: true };
       },
       selectConnection: (id) =>
         set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
