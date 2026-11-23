@@ -39,7 +39,10 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
   };
 
   return (
-    <section aria-label="Run settings" style={{ display: 'grid', gap: 8, padding: 12 }}>
+    <section
+      aria-label="Run settings"
+      style={{ display: 'grid', gap: 8, padding: 12, alignContent: 'start' }}
+    >
       <h2 style={{ font: '600 12px sans-serif', margin: 0 }}>RUN SETTINGS</h2>
       <label style={box}>
         Shift length (hr)
