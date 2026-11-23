@@ -47,8 +47,9 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             setStop(s === 'stopped' || s === 'conflict' ? (err ?? null) : null);
           },
           save: async () => {
-            const { floor, equipment, products, cycleTimes } = useEditorStore.getState();
-            const document = { ...base, floor, equipment, products, cycleTimes };
+            const { floor, equipment, products, connections, cycleTimes } =
+              useEditorStore.getState();
+            const document = { ...base, floor, equipment, products, connections, cycleTimes };
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
             base = document;
@@ -59,6 +60,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             s.floor !== prev.floor ||
             s.equipment !== prev.equipment ||
             s.products !== prev.products ||
+            s.connections !== prev.connections ||
             s.cycleTimes !== prev.cycleTimes
           )
             saver?.markDirty();

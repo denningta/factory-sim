@@ -85,7 +85,13 @@ export function EquipmentLayer() {
 
   // Selection only changes tints, but it still needs a rewrite.
   useLayoutEffect(() => write(null), [groups, selectedIds]);
-  useEffect(() => () => stopDrag.current?.(), []);
+  useEffect(
+    () => () => {
+      stopDrag.current?.();
+      useEditorStore.getState().setDragging([]);
+    },
+    [],
+  );
 
   const onPointerDown = (g: Group) => (e: ThreeEvent<PointerEvent>) => {
     const item = e.instanceId === undefined ? undefined : g.items[e.instanceId];
@@ -113,13 +119,21 @@ export function EquipmentLayer() {
       enabled: useEditorStore.getState().snapEnabled,
     });
     stopDrag.current?.();
+    let moving = false;
     stopDrag.current = trackDrag(
       (ev) => {
         const d = deltaOf(ev);
-        if (d) write(dragTargets(starts, item.id, d, snap()));
+        if (!d) return;
+        // Once per drag, not per move: a plain click must not re-render the connection layer.
+        if (!moving) {
+          moving = true;
+          useEditorStore.getState().setDragging(Object.keys(starts));
+        }
+        write(dragTargets(starts, item.id, d, snap()));
       },
       (ev) => {
         stopDrag.current = null;
+        if (moving) useEditorStore.getState().setDragging([]);
         const d = deltaOf(ev);
         if (d) useEditorStore.getState().dragSelected(starts, item.id, d);
         write(null);

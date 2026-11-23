@@ -9,6 +9,7 @@ import {
   type Connection,
   type CycleTime,
   type Equipment,
+  type PortRef,
   type Floor,
   type Product,
   type Project,
@@ -134,8 +135,6 @@ export interface EditorState extends Prefs {
   /** Moves a step to index `to` (clamped); the rest keep their order. */
   moveRoutingStep: (productId: string, stepId: string, to: number) => void;
   removeRoutingStep: (productId: string, stepId: string) => void;
-  /** Connections; part of the project document. Edited by FL-1; read here for reachability. */
-  connections: Connection[];
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -159,6 +158,18 @@ export interface EditorState extends Prefs {
   /** Sets every selected item's rotation to a typed angle in degrees. */
   setSelectedRotation: (degrees: number) => void;
   deleteSelected: () => void;
+  /** Connections; part of the project document. */
+  connections: Connection[];
+  selectedConnectionId: string | null;
+  /** The output port picked as the start of a connection being drawn; session-only. */
+  pendingFrom: PortRef | null;
+  /** First click an output (sets `pendingFrom`), then an input (connects). Esc cancels. */
+  clickPort: (ref: PortRef) => ConnectResult;
+  connect: (from: PortRef, to: PortRef) => ConnectResult;
+  selectConnection: (id: string | null) => void;
+  /** Ids being dragged right now (empty otherwise); their ports and arrows are hidden. */
+  draggingIds: string[];
+  setDragging: (ids: string[]) => void;
   /** Session-only edit history (LE-3). */
   canUndo: boolean;
   canRedo: boolean;
@@ -182,6 +193,8 @@ export interface EditorState extends Prefs {
   toggleView: () => void;
 }
 
+export type ConnectResult = { ok: true } | { ok: false; error: string };
+
 export const HISTORY_LIMIT = 100;
 
 export interface Point {
@@ -191,18 +204,19 @@ export interface Point {
 
 export function createEditorStore() {
   return create<EditorState>()((set, get) => {
-    // History is session-only and snapshots the document content the editor owns. A future
-    // connect/disconnect (FL-1) joins by adding `connections` to Snapshot and to loadDocument.
+    // History is session-only and snapshots the document content the editor owns.
     interface Snapshot {
       floor: Floor;
       equipment: Equipment[];
       products: Product[];
+      connections: Connection[];
       cycleTimes: CycleTime[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
       equipment: get().equipment,
       products: get().products,
+      connections: get().connections,
       cycleTimes: get().cycleTimes,
     });
     let past: Snapshot[] = [];
@@ -227,6 +241,10 @@ export function createEditorStore() {
       set({
         ...to,
         selectedIds: get().selectedIds.filter((id) => ids.has(id)),
+        selectedConnectionId: to.connections.some((c) => c.id === get().selectedConnectionId)
+          ? get().selectedConnectionId
+          : null,
+        pendingFrom: null,
         canUndo: past.length > 0,
         canRedo: future.length > 0,
       });
@@ -429,7 +447,6 @@ export function createEditorStore() {
           routingOf(productId).filter((s) => s.id !== stepId),
         );
       },
-      connections: [],
       selectedIds: [],
       placeEquipment: (typeId, point) => {
         const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
@@ -452,8 +469,9 @@ export function createEditorStore() {
       },
       selectEquipment: (id, additive) => {
         const { selectedIds } = get();
-        if (!additive) return set({ selectedIds: [id] });
+        if (!additive) return set({ selectedIds: [id], selectedConnectionId: null });
         set({
+          selectedConnectionId: null,
           selectedIds: selectedIds.includes(id)
             ? selectedIds.filter((s) => s !== id)
             : [...selectedIds, id],
@@ -464,7 +482,7 @@ export function createEditorStore() {
         const base = additive ? get().selectedIds : [];
         set({ selectedIds: [...base, ...hit.filter((id) => !base.includes(id))] });
       },
-      clearSelection: () => set({ selectedIds: [] }),
+      clearSelection: () => set({ selectedIds: [], selectedConnectionId: null, pendingFrom: null }),
       dragSelected: (starts, anchorId, delta) => {
         const { floor, snapEnabled } = get();
         const to = dragTargets(starts, anchorId, delta, {
@@ -538,10 +556,16 @@ export function createEditorStore() {
       },
       deleteSelected: () => {
         const gone = new Set(get().selectedIds);
-        if (!get().equipment.some((e) => gone.has(e.id))) return;
+        const { selectedConnectionId, connections } = get();
+        const dropped = (c: Connection) =>
+          c.id === selectedConnectionId ||
+          gone.has(c.from.equipmentId) ||
+          gone.has(c.to.equipmentId);
+        if (!get().equipment.some((e) => gone.has(e.id)) && !connections.some(dropped)) return;
         record();
         set({
           equipment: get().equipment.filter((e) => !gone.has(e.id)),
+          connections: connections.filter((c) => !dropped(c)),
           // A step at a deleted station would make the document invalid (PR-2).
           products: get().products.map((p) =>
             p.routing.some((s) => gone.has(s.stationId))
@@ -551,8 +575,56 @@ export function createEditorStore() {
           // Likewise a cycle time at one (PR-3).
           cycleTimes: get().cycleTimes.filter((c) => !gone.has(c.stationId)),
           selectedIds: [],
+          selectedConnectionId: null,
+          pendingFrom: null,
         });
       },
+      connections: [],
+      selectedConnectionId: null,
+      pendingFrom: null,
+      clickPort: (ref) => {
+        const { pendingFrom, equipment } = get();
+        const kind = equipment
+          .find((e) => e.id === ref.equipmentId)
+          ?.ports.find((p) => p.id === ref.portId)?.kind;
+        if (!kind) return { ok: false, error: 'Unknown port' };
+        if (!pendingFrom) {
+          if (kind !== 'output') return { ok: false, error: 'Start from an output port' };
+          set({ pendingFrom: ref, selectedIds: [], selectedConnectionId: null });
+          return { ok: true };
+        }
+        if (kind === 'output') {
+          // Picking another output restarts the connection from there.
+          set({ pendingFrom: ref });
+          return { ok: true };
+        }
+        const result = get().connect(pendingFrom, ref);
+        // A rejected target keeps the start so the user can pick another input.
+        if (result.ok) set({ pendingFrom: null });
+        return result;
+      },
+      connect: (from, to) => {
+        const { connections, equipment, floor } = get();
+        const taken = new Set(connections.map((c) => c.id));
+        let n = connections.length + 1;
+        while (taken.has(`cn-${n}`)) n++;
+        const next = [...connections, { id: `cn-${n}`, from, to, capacity: 0 }];
+        // The schema owns the rules: no self-link, output→input only, no duplicates.
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor,
+          equipment,
+          connections: next,
+        });
+        if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
+        record();
+        set({ connections: next, selectedConnectionId: `cn-${n}`, selectedIds: [] });
+        return { ok: true };
+      },
+      draggingIds: [],
+      setDragging: (draggingIds) => set({ draggingIds }),
+      selectConnection: (id) =>
+        set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {
         past = [];
         future = [];
@@ -564,6 +636,8 @@ export function createEditorStore() {
           cycleTimes: doc.cycleTimes,
           connections: doc.connections,
           selectedIds: [],
+          selectedConnectionId: null,
+          pendingFrom: null,
           selectedTypeId: null,
           canUndo: false,
           canRedo: false,
