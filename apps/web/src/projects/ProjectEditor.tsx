@@ -36,7 +36,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       (p) => {
         if (cancelled) return;
         let revision = p.revision;
-        // Routings, cycle times etc. aren't edited yet; carry them through unchanged.
+        // Cycle times aren't edited yet; carry them through unchanged.
         let base: Project = p.document;
         useEditorStore.getState().loadDocument(base);
         setName(p.name);
