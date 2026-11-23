@@ -45,6 +45,10 @@ export interface RunSession {
 export type RunSessionResult =
   { ok: true; session: RunSession } | { ok: false; issues: ModelIssue[] };
 
+/** Speed range in sim seconds per wall second. */
+const MIN_SPEED = 1;
+const MAX_SPEED = 1000;
+
 export function createRunSession(project: Project, options: RunOptions): RunSessionResult {
   const compiled = compileLine(project);
   if (!compiled.ok) return { ok: false, issues: compiled.issues };
@@ -87,7 +91,9 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       notify();
     },
     setSpeed(x) {
-      speed = pb.speed = x;
+      speed = pb.speed = Number.isFinite(x)
+        ? Math.min(MAX_SPEED, Math.max(MIN_SPEED, x))
+        : MIN_SPEED;
       notify();
     },
     setAnimate(on) {
@@ -95,7 +101,10 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       notify();
     },
     runToEnd() {
-      throw new Error('not implemented');
+      animate = pb.animate = false;
+      if (pb.run.done) return notify();
+      playing = true;
+      notify();
     },
     frame(wallSeconds) {
       if (!playing) return;

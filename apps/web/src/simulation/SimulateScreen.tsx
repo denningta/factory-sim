@@ -67,6 +67,12 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
         <button onClick={() => (session.playing ? session.pause() : session.play())}>
           {session.playing ? 'Pause' : 'Play'}
         </button>
+        <button onClick={() => session.step()} disabled={session.done}>
+          Step
+        </button>
+        <button onClick={() => session.runToEnd()} disabled={session.done}>
+          Run to end
+        </button>
         <button
           onClick={() => {
             session.reset();

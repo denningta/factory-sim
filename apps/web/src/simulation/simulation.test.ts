@@ -425,6 +425,7 @@ describe('SE-2 AC3: run to end with no animation finishes a one-week 20-station 
   function twentyStations(): Project {
     const store = createEditorStore();
     const s = store.getState;
+    s().setFloor({ width: 400, length: 40 });
     const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
     const p = s().addProduct();
     let prev = src.id;
