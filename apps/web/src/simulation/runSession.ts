@@ -26,6 +26,8 @@ export interface RunSession {
   setSpeed(x: number): void;
   /** Off: no events are recorded and the run goes as fast as time slices allow. */
   setAnimate(on: boolean): void;
+  /** Animation off, then play at full speed until the run ends. */
+  runToEnd(): void;
   /** Called by the host once per animation frame; advances the clock while playing. */
   frame(wallSeconds: number): void;
   readonly now: number;
@@ -91,6 +93,9 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     setAnimate(on) {
       animate = pb.animate = on;
       notify();
+    },
+    runToEnd() {
+      throw new Error('not implemented');
     },
     frame(wallSeconds) {
       if (!playing) return;

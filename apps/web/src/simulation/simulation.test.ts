@@ -363,3 +363,118 @@ describe('RunSession: the interface SE-2, SE-4 and AN-1 build on', () => {
     expect(s.stats()).toEqual(ref.session.stats());
   });
 });
+
+describe('SE-2 AC1: play, pause, single-step, reset', () => {
+  const make = () => {
+    const r = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!r.ok) throw new Error('compile');
+    return r.session;
+  };
+
+  it('step pauses a playing run and advances to the next change each time', () => {
+    const s = make();
+    s.play();
+    s.step();
+    expect(s.playing).toBe(false);
+    const t1 = s.now;
+    s.step();
+    expect(s.now).toBeGreaterThanOrEqual(t1);
+    expect(s.now).toBeGreaterThan(0);
+  });
+
+  it('reset after the end of a run makes it playable again', () => {
+    const s = make();
+    s.runToEnd();
+    for (let i = 0; i < 100000 && !s.done; i++) s.frame(1 / 60);
+    expect(s.done).toBe(true);
+    s.reset();
+    expect(s.done).toBe(false);
+    expect(s.now).toBe(0);
+    s.play();
+    expect(s.playing).toBe(true);
+  });
+});
+
+describe('SE-2 AC2: speed from 1x to 1000x real time', () => {
+  const make = () => {
+    const r = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 100000 });
+    if (!r.ok) throw new Error('compile');
+    return r.session;
+  };
+
+  it.each([1, 10, 100, 1000])('runs at %dx: one wall second is that many sim seconds', (x) => {
+    const s = make();
+    s.setSpeed(x);
+    s.play();
+    s.frame(1);
+    expect(s.now).toBeCloseTo(x, 6);
+  });
+
+  it('clamps speeds outside 1..1000', () => {
+    const s = make();
+    s.setSpeed(5000);
+    expect(s.speed).toBe(1000);
+    s.setSpeed(0.1);
+    expect(s.speed).toBe(1);
+    s.setSpeed(Number.NaN);
+    expect(s.speed).toBe(1);
+  });
+});
+
+describe('SE-2 AC3: run to end with no animation finishes a one-week 20-station run in under 30 s', () => {
+  function twentyStations(): Project {
+    const store = createEditorStore();
+    const s = store.getState;
+    const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
+    const p = s().addProduct();
+    let prev = src.id;
+    for (let i = 0; i < 20; i++) {
+      const ws = s().placeEquipment('base-workstation', { x: 6 * (i + 1), y: 0 })!;
+      s().connect({ equipmentId: prev, portId: 'out' }, { equipmentId: ws.id, portId: 'in' });
+      s().addRoutingStep(p.id, ws.id);
+      s().setCycleTime(p.id, ws.id, 40);
+      const t = s().addTechnician();
+      s().setTechnicianStation(t.id, ws.id, true);
+      prev = ws.id;
+    }
+    const sink = s().placeEquipment('base-sink', { x: 6 * 21, y: 0 })!;
+    s().connect({ equipmentId: prev, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
+    s().setReleaseInterval(45);
+    const st = s();
+    return {
+      ...createProject(),
+      floor: st.floor,
+      equipment: st.equipment,
+      connections: st.connections,
+      products: st.products,
+      cycleTimes: st.cycleTimes,
+      technicians: st.technicians,
+      demand: st.demand,
+      release: st.release,
+    };
+  }
+
+  it('runToEnd turns animation off and plays', () => {
+    const r = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!r.ok) throw new Error('compile');
+    r.session.runToEnd();
+    expect(r.session.animate).toBe(false);
+    expect(r.session.playing).toBe(true);
+  });
+
+  it('finishes in frame slices well inside 30 s', () => {
+    const r = createRunSession(twentyStations(), {
+      seed: 1,
+      warmUp: 0,
+      runLength: 7 * 24 * 3600,
+    });
+    if (!r.ok) throw new Error(r.issues.map((i) => i.message).join('; '));
+    const started = Date.now();
+    r.session.runToEnd();
+    let frames = 0;
+    while (!r.session.done && frames++ < 1_000_000) r.session.frame(1 / 60);
+    expect(r.session.done).toBe(true);
+    expect((Date.now() - started) / 1000).toBeLessThan(30);
+    expect(r.session.stats().total.completed).toBeGreaterThan(1000);
+  }, 60_000);
+});
