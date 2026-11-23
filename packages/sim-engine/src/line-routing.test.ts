@@ -66,4 +66,37 @@ describe('FL-3 routing at splits', () => {
     ]);
     expect(c.issues[0]!.message).toMatch(/B can't reach/);
   });
+
+  it('no_path when the step is reachable only through a workstation that is not the next step', () => {
+    const p = splitProject();
+    // S1 → S2 → S3: B's S3 is only behind S2, and a part never crosses a workstation it isn't routed to.
+    p.connections = p.connections.filter((x) => x.id !== 'c2');
+    p.connections.push({
+      id: 'c5',
+      from: { equipmentId: 'S2', portId: 'out' },
+      to: { equipmentId: 'S3', portId: 'in' },
+      capacity: null,
+      transfer: { kind: 'instant' as const },
+    });
+    const c = compileLine(p);
+    expect(c.ok).toBe(false);
+    if (c.ok) return;
+    expect(c.issues).toEqual([
+      expect.objectContaining({ code: 'no_path', objectId: 'B-S3', severity: 'error' }),
+    ]);
+  });
+
+  it('a backed-up S2 does not stall B parts bound for S3 (tight release interval)', () => {
+    const p = splitProject();
+    p.release = { interval: fixed(10), product: { kind: 'sequence', pattern: ['A', 'B'] } };
+    p.cycleTimes.find((x) => x.productId === 'A' && x.stationId === 'S2')!.time = fixed(200);
+    const c = compileLine(p);
+    if (!c.ok) throw new Error(JSON.stringify(c.issues));
+    const r = createRun(c.model, { seed: 1, warmUp: 0, runLength: 3600 });
+    r.runUntil(r.endTime);
+    const s = r.stats();
+    // A is capped by S2 (one per 200 s) while B, released every 20 s, flows freely through S3.
+    expect(s.byProduct['A']!.completed).toBeLessThanOrEqual(18);
+    expect(s.byProduct['B']!.completed).toBeGreaterThanOrEqual(170);
+  });
 });
