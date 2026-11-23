@@ -68,3 +68,44 @@ describe('SE-2: SimulateScreen playback controls', () => {
     expect(button('Step').disabled).toBe(false);
   });
 });
+
+describe('SE-4: run settings panel', () => {
+  const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
+  const set = async (name: string, value: string) => {
+    await userEvent.clear(field(name));
+    await userEvent.type(field(name), value);
+  };
+
+  it('run length in shifts and warm-up use the shift length: the run ends at warm-up + length', async () => {
+    render(<SimulateScreen />);
+    await set('Shift length (hr)', '1');
+    await set('Warm-up (hr)', '1');
+    await set('Run length', '2');
+    await userEvent.click(button('Apply'));
+    await userEvent.click(button('Run to end'));
+    await waitFor(() => expect(clock()).toBe('3:00:00 (finished)'), { timeout: 5000 });
+    expect(useEditorStore.getState().shiftLength).toBe(3600);
+  });
+
+  it('run length can be given in hours', async () => {
+    render(<SimulateScreen />);
+    await userEvent.selectOptions(screen.getByLabelText('Run length unit'), 'hours');
+    await set('Run length', '2');
+    await userEvent.click(button('Apply'));
+    await userEvent.click(button('Run to end'));
+    await waitFor(() => expect(clock()).toBe('2:00:00 (finished)'), { timeout: 5000 });
+  });
+
+  it('a random seed is drawn on Apply and shown; a fixed seed is kept', async () => {
+    render(<SimulateScreen />);
+    expect(field('Seed').value).toBe('1');
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
+    await userEvent.click(button('Apply'));
+    const drawn = screen.getByRole('status', { name: 'Seed used' }).textContent ?? '';
+    expect(drawn).toMatch(/\d+/);
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
+    await set('Seed', '42');
+    await userEvent.click(button('Apply'));
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
+  });
+});

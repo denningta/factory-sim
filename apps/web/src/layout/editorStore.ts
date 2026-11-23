@@ -141,6 +141,8 @@ export interface EditorState extends Prefs {
   release: Release;
   /** Seconds per shift (read-only here); turns per-shift demand into a release interval. */
   shiftLength: number;
+  /** Sets the shift length in seconds (> 0); re-derives the per-shift release interval. */
+  setShiftLength: (seconds: number) => void;
   /** Switches between units per shift and % of mix, converting the values. */
   setDemandBasis: (basis: Demand['basis']) => void;
   /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
@@ -438,6 +440,9 @@ export function createEditorStore() {
       demand: { basis: 'mix', items: [] },
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
+      setShiftLength: () => {
+        throw new Error('not implemented');
+      },
       setDemandBasis: (basis) => {
         const { demand, products } = get();
         if (demand.basis === basis) return;
