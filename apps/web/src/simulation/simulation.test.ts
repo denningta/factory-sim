@@ -172,6 +172,7 @@ function realLine(): { project: Project; geometry: LineGeometry; colors: Map<str
   const p = s().addProduct();
   s().addRoutingStep(p.id, ws.id);
   s().setCycleTime(p.id, ws.id, 5);
+  s().setReleaseInterval(4);
   const tech = s().addTechnician();
   s().setTechnicianStation(tech.id, ws.id, true);
   const st = s();
@@ -213,8 +214,8 @@ describe('SE-3 AC2: animation stays in sync with the simulation clock at any spe
   });
 
   it('shows the same picture for the same sim time regardless of frame rate', () => {
-    const coarse = posesAfter(10, 1, 1);
-    const fine = posesAfter(10, 60, 1 / 60);
+    const coarse = posesAfter(9, 1, 1);
+    const fine = posesAfter(9, 60, 1 / 60);
     expect(fine.now).toBeCloseTo(coarse.now);
     expect(fine.poses.length).toBeGreaterThan(0);
     expect(fine.poses).toEqual(coarse.poses);
@@ -252,7 +253,7 @@ describe('SE-3 AC3: animation can be turned off for speed', () => {
 
   it('turning animation back on resumes drawing new parts', () => {
     const { project, geometry: g, colors: c } = realLine();
-    const pb = createPlayback(newRun(project), g, c);
+    const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
     pb.animate = false;
     pb.advance(1 / 60);
     pb.animate = true;

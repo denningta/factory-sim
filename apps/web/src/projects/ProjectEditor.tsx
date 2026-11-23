@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
 import { Editor } from '../Editor';
+import { SimulateScreen } from '../simulation/SimulateScreen';
 import { ProductsPanel } from '../products/ProductsPanel';
 import { useEditorStore } from '../layout/editorStore';
 import { useUndoShortcuts } from '../layout/shortcuts';
@@ -26,7 +27,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   const [stop, setStop] = useState<ApiRequestError | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<'layout' | 'products'>('layout');
+  const [tab, setTab] = useState<'layout' | 'products' | 'simulate'>('layout');
 
   useEffect(() => {
     let cancelled = false;
@@ -122,9 +123,9 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         <button onClick={onClose}>← Projects</button>
         <strong>{name}</strong>
         <nav aria-label="Screens" style={{ display: 'flex', gap: 4 }}>
-          {(['layout', 'products'] as const).map((t) => (
+          {(['layout', 'products', 'simulate'] as const).map((t) => (
             <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
-              {t === 'layout' ? 'Layout' : 'Products'}
+              {t === 'layout' ? 'Layout' : t === 'products' ? 'Products' : 'Simulate'}
             </button>
           ))}
         </nav>
@@ -148,7 +149,13 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       </header>
       {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
       <div inert={locked} style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}>
-        {tab === 'layout' ? <Editor readOnly={locked} /> : <ProductsPanel />}
+        {tab === 'layout' ? (
+          <Editor readOnly={locked} />
+        ) : tab === 'products' ? (
+          <ProductsPanel />
+        ) : (
+          <SimulateScreen />
+        )}
       </div>
     </div>
   );

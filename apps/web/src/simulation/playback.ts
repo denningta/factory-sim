@@ -1,5 +1,5 @@
 import type { Run } from '@factory-sim/sim-engine';
-import type { LineGeometry, PartTracks } from './partTracks';
+import { createPartTracks, type LineGeometry, type PartTracks } from './partTracks';
 
 export interface Playback {
   readonly run: Run;
@@ -17,11 +17,43 @@ export interface PlaybackOptions {
   nowMs?: () => number;
 }
 
+/** Sim seconds simulated between wall-clock checks while animation is off. */
+const OFF_CHUNK = 60;
+
 export function createPlayback(
-  _run: Run,
-  _geometry: LineGeometry,
-  _colors: ReadonlyMap<string, string>,
-  _options?: PlaybackOptions,
+  run: Run,
+  geometry: LineGeometry,
+  colors: ReadonlyMap<string, string>,
+  options: PlaybackOptions = {},
 ): Playback {
-  throw new Error('not implemented');
+  const sliceMs = options.sliceMs ?? 8;
+  const nowMs = options.nowMs ?? (() => performance.now());
+  const tracks = createPartTracks(geometry, colors);
+  let animate = true;
+  const pb: Playback = {
+    run,
+    tracks,
+    speed: 1,
+    get animate() {
+      return animate;
+    },
+    set animate(on: boolean) {
+      if (on === animate) return;
+      animate = on;
+      run.setEventsEnabled(on);
+      // Parts released while off were never recorded; whatever is in flight can't be drawn.
+      tracks.clear();
+    },
+    advance(wallSeconds) {
+      if (animate) {
+        run.runUntil(run.now + wallSeconds * pb.speed);
+        tracks.ingest(run.drainEvents());
+        return;
+      }
+      const start = nowMs();
+      do run.runUntil(run.now + OFF_CHUNK);
+      while (!run.done && nowMs() - start < sliceMs);
+    },
+  };
+  return pb;
 }
