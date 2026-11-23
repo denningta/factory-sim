@@ -164,7 +164,7 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                               background: '#f3f4f6',
                             }}
                           >
-                            —
+                            not routed
                           </td>
                         ),
                       )}
