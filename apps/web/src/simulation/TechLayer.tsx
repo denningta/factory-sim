@@ -41,7 +41,11 @@ function TechMarker({ session, id, name }: { session: RunSession; id: string; na
       <mesh position={[0, BODY_HEIGHT / 2, 0]} material={material}>
         <capsuleGeometry args={[BODY_RADIUS, BODY_HEIGHT - 2 * BODY_RADIUS, 4, 12]} />
       </mesh>
-      <TextLabel text={name} position={[0, BODY_HEIGHT + LABEL_HEIGHT * 0.8, 0]} height={LABEL_HEIGHT} />
+      <TextLabel
+        text={name}
+        position={[0, BODY_HEIGHT + LABEL_HEIGHT * 0.8, 0]}
+        height={LABEL_HEIGHT}
+      />
     </group>
   );
 }
