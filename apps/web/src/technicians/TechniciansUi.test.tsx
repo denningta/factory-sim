@@ -33,6 +33,20 @@ describe('TechniciansPanel (TE-1)', () => {
   });
 });
 
+describe('TechniciansPanel walk speed units (TE-1)', () => {
+  it('shows ft/min in ft and stores m/s', async () => {
+    const user = userEvent.setup();
+    store.getState().setUnit('ft');
+    store.getState().addTechnician();
+    render(<TechniciansPanel useStore={store} />);
+    const speed = screen.getByLabelText(/walk speed \(ft\/min\)/i) as HTMLInputElement;
+    expect(Number(speed.value)).toBeCloseTo(236.22, 1);
+    await user.clear(speed);
+    await user.type(speed, '300');
+    expect(store.getState().technicians[0]!.walkSpeed).toBeCloseTo(1.524, 3);
+  });
+});
+
 describe('Workstation labor editor in PropertiesPanel (TE-1)', () => {
   const setup = () => {
     const a = store.getState().placeEquipment('base-workstation', { x: 3, y: 3 })!;

@@ -51,6 +51,12 @@ describe('TE-1 create techs with name and walk speed (default 1.2 m/s)', () => {
     expect(s().technicians[0]).toMatchObject({ name: 'Ana', walkSpeed: 1.5 });
   });
 
+  it('trims the name', () => {
+    const t = s().addTechnician();
+    s().updateTechnician(t.id, { name: '  Ana ' });
+    expect(s().technicians[0]!.name).toBe('Ana');
+  });
+
   it('is undoable, and loadDocument restores technicians', () => {
     s().addTechnician();
     s().undo();

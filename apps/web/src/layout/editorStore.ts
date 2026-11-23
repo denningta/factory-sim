@@ -6,6 +6,7 @@ import {
   floorSchema,
   connectionSchema,
   projectSchema,
+  technicianSchema,
   instantiate,
   type Connection,
   type CycleTime,
@@ -373,12 +374,18 @@ export function createEditorStore() {
       updateTechnician: (id, patch) => {
         const current = get().technicians.find((t) => t.id === id);
         if (!current) return { ok: false, error: 'Technician not found' };
-        const next = { ...current, ...patch };
-        if (next.name.trim() === '') return { ok: false, error: 'Name cannot be empty' };
-        if (!Number.isFinite(next.walkSpeed) || next.walkSpeed <= 0)
-          return { ok: false, error: 'Walk speed must be greater than 0' };
+        // The schema owns the rules and trims the name; we only word the errors.
+        const parsed = technicianSchema.safeParse({ ...current, ...patch });
+        if (!parsed.success)
+          return {
+            ok: false,
+            error:
+              parsed.error.issues[0]!.path[0] === 'name'
+                ? 'Name cannot be empty'
+                : 'Walk speed must be greater than 0',
+          };
         record();
-        set({ technicians: get().technicians.map((t) => (t.id === id ? next : t)) });
+        set({ technicians: get().technicians.map((t) => (t.id === id ? parsed.data : t)) });
         return { ok: true };
       },
       deleteTechnician: (id) => {
