@@ -4,11 +4,13 @@ import { parseCycleTimeTable, parseDuration, stationsOf } from './cycleTimes';
 
 type Store = typeof defaultStore;
 
+const INVALID = 'Enter seconds or mm:ss, greater than 0';
+
 const cellStyle = { padding: '6px 10px', borderBottom: '1px solid #e5e7eb' } as const;
 
 /**
- * One grid cell. Valid text commits as you type; invalid text stays visible with its reason and
- * never reaches the store. Empty clears the cell. A focus-to-blur session is one undo step.
+ * One grid cell. Valid text commits on blur or Enter; invalid text stays visible with its reason
+ * and never reaches the store. Empty clears the cell. A focus-to-blur session is one undo step.
  */
 function TimeCell({
   label,
@@ -44,19 +46,18 @@ function TimeCell({
         onChange={(e) => {
           const text = e.target.value;
           setDraft(text);
-          if (text.trim() === '') {
-            setError(null);
-            return commit(null);
-          }
-          const seconds = parseDuration(text);
-          if (seconds === null) return setError('Enter seconds or mm:ss, greater than 0');
-          setError(null);
-          commit(seconds);
+          setError(text.trim() === '' || parseDuration(text) !== null ? null : INVALID);
         }}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         onBlur={() => {
+          // Commit only finished text: a keystroke-by-keystroke commit would leave a stale prefix
+          // ("2" of "2:3x") in the store when the final text is invalid. Invalid text stays with
+          // its error and the store keeps the last good value.
+          if (draft !== null && !error) {
+            commit(draft.trim() === '' ? null : parseDuration(draft));
+            setDraft(null);
+          }
           endEdit(session.current);
-          setDraft(null);
-          setError(null);
         }}
         style={{
           width: 72,
@@ -178,8 +179,8 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
             <summary style={{ cursor: 'pointer' }}>Import from CSV or Excel</summary>
             <div style={{ display: 'grid', gap: 8, padding: '8px 0', maxWidth: 560 }}>
               <p style={{ color: '#6b7280', margin: 0 }}>
-                First row: station names. First column: part numbers. Copy the cells from Excel and
-                paste, or choose a CSV file.
+                First row: station names. First column: exact part numbers (case-sensitive). Copy
+                the cells from Excel and paste, or choose a CSV file.
               </p>
               <label style={{ display: 'grid', gap: 4 }}>
                 Paste cycle times

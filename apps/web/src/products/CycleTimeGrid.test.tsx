@@ -65,8 +65,8 @@ describe('PR-3 each cell takes a fixed time', () => {
     const { saw, cnc, p1 } = setup();
     render(<ProductsPanel useStore={store} />);
     await screen.findByRole('table', { name: /cycle times/i });
-    await user.type(cell('Product 1', 'Saw')!, '45');
-    await user.type(cell('Product 1', 'CNC')!, '1:30');
+    await user.type(cell('Product 1', 'Saw')!, '45{Enter}');
+    await user.type(cell('Product 1', 'CNC')!, '1:30{Enter}');
     expect(s().cycleTimes).toEqual(
       expect.arrayContaining([
         { productId: p1.id, stationId: saw, time: { kind: 'fixed', value: 45 } },
@@ -89,12 +89,27 @@ describe('PR-3 each cell takes a fixed time', () => {
     expect(s().cycleTimes[0]!.time).toEqual({ kind: 'fixed', value: 30 });
   });
 
+  it('blurring an invalid cell keeps the draft and error and stores nothing', async () => {
+    const user = userEvent.setup();
+    setup();
+    render(<ProductsPanel useStore={store} />);
+    const input = (await screen.findByLabelText(
+      'Cycle time, Product 1 at Saw',
+    )) as HTMLInputElement;
+    await user.type(input, '2:3x');
+    await user.tab();
+    expect(input.value).toBe('2:3x');
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(s().cycleTimes).toEqual([]);
+  });
+
   it('clearing a cell removes its cycle time', async () => {
     const user = userEvent.setup();
     const { saw, p1 } = setup();
     s().setCycleTime(p1.id, saw, 30);
     render(<ProductsPanel useStore={store} />);
     await user.clear(await screen.findByLabelText('Cycle time, Product 1 at Saw'));
+    await user.tab();
     expect(s().cycleTimes).toEqual([]);
   });
 });
@@ -107,9 +122,9 @@ describe('PR-3 missing cycle times are flagged before a run (UI)', () => {
     await screen.findByRole('table', { name: /cycle times/i });
     expect(screen.getByText(/3 cycle times.*missing/i)).toBeTruthy();
     expect(cell('Product 1', 'Saw')!.getAttribute('aria-invalid')).toBe('true');
-    await user.type(cell('Product 1', 'Saw')!, '10');
-    await user.type(cell('Product 1', 'CNC')!, '10');
-    await user.type(cell('Product 2', 'Saw')!, '10');
+    await user.type(cell('Product 1', 'Saw')!, '10{Enter}');
+    await user.type(cell('Product 1', 'CNC')!, '10{Enter}');
+    await user.type(cell('Product 2', 'Saw')!, '10{Enter}');
     expect(screen.queryByText(/cycle times? .*missing/i)).toBeNull();
     expect(cell('Product 1', 'Saw')!.getAttribute('aria-invalid')).toBeNull();
   });

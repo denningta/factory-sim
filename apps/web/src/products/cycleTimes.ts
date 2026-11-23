@@ -19,7 +19,7 @@ export interface ImportResult {
 
 const SECONDS = '(\\d+(?:\\.\\d+)?)';
 const PLAIN = new RegExp(`^${SECONDS}$`);
-const MIN_SEC = new RegExp(`^(\\d+):([0-5]?\\d(?:\\.\\d+)?)$`);
+const MIN_SEC = new RegExp(`^(\\d+):([0-5]\\d(?:\\.\\d+)?)$`);
 const HOUR_MIN_SEC = new RegExp(`^(\\d+):([0-5]\\d):([0-5]\\d(?:\\.\\d+)?)$`);
 
 /** Seconds from "45", "1.5", "m:ss" or "h:mm:ss"; null if it isn't a positive duration. */

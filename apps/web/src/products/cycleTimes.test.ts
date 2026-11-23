@@ -33,7 +33,7 @@ describe('PR-3 each cell takes a fixed time: duration input', () => {
     expect(parseDuration(text)).toBe(seconds);
   });
 
-  it.each(['', ' ', 'abc', '0', '-5', '1:75', '1:', ':30', '1:2:3:4', '1e3'])(
+  it.each(['', ' ', 'abc', '0', '-5', '1:75', '1:5', '1:', '2:3x', ':30', '1:2:3:4', '1e3'])(
     'rejects %j',
     (text) => {
       expect(parseDuration(text)).toBeNull();
