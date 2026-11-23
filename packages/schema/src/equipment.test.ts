@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BASE_EQUIPMENT_TYPES,
+  CURRENT_SCHEMA_VERSION,
   EQUIPMENT_BEHAVIORS,
   createProject,
   equipmentTypeSchema,
@@ -27,12 +28,18 @@ describe('equipment types (ADR-0010, EQ-1 contract)', () => {
   });
 
   it('rejects a workstation batch size larger than its capacity', () => {
-    const ws = { ...BASE_EQUIPMENT_TYPES[0]!, params: { capacity: 2, batchSize: 3 } };
+    const ws = {
+      ...BASE_EQUIPMENT_TYPES[0]!,
+      params: { capacity: 2, batchSize: 3, labor: { mode: 'manual' as const } },
+    };
     const result = equipmentTypeSchema.safeParse(ws);
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0]?.path).toEqual(['params', 'batchSize']);
     expect(
-      equipmentTypeSchema.safeParse({ ...ws, params: { capacity: 3, batchSize: 3 } }).success,
+      equipmentTypeSchema.safeParse({
+        ...ws,
+        params: { capacity: 3, batchSize: 3, labor: { mode: 'manual' as const } },
+      }).success,
     ).toBe(true);
   });
 
@@ -117,11 +124,11 @@ describe('schema v1 → current upgrade (real chain)', () => {
     const result = loadProject(v1);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.project.schemaVersion).toBe(3);
+    expect(result.project.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.project.equipment[0]).toEqual({
       ...v1.equipment[0],
       color: '#8a94a6',
-      params: { capacity: 1, batchSize: 1 },
+      params: { capacity: 1, batchSize: 1, labor: { mode: 'manual' } },
       ports: [
         { id: 'in', kind: 'input', u: 0, v: -0.5 },
         { id: 'out', kind: 'output', u: 0, v: 0.5 },
@@ -137,6 +144,7 @@ describe('schema v1 → current upgrade (real chain)', () => {
         from: { equipmentId: 's1', portId: 'out' },
         to: { equipmentId: 'c1', portId: 'in' },
         capacity: 0,
+        transfer: { kind: 'instant' },
       },
     ]);
   });
@@ -233,6 +241,7 @@ describe('schema v2 → v3 upgrade', () => {
       from: { equipmentId: 'src', portId: 'out' },
       to: { equipmentId: 'snk', portId: 'in' },
       capacity: 0,
+      transfer: { kind: 'instant' },
     });
   });
 
