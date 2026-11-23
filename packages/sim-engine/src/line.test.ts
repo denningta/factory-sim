@@ -178,6 +178,15 @@ describe('SE-6 AC3: pre-run checks report ModelIssues linked to the object', () 
     ]);
   });
 
+  it('a manual station no product routes through needs no technician', () => {
+    // Product owner decision: only routed manual stations need a tech.
+    const p = lineProject(one());
+    const s1 = p.equipment.find((e) => e.id === 'S1')!;
+    p.equipment.push({ ...s1, id: 'S9', position: { x: 0, y: 6 } }); // unconnected, unrouted
+    const c = compileLine(p);
+    expect(c.ok ? [] : c.issues).toEqual([]);
+  });
+
   it('no source, no sink', () => {
     const p = lineProject(one());
     p.equipment = p.equipment.filter((e) => e.behavior !== 'source' && e.behavior !== 'sink');

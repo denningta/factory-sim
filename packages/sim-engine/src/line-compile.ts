@@ -89,10 +89,12 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
   if (!hasSink) error('no_sink', 'Add a sink where finished parts leave the line.');
 
   const staffed = new Set(p.technicians.flatMap((t) => t.stationIds));
+  // Product owner decision (SE-6): only stations some routing uses need a technician.
+  const routed = new Set(p.products.flatMap((pr) => pr.routing.map((s) => s.stationId)));
   const stations: StationDef[] = [];
   for (const e of p.equipment) {
     if (e.behavior !== 'workstation') continue;
-    if (e.params.labor.mode === 'manual' && !staffed.has(e.id))
+    if (e.params.labor.mode === 'manual' && routed.has(e.id) && !staffed.has(e.id))
       error(
         'manual_station_without_tech',
         `"${e.name || e.id}" is manual but no technician is assigned to it.`,
