@@ -10,6 +10,7 @@ import {
   instantiate,
   type Connection,
   type CycleTime,
+  type Duration,
   type Equipment,
   type PortRef,
   type Floor,
@@ -141,6 +142,12 @@ export interface EditorState extends Prefs {
   cycleTimes: CycleTime[];
   /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
   setCycleTime: (productId: string, stationId: string, seconds: number | null) => ProductResult;
+  /** Sets any duration kind (WS-2); null clears the cell. */
+  setCycleTimeDuration: (
+    productId: string,
+    stationId: string,
+    time: Duration | null,
+  ) => ProductResult;
   /** Applies imported cells as one undo step. */
   importCycleTimes: (entries: { productId: string; stationId: string; seconds: number }[]) => void;
   /** Appends a step at `stationId`, which must be a workstation (PR-2). */
@@ -334,6 +341,9 @@ export function createEditorStore() {
         record();
         set({ cycleTimes: withTime(current, productId, stationId, seconds) });
         return { ok: true };
+      },
+      setCycleTimeDuration: () => {
+        throw new Error('not implemented');
       },
       importCycleTimes: (entries) => {
         const valid = entries.filter(
