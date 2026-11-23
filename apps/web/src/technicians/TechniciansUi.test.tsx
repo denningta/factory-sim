@@ -74,10 +74,22 @@ describe('Workstation labor editor in PropertiesPanel (TE-1)', () => {
     expect(laborOf(store.getState().equipment[0]!).mode).toBe('automatic');
     const load = screen.getByLabelText(/^load time/i);
     await user.clear(load);
-    await user.type(load, '12');
+    await user.type(load, '12{Enter}');
     expect(laborOf(store.getState().equipment[0]!)).toMatchObject({
       loadTime: { kind: 'fixed', value: 12 },
     });
-    expect(screen.getByLabelText(/unload time/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^unload time/i)).toBeTruthy();
+  });
+
+  it('takes a distribution for the load time', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(await screen.findByRole('radio', { name: /automatic/i }));
+    await user.selectOptions(screen.getByLabelText('Distribution, Load time'), 'normal');
+    await user.type(screen.getByLabelText('Mean, Load time'), '10{Enter}');
+    await user.type(screen.getByLabelText('Std dev, Load time'), '2{Enter}');
+    expect(laborOf(store.getState().equipment[0]!)).toMatchObject({
+      loadTime: { kind: 'normal', mean: 10, stdDev: 2 },
+    });
   });
 });

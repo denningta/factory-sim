@@ -10,6 +10,8 @@ import {
   instantiate,
   type Connection,
   type CycleTime,
+  type Duration,
+  durationSchema,
   type Equipment,
   type PortRef,
   type Floor,
@@ -141,6 +143,12 @@ export interface EditorState extends Prefs {
   cycleTimes: CycleTime[];
   /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
   setCycleTime: (productId: string, stationId: string, seconds: number | null) => ProductResult;
+  /** Sets any duration kind (WS-2); null clears the cell. */
+  setCycleTimeDuration: (
+    productId: string,
+    stationId: string,
+    time: Duration | null,
+  ) => ProductResult;
   /** Applies imported cells as one undo step. */
   importCycleTimes: (entries: { productId: string; stationId: string; seconds: number }[]) => void;
   /** Appends a step at `stationId`, which must be a workstation (PR-2). */
@@ -333,6 +341,38 @@ export function createEditorStore() {
         if (existing?.time.kind === 'fixed' && existing.time.value === seconds) return { ok: true };
         record();
         set({ cycleTimes: withTime(current, productId, stationId, seconds) });
+        return { ok: true };
+      },
+      setCycleTimeDuration: (productId, stationId, time) => {
+        const product = get().products.find((p) => p.id === productId);
+        if (!product) return { ok: false, error: 'Product not found' };
+        if (!product.routing.some((s) => s.stationId === stationId))
+          return { ok: false, error: 'This product does not route through that station' };
+        const current = get().cycleTimes;
+        if (time === null) {
+          const next = current.filter(
+            (c) => c.productId !== productId || c.stationId !== stationId,
+          );
+          if (next.length === current.length) return { ok: true };
+          record();
+          set({ cycleTimes: next });
+          return { ok: true };
+        }
+        const parsed = durationSchema.safeParse(time);
+        if (!parsed.success)
+          return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid cycle time' };
+        const existing = current.find(
+          (c) => c.productId === productId && c.stationId === stationId,
+        );
+        if (existing && JSON.stringify(existing.time) === JSON.stringify(parsed.data))
+          return { ok: true };
+        record();
+        set({
+          cycleTimes: [
+            ...current.filter((c) => c.productId !== productId || c.stationId !== stationId),
+            { productId, stationId, time: parsed.data },
+          ],
+        });
         return { ok: true };
       },
       importCycleTimes: (entries) => {

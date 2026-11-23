@@ -11,6 +11,7 @@ const s = () => store.getState();
 beforeEach(() => {
   localStorage.clear();
   store = createEditorStore();
+  unrouted.clear();
 });
 
 const station = (x = 2) => s().placeEquipment('base-workstation', { x, y: 2 })!;
@@ -23,9 +24,21 @@ const doc = () => ({
   cycleTimes: s().cycleTimes,
   technicians: s().technicians,
 });
+const unrouted = new Set<string>();
 const issues = () =>
   preRunIssues({
-    products: [{ id: 'p', partNumber: 'P', name: 'P', color: '#000000', routing: [] }],
+    // One product routed through every workstation; `unrouted` stations are left out.
+    products: [
+      {
+        id: 'p',
+        partNumber: 'P',
+        name: 'P',
+        color: '#000000',
+        routing: s()
+          .equipment.filter((e) => e.behavior === 'workstation' && !unrouted.has(e.id))
+          .map((e, i) => ({ id: `step-${i}`, stationId: e.id })),
+      },
+    ],
     cycleTimes: [],
     equipment: s().equipment,
     technicians: s().technicians,
@@ -154,6 +167,13 @@ describe('TE-1 each station is manual or automatic (load/unload only)', () => {
 });
 
 describe('TE-1 a manual station with no tech is flagged before a run', () => {
+  it('does not flag a manual station that no product routes through', () => {
+    const a = station();
+    expect(issues()).toHaveLength(1);
+    unrouted.add(a.id);
+    expect(issues()).toEqual([]);
+  });
+
   it('flags manual_station_without_tech until a tech is assigned', () => {
     const a = station();
     expect(issues()).toEqual([
