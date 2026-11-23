@@ -23,6 +23,9 @@ import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
 import type { DisplayUnit } from './units';
 import type { ViewMode } from './viewControls';
 
+/** m/s; a typical walking pace (TE-1). */
+const DEFAULT_WALK_SPEED = 1.2;
+
 const PREFS_KEY = 'factory-sim:editor-prefs';
 
 interface Prefs {
@@ -228,6 +231,7 @@ export function createEditorStore() {
       products: Product[];
       connections: Connection[];
       cycleTimes: CycleTime[];
+      technicians: Technician[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -235,6 +239,7 @@ export function createEditorStore() {
       products: get().products,
       connections: get().connections,
       cycleTimes: get().cycleTimes,
+      technicians: get().technicians,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -349,16 +354,52 @@ export function createEditorStore() {
       },
       technicians: [],
       addTechnician: () => {
-        throw new Error('TE-1: not implemented');
+        const { technicians } = get();
+        const used = new Set(technicians.map((t) => t.id));
+        const names = new Set(technicians.map((t) => t.name));
+        // Count up past anything taken so deleting a tech never makes a default collide.
+        let n = technicians.length + 1;
+        while (used.has(`tech-${n}`) || names.has(`Tech ${n}`)) n++;
+        const tech: Technician = {
+          id: `tech-${n}`,
+          name: `Tech ${n}`,
+          walkSpeed: DEFAULT_WALK_SPEED,
+          stationIds: [],
+        };
+        record();
+        set({ technicians: [...technicians, tech] });
+        return tech;
       },
-      updateTechnician: () => {
-        throw new Error('TE-1: not implemented');
+      updateTechnician: (id, patch) => {
+        const current = get().technicians.find((t) => t.id === id);
+        if (!current) return { ok: false, error: 'Technician not found' };
+        const next = { ...current, ...patch };
+        if (next.name.trim() === '') return { ok: false, error: 'Name cannot be empty' };
+        if (!Number.isFinite(next.walkSpeed) || next.walkSpeed <= 0)
+          return { ok: false, error: 'Walk speed must be greater than 0' };
+        record();
+        set({ technicians: get().technicians.map((t) => (t.id === id ? next : t)) });
+        return { ok: true };
       },
-      deleteTechnician: () => {
-        throw new Error('TE-1: not implemented');
+      deleteTechnician: (id) => {
+        if (!get().technicians.some((t) => t.id === id)) return;
+        record();
+        set({ technicians: get().technicians.filter((t) => t.id !== id) });
       },
-      setTechnicianStation: () => {
-        throw new Error('TE-1: not implemented');
+      setTechnicianStation: (techId, stationId, assigned) => {
+        const tech = get().technicians.find((t) => t.id === techId);
+        if (!tech) return { ok: false, error: 'Technician not found' };
+        const error = notAStation(stationId);
+        if (error) return { ok: false, error };
+        if (tech.stationIds.includes(stationId) === assigned) return { ok: true };
+        const stationIds = assigned
+          ? [...tech.stationIds, stationId]
+          : tech.stationIds.filter((id) => id !== stationId);
+        record();
+        set({
+          technicians: get().technicians.map((t) => (t.id === techId ? { ...t, stationIds } : t)),
+        });
+        return { ok: true };
       },
       addProduct: () => {
         const { products } = get();
@@ -557,7 +598,11 @@ export function createEditorStore() {
           ...current,
           name: patch.name ?? current.name,
           position,
-          params: { ...current.params, ...patch.params },
+          params: {
+            ...current.params,
+            ...patch.params,
+            ...(patch.labor ? { labor: patch.labor } : {}),
+          },
           footprint: { ...current.footprint, ...patch.footprint },
           height: patch.height ?? current.height,
         };
@@ -604,6 +649,12 @@ export function createEditorStore() {
           ),
           // Likewise a cycle time at one (PR-3).
           cycleTimes: get().cycleTimes.filter((c) => !gone.has(c.stationId)),
+          // And a technician assigned to it (TE-1).
+          technicians: get().technicians.map((t) =>
+            t.stationIds.some((id) => gone.has(id))
+              ? { ...t, stationIds: t.stationIds.filter((id) => !gone.has(id)) }
+              : t,
+          ),
           selectedIds: [],
           selectedConnectionId: null,
           pendingFrom: null,
@@ -680,6 +731,7 @@ export function createEditorStore() {
           equipment: doc.equipment,
           products: doc.products,
           cycleTimes: doc.cycleTimes,
+          technicians: doc.technicians,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,

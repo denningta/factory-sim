@@ -1,5 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
+import { Field, parseNumber } from './Field';
+import { LaborEditor } from '../technicians/LaborEditor';
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import {
   formatLength,
@@ -13,85 +15,6 @@ import {
 type Store = typeof defaultStore;
 
 const toDegrees = (rad: number) => (rad * 180) / Math.PI;
-
-/**
- * A text field that commits each keystroke through `commit`, which returns an error reason or
- * null. Invalid text stays visible with its reason; the store never receives it. On blur the
- * field reverts to the stored value.
- */
-function Field({
-  label,
-  value,
-  commit,
-  extraError,
-  onBlur,
-  placeholder,
-  beginEdit,
-  endEdit,
-}: {
-  label: string;
-  value: string;
-  commit: (text: string) => string | null;
-  /** A reason set from outside, e.g. the other field of a rule that spans two fields. */
-  extraError?: string | null;
-  onBlur?: () => void;
-  placeholder?: string;
-  /** One focus-to-blur (or Enter) session is one undo step, however many keystrokes. */
-  beginEdit: () => number;
-  endEdit: (token: number) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const errorId = useId();
-  const shown = error ?? extraError ?? null;
-  // The field can unmount while focused (selection changes); close its session then.
-  const session = useRef(0);
-  const begin = () => {
-    session.current = beginEdit();
-  };
-  const end = () => endEdit(session.current);
-  useEffect(() => () => endEdit(session.current), [endEdit]);
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-      {label}
-      <input
-        type="text"
-        inputMode="decimal"
-        value={draft ?? value}
-        placeholder={placeholder}
-        aria-invalid={shown ? 'true' : undefined}
-        aria-describedby={shown ? errorId : undefined}
-        onFocus={begin}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter') return;
-          end();
-          begin();
-        }}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          setError(commit(e.target.value));
-        }}
-        onBlur={() => {
-          end();
-          setDraft(null);
-          setError(null);
-          onBlur?.();
-        }}
-      />
-      {shown && (
-        <span id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
-          {shown}
-        </span>
-      )}
-    </label>
-  );
-}
-
-/** Parses typed text as a finite number, or returns the reason it can't be. */
-function parseNumber(text: string): number | string {
-  const n = Number(text);
-  return text.trim() === '' || !Number.isFinite(n) ? 'Enter a number' : n;
-}
 
 const PARAM_LABELS: Record<string, string> = {
   capacity: 'Capacity (units)',
@@ -242,7 +165,7 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
               />
             ))}
           </div>
-          {/* Numeric params only; labor mode (TE-1) gets its own editor. */}
+          {/* Numeric params only; labor (TE-1) has its own editor below. */}
           {Object.entries(first.params)
             .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
             .map(([key, v]) => {
@@ -275,6 +198,9 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
                 />
               );
             })}
+          {first.behavior === 'workstation' && (
+            <LaborEditor equipmentId={first.id} useStore={useStore} />
+          )}
         </>
       ) : (
         <p style={{ margin: 0 }}>

@@ -5,6 +5,7 @@ import { FloorPanel } from './layout/FloorPanel';
 import { FloorScene } from './layout/FloorScene';
 import { PropertiesPanel } from './layout/PropertiesPanel';
 import { ViewToolbar } from './layout/ViewToolbar';
+import { TechniciansPanel } from './technicians/TechniciansPanel';
 import { useEditorStore } from './layout/editorStore';
 import { useEditorShortcuts } from './layout/shortcuts';
 
@@ -43,6 +44,7 @@ export function Editor({ readOnly = false }: { readOnly?: boolean }) {
       <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
         <PropertiesPanel />
         <FloorPanel />
+        <TechniciansPanel />
       </aside>
     </div>
   );
