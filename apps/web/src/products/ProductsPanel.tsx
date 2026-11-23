@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { preRunIssues } from './preRunIssues';
+import { RoutingEditor } from './RoutingEditor';
 
 type Store = typeof defaultStore;
 
@@ -79,7 +80,7 @@ function ColorInput({
   );
 }
 
-/** Wireframe 2, "End items": the products built on the line. Routings are PR-2. */
+/** Wireframe 2: "End items" (PR-1) on the left, the selected product's routing (PR-2) beside it. */
 export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store }) {
   const { products, addProduct, updateProduct, deleteProduct, beginEdit, endEdit } = useStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -91,83 +92,95 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
   };
 
   return (
-    <section style={{ padding: 16, font: '14px sans-serif', maxWidth: 420 }}>
-      <h2 style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>
-        End items
-      </h2>
-      <p style={{ color: '#6b7280', marginTop: 2 }}>Products built on this line</p>
-      {issues.map((i) => (
-        <p key={i.code} style={{ color: '#b45309' }}>
-          {i.message}
-        </p>
-      ))}
-      <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
-        {products.map((p) => (
-          <li key={p.id}>
-            <button
-              onClick={() => setSelectedId(p.id)}
-              aria-pressed={p.id === selected?.id}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: 8,
-                border: p.id === selected?.id ? '2px solid #2563eb' : '1px solid #d1d5db',
-                borderRadius: 6,
-                background: 'white',
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: 10,
-                  height: 10,
-                  borderRadius: 5,
-                  background: p.color,
-                  marginRight: 8,
-                }}
-              />
-              <strong>{p.name}</strong> <span style={{ color: '#6b7280' }}>[{p.partNumber}]</span>
-            </button>
-          </li>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '280px minmax(0, 1fr)',
+        minHeight: '100%',
+        font: '14px sans-serif',
+      }}
+    >
+      <section style={{ padding: 16, borderRight: '1px solid #e5e7eb' }}>
+        <h2 style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>
+          End items
+        </h2>
+        <p style={{ color: '#6b7280', marginTop: 2 }}>Products built on this line</p>
+        {issues.map((i) => (
+          <p key={i.code} style={{ color: '#b45309' }}>
+            {i.message}
+          </p>
         ))}
-      </ul>
-      <button
-        onClick={() => setSelectedId(addProduct().id)}
-        style={{ width: '100%', padding: 8, marginBottom: 16 }}
-      >
-        + Add product
-      </button>
-      {selected && (
-        <div key={selected.id} style={{ display: 'grid', gap: 8 }}>
-          <TextField
-            label="Part number"
-            value={selected.partNumber}
-            commit={edit('partNumber')}
-            beginEdit={beginEdit}
-            endEdit={endEdit}
-          />
-          <TextField
-            label="Name"
-            value={selected.name}
-            commit={edit('name')}
-            beginEdit={beginEdit}
-            endEdit={endEdit}
-          />
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            Color
-            <ColorInput
-              value={selected.color}
+        <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
+          {products.map((p) => (
+            <li key={p.id}>
+              <button
+                onClick={() => setSelectedId(p.id)}
+                aria-pressed={p.id === selected?.id}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: 8,
+                  border: p.id === selected?.id ? '2px solid #2563eb' : '1px solid #d1d5db',
+                  borderRadius: 6,
+                  background: 'white',
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: 'inline-block',
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    background: p.color,
+                    marginRight: 8,
+                  }}
+                />
+                <strong>{p.name}</strong> <span style={{ color: '#6b7280' }}>[{p.partNumber}]</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => setSelectedId(addProduct().id)}
+          style={{ width: '100%', padding: 8, marginBottom: 16 }}
+        >
+          + Add product
+        </button>
+        {selected && (
+          <div key={selected.id} style={{ display: 'grid', gap: 8 }}>
+            <TextField
+              label="Part number"
+              value={selected.partNumber}
+              commit={edit('partNumber')}
               beginEdit={beginEdit}
               endEdit={endEdit}
-              commit={(c) => updateProduct(selected.id, { color: c })}
             />
-          </label>
-          <button onClick={() => deleteProduct(selected.id)} style={{ color: '#b91c1c' }}>
-            Delete product
-          </button>
-        </div>
-      )}
-    </section>
+            <TextField
+              label="Name"
+              value={selected.name}
+              commit={edit('name')}
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+            />
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              Color
+              <ColorInput
+                value={selected.color}
+                beginEdit={beginEdit}
+                endEdit={endEdit}
+                commit={(c) => updateProduct(selected.id, { color: c })}
+              />
+            </label>
+            <button onClick={() => deleteProduct(selected.id)} style={{ color: '#b91c1c' }}>
+              Delete product
+            </button>
+          </div>
+        )}
+      </section>
+      <div style={{ padding: 24, background: '#f9fafb' }}>
+        {selected && <RoutingEditor product={selected} useStore={useStore} />}
+      </div>
+    </div>
   );
 }
