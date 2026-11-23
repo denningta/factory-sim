@@ -16,6 +16,7 @@ import {
 /** A small valid line: Source → S1 → S2 → Sink, two products. */
 function sampleProject(): Project {
   return {
+    ...createProject(),
     schemaVersion: CURRENT_SCHEMA_VERSION,
     floor: { width: 30, length: 20, gridSpacing: 1 },
     equipment: [
@@ -59,6 +60,7 @@ function link(id: string, from: string, to: string): Project['connections'][numb
     from: { equipmentId: from, portId: 'out' },
     to: { equipmentId: to, portId: 'in' },
     capacity: 0,
+    transfer: { kind: 'instant' },
   };
 }
 
@@ -108,7 +110,7 @@ describe('PL-3 AC2: saves are validated; invalid data is rejected with a clear m
   it('rejects non-positive lengths and times', () => {
     const p = sampleProject();
     p.floor.length = 0;
-    p.cycleTimes[0]!.time.value = -1;
+    p.cycleTimes[0]!.time = { kind: 'fixed', value: -1 };
     expectInvalid(p, 'floor.length', 'cycleTimes[0].time.value');
   });
 
@@ -302,5 +304,122 @@ describe('PL-3 AC3: an upgrade step converts an older version to the current one
 
   it('the real loader accepts current-version documents', () => {
     expect(loadProject(sampleProject())).toEqual({ ok: true, project: sampleProject() });
+  });
+});
+
+describe('schema v4 (Sprint 4 contract)', () => {
+  it('accepts every duration kind and rejects bad triangular parameters', () => {
+    const p = sampleProject();
+    const kinds = [
+      { kind: 'fixed', value: 30 },
+      { kind: 'normal', mean: 30, stdDev: 3 },
+      { kind: 'triangular', min: 20, mode: 30, max: 45 },
+      { kind: 'lognormal', mean: 30, stdDev: 5 },
+      { kind: 'exponential', mean: 30 },
+    ] as const;
+    for (const time of kinds) {
+      p.cycleTimes[0]!.time = { ...time };
+      expect(validateProject(p).ok, time.kind).toBe(true);
+    }
+    p.cycleTimes[0]!.time = { kind: 'triangular', min: 40, mode: 30, max: 45 };
+    expectInvalid(p, 'cycleTimes[0].time.mode', 'min ≤ most likely ≤ max');
+  });
+
+  it('accepts an optional operation name on routing steps', () => {
+    const p = sampleProject();
+    p.products[0]!.routing[0]!.name = 'Cut stock';
+    expect(validateProject(p).ok).toBe(true);
+  });
+
+  it('validates demand: known products, listed once, mix adds to 100', () => {
+    const p = sampleProject();
+    p.demand = {
+      basis: 'mix',
+      items: [
+        { productId: 'pA', value: 60 },
+        { productId: 'pB', value: 40 },
+      ],
+    };
+    expect(validateProject(p).ok).toBe(true);
+    p.products.push({ ...p.products[1]!, id: 'pC', partNumber: 'C-300', routing: [] });
+    p.demand.items = ['pA', 'pB', 'pC'].map((productId) => ({ productId, value: 33.33 }));
+    expect(validateProject(p).ok).toBe(true);
+    p.products.pop();
+    p.demand = {
+      basis: 'mix',
+      items: [
+        { productId: 'pA', value: 60 },
+        { productId: 'pB', value: 30 },
+      ],
+    };
+    expectInvalid(p, 'demand.items', 'add up to 100');
+    p.demand = {
+      basis: 'perShift',
+      items: [
+        { productId: 'pZ', value: 5 },
+        { productId: 'pZ', value: 1 },
+      ],
+    };
+    expectInvalid(p, 'demand.items[0].productId', 'Unknown product', 'listed twice');
+  });
+
+  it('validates release sequences against products', () => {
+    const p = sampleProject();
+    p.release = {
+      interval: { kind: 'exponential', mean: 45 },
+      product: { kind: 'sequence', pattern: ['pA', 'pA', 'pB'] },
+    };
+    expect(validateProject(p).ok).toBe(true);
+    p.release.product = { kind: 'sequence', pattern: ['pA', 'nope'] };
+    expectInvalid(p, 'release.product.pattern[1]', 'Unknown product');
+  });
+
+  it('validates technicians: workstations only, no duplicates, unique ids', () => {
+    const p = sampleProject();
+    p.technicians = [{ id: 't1', name: 'Tech 1', walkSpeed: 1.2, stationIds: ['s1', 's2'] }];
+    expect(validateProject(p).ok).toBe(true);
+    p.technicians[0]!.stationIds = ['src', 's1', 's1'];
+    expectInvalid(p, 'technicians[0].stationIds[0]', 'not a workstation', 'assigned twice');
+    p.technicians = [{ id: 's1', name: 'X', walkSpeed: 1, stationIds: [] }];
+    expectInvalid(p, 'technicians[0].id', 'Duplicate id');
+  });
+
+  it('accepts manual and automatic labor on workstations', () => {
+    const p = sampleProject();
+    const ws = p.equipment.find((e) => e.id === 's1')!;
+    if (ws.behavior !== 'workstation') throw new Error('unreachable');
+    ws.params.labor = {
+      mode: 'automatic',
+      loadTime: { kind: 'fixed', value: 5 },
+      unloadTime: { kind: 'fixed', value: 4 },
+    };
+    expect(validateProject(p).ok).toBe(true);
+  });
+
+  it('accepts instant, fixed and speed transfers on connections', () => {
+    const p = sampleProject();
+    p.connections[0]!.transfer = { kind: 'fixed', time: { kind: 'fixed', value: 12 } };
+    p.connections[1]!.transfer = { kind: 'speed', speed: 0.5 };
+    expect(validateProject(p).ok).toBe(true);
+    p.connections[1]!.transfer = { kind: 'speed', speed: 0 };
+    expectInvalid(p, 'connections[1].transfer.speed');
+  });
+
+  it('upgrades a v3 document with planning defaults, manual labor and instant transfers', () => {
+    const current = sampleProject();
+    const { calendar: _c, demand: _d, release: _r, technicians: _t, ...rest } = current;
+    const v3 = JSON.parse(
+      JSON.stringify({
+        ...rest,
+        schemaVersion: 3,
+        connections: current.connections.map(({ transfer: _x, ...c }) => c),
+        equipment: current.equipment.map((e) =>
+          e.behavior === 'workstation'
+            ? { ...e, params: { capacity: e.params.capacity, batchSize: e.params.batchSize } }
+            : e,
+        ),
+      }),
+    );
+    expect(loadProject(v3)).toEqual({ ok: true, project: current });
   });
 });

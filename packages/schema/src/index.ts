@@ -14,6 +14,7 @@ import { CURRENT_SCHEMA_VERSION, projectSchema, type Project } from './project';
 import { createUpgrader, validate, type ParseResult, type UpgradeStep } from './upgrade';
 
 export * from './equipment';
+export * from './duration';
 export * from './project';
 export * from './http';
 export { createUpgrader, formatIssues, type ParseResult, type UpgradeStep } from './upgrade';
@@ -92,6 +93,31 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
           capacity: 0,
         };
       });
+    }
+    return next;
+  },
+  // v3 → v4: planning defaults, manual labor on workstations, instant transfers.
+  3: (doc) => {
+    const next: Record<string, unknown> = {
+      calendar: { shiftLength: 28800 },
+      demand: { basis: 'mix', items: [] },
+      release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
+      technicians: [],
+      ...doc,
+      schemaVersion: 4,
+    };
+    if (Array.isArray(doc.equipment)) {
+      next.equipment = doc.equipment.map((e: unknown) => {
+        if (typeof e !== 'object' || e === null) return e;
+        const { behavior, params } = e as { behavior?: unknown; params?: unknown };
+        if (behavior !== 'workstation' || typeof params !== 'object' || params === null) return e;
+        return { ...e, params: { labor: { mode: 'manual' }, ...params } };
+      });
+    }
+    if (Array.isArray(doc.connections)) {
+      next.connections = doc.connections.map((c: unknown) =>
+        typeof c === 'object' && c !== null ? { transfer: { kind: 'instant' }, ...c } : c,
+      );
     }
     return next;
   },

@@ -311,7 +311,7 @@ export function createEditorStore() {
         const existing = current.find(
           (c) => c.productId === productId && c.stationId === stationId,
         );
-        if (existing?.time.value === seconds) return { ok: true };
+        if (existing?.time.kind === 'fixed' && existing.time.value === seconds) return { ok: true };
         record();
         set({ cycleTimes: withTime(current, productId, stationId, seconds) });
         return { ok: true };
@@ -612,7 +612,10 @@ export function createEditorStore() {
         const taken = new Set(connections.map((c) => c.id));
         let n = connections.length + 1;
         while (taken.has(`cn-${n}`)) n++;
-        const next = [...connections, { id: `cn-${n}`, from, to, capacity: 0 }];
+        const next = [
+          ...connections,
+          { id: `cn-${n}`, from, to, capacity: 0, transfer: { kind: 'instant' as const } },
+        ];
         // The schema owns the rules: no self-link, output→input only, no duplicates.
         const parsed = projectSchema.safeParse({
           ...createProject(),

@@ -23,3 +23,8 @@ issue: 26
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **One source for now:** `release` is project-wide. The line model requires exactly one `source` and reports a `ModelIssue` (`multiple_sources`) otherwise. Per-source release rules would be a schema change through the lead.
+- When products are deleted, `removeProduct` must also drop them from `demand.items` and `release.product.pattern` (same undo step), or autosave fails validation.
+
+- **Contract (schema v4):** `project.demand = {basis: 'perShift'|'mix', items: [{productId, value}]}` (mix sums to 100) and `project.release = {interval: Duration, product: {kind: 'smooth'|'random'} | {kind: 'sequence', pattern}}`. The three options map to: fixed interval → `fixed` interval + `smooth`; random by mix → `random`; heijunka → `sequence`. `project.calendar.shiftLength` converts per-shift demand into an interval in the UI. The AC3 'mix within 2%' test runs on the line model (SE-6).

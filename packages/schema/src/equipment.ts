@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { durationSchema } from './duration';
 
 /**
  * Equipment types are data, not code (ADR-0010): one of five base behaviors plus its
@@ -17,6 +18,19 @@ const positiveInt = z.number().int().positive();
 
 export const EQUIPMENT_BEHAVIORS = ['workstation', 'buffer', 'conveyor', 'source', 'sink'] as const;
 
+/**
+ * Who runs a workstation (TE-1): manual = a tech is present for the whole cycle; automatic =
+ * a tech only loads and unloads, and the machine runs the cycle alone.
+ */
+export const laborSchema = z.discriminatedUnion('mode', [
+  z.strictObject({ mode: z.literal('manual') }),
+  z.strictObject({
+    mode: z.literal('automatic'),
+    loadTime: durationSchema,
+    unloadTime: durationSchema,
+  }),
+]);
+
 /** Simulation parameters per behavior. SI units. */
 export const behaviorParamsSchemas = {
   workstation: z
@@ -25,6 +39,7 @@ export const behaviorParamsSchemas = {
       capacity: positiveInt,
       /** Units that must accumulate before processing starts (WS-3); processed together. */
       batchSize: positiveInt,
+      labor: laborSchema,
     })
     .refine((p) => p.batchSize <= p.capacity, {
       message: 'Batch size cannot exceed capacity: a batch is processed together',
@@ -185,6 +200,7 @@ export type EquipmentType = z.infer<typeof equipmentTypeSchema>;
 export type Equipment = z.infer<typeof equipmentSchema>;
 export type EquipmentBehavior = Equipment['behavior'];
 export type Port = z.infer<typeof portSchema>;
+export type Labor = z.infer<typeof laborSchema>;
 export type BehaviorParams<B extends EquipmentBehavior> = z.infer<
   (typeof behaviorParamsSchemas)[B]
 >;
@@ -198,7 +214,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     id: 'base-workstation',
     name: 'Workstation',
     behavior: 'workstation',
-    params: { capacity: 1, batchSize: 1 },
+    params: { capacity: 1, batchSize: 1, labor: { mode: 'manual' } },
     footprint: { width: 2, length: 1.5 },
     height: 1.2,
     color: '#8a94a6',

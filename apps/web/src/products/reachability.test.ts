@@ -10,6 +10,7 @@ const link = (from: string, to: string): Connection => ({
   from: { equipmentId: from, portId: 'out' },
   to: { equipmentId: to, portId: 'in' },
   capacity: 0,
+  transfer: { kind: 'instant' },
 });
 
 describe('PR-2 steps whose station is unreachable by connections are flagged', () => {

@@ -114,7 +114,7 @@ describe('updateEquipment (WS-1)', () => {
     const got = s.getState().equipment[0]!;
     expect(got.name).toBe('Weld 1');
     expect(got.position).toEqual({ x: 7.5, y: 4 });
-    expect(got.params).toEqual({ capacity: 3, batchSize: 1 });
+    expect(got.params).toEqual({ capacity: 3, batchSize: 1, labor: { mode: 'manual' } });
   });
 
   it('rejects invalid values with a reason and leaves the equipment unchanged', () => {

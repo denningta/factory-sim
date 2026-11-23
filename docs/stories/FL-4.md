@@ -22,3 +22,5 @@ issue: 11
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Contract (schema v4):** `connection.transfer = {kind: 'instant'} | {kind: 'fixed', time: Duration} | {kind: 'speed', speed}`; distance is between the two ports' world positions (the FL-1 helper). AC2 'parts in transit count as WIP' is in SE-6's `RunStats.averageWip`.

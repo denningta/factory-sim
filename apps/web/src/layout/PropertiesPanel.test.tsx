@@ -20,6 +20,13 @@ const place = (x: number, y: number) => {
 };
 
 describe('PropertiesPanel', () => {
+  it('shows numeric params only; labor mode is not rendered as a field (schema v4)', async () => {
+    place(2, 2);
+    expect(await screen.findByLabelText(/capacity/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/labor/i)).toBeNull();
+    expect(screen.queryByDisplayValue('[object Object]')).toBeNull();
+  });
+
   it('prompts to select something when nothing is selected', async () => {
     expect(await screen.findByText(/select equipment/i)).toBeTruthy();
   });

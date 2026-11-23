@@ -131,6 +131,7 @@ describe('PR-2 add, reorder and remove routing steps, each assigned to a station
           from: { equipmentId: s1.id, portId: 'out' },
           to: { equipmentId: s2.id, portId: 'in' },
           capacity: 0,
+          transfer: { kind: 'instant' as const },
         },
       ],
     };

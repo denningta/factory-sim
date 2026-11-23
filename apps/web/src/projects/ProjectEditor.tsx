@@ -6,6 +6,7 @@ import { ProductsPanel } from '../products/ProductsPanel';
 import { useEditorStore } from '../layout/editorStore';
 import { useUndoShortcuts } from '../layout/shortcuts';
 import { createAutosaver, type SaveStatus } from './autosave';
+import { documentForSave } from './document';
 
 const AUTOSAVE_MS = 2000; // well inside the 5 s requirement, leaves room for the request
 
@@ -49,7 +50,13 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           save: async () => {
             const { floor, equipment, products, connections, cycleTimes } =
               useEditorStore.getState();
-            const document = { ...base, floor, equipment, products, connections, cycleTimes };
+            const document = documentForSave(base, {
+              floor,
+              equipment,
+              products,
+              connections,
+              cycleTimes,
+            });
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
             base = document;

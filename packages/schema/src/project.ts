@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { durationSchema } from './duration';
 import {
   colorSchema as color,
   equipmentSchema,
@@ -11,13 +12,15 @@ import {
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * v3: equipment has `ports`; connections join an output port to an input port and carry a
  *     `capacity` (FL-1, FL-2).
+ * v4: duration distributions (WS-2), routing step names, calendar, demand and release rule
+ *     (PR-4), technicians and workstation labor (TE-1), connection transfer time (FL-4).
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
@@ -40,9 +43,24 @@ export const connectionSchema = z.strictObject({
    * upstream station blocks until downstream takes the part), `null` = unlimited.
    */
   capacity: z.number().int().nonnegative().nullable(),
+  /**
+   * Time to move a part along the connection (FL-4): `instant`, a `fixed` duration, or
+   * calculated from the distance between the two ports at `speed` m/s. Parts in transit
+   * count as WIP.
+   */
+  transfer: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('instant') }),
+    z.strictObject({ kind: z.literal('fixed'), time: durationSchema }),
+    z.strictObject({ kind: z.literal('speed'), speed: z.number().positive() }),
+  ]),
 });
 
-export const routingStepSchema = z.strictObject({ id, stationId: id });
+export const routingStepSchema = z.strictObject({
+  id,
+  stationId: id,
+  /** Optional operation name shown in the routing (e.g. "Cut stock"). */
+  name: z.string().trim().max(100).optional(),
+});
 
 export const productSchema = z.strictObject({
   id,
@@ -54,19 +72,56 @@ export const productSchema = z.strictObject({
   routing: z.array(routingStepSchema),
 });
 
-/**
- * A duration in seconds. A discriminated union so that random distributions (PR-4)
- * are new kinds with a trivial upgrade step, not a reshaping of existing data.
- */
-export const durationSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('fixed'), value: seconds }),
-]);
+export { durationSchema };
 
 /** Cycle time keyed by (product, station) (ADR-0009). */
 export const cycleTimeSchema = z.strictObject({
   productId: id,
   stationId: id,
   time: durationSchema,
+});
+
+/** Working calendar. Shift length turns "per shift" demand and run lengths into seconds. */
+export const calendarSchema = z.strictObject({ shiftLength: seconds });
+
+/**
+ * Demand (PR-4): units per shift, or percent of the mix, per product. With `mix`, values
+ * sum to 100.
+ */
+export const demandSchema = z
+  .strictObject({
+    basis: z.enum(['perShift', 'mix']),
+    items: z.array(z.strictObject({ productId: id, value: z.number().nonnegative() })),
+  })
+  .refine(
+    (d) =>
+      d.basis !== 'mix' ||
+      d.items.length === 0 ||
+      Math.abs(d.items.reduce((sum, i) => sum + i.value, 0) - 100) <= 0.05, // 3 × 33.33 is fine
+    { message: 'Mix percentages must add up to 100', path: ['items'] },
+  );
+
+/**
+ * Release rule (PR-4): one part every `interval` (fixed or a distribution). Which product:
+ * `smooth` follows the demand mix deterministically (fixed-interval option), `random` draws
+ * by mix (random-by-mix option), `sequence` repeats a heijunka pattern of product ids.
+ */
+export const releaseSchema = z.strictObject({
+  interval: durationSchema,
+  product: z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('smooth') }),
+    z.strictObject({ kind: z.literal('random') }),
+    z.strictObject({ kind: z.literal('sequence'), pattern: z.array(id).min(1) }),
+  ]),
+});
+
+/** A technician (TE-1) assigned to one or more workstations. */
+export const technicianSchema = z.strictObject({
+  id,
+  name: z.string().trim().min(1),
+  /** m/s; default 1.2. */
+  walkSpeed: z.number().positive(),
+  stationIds: z.array(id),
 });
 
 const projectShape = z.strictObject({
@@ -76,6 +131,10 @@ const projectShape = z.strictObject({
   connections: z.array(connectionSchema),
   products: z.array(productSchema),
   cycleTimes: z.array(cycleTimeSchema),
+  calendar: calendarSchema,
+  demand: demandSchema,
+  release: releaseSchema,
+  technicians: z.array(technicianSchema),
 });
 
 type ProjectShape = z.infer<typeof projectShape>;
@@ -162,7 +221,45 @@ function checkReferences(p: ProjectShape, ctx: z.RefinementCtx): void {
   });
 }
 
-export const projectSchema = projectShape.superRefine(checkReferences);
+function checkPlanning(p: ProjectShape, ctx: z.RefinementCtx): void {
+  const issue = (path: PropertyKey[], message: string) =>
+    ctx.addIssue({ code: 'custom', path, message });
+  const productIds = new Set(p.products.map((pr) => pr.id));
+  const workstations = new Set(
+    p.equipment.filter((e) => e.behavior === 'workstation').map((e) => e.id),
+  );
+
+  const demanded = new Set<string>();
+  p.demand.items.forEach((item, i) => {
+    if (!productIds.has(item.productId))
+      issue(['demand', 'items', i, 'productId'], `Unknown product "${item.productId}"`);
+    if (demanded.has(item.productId))
+      issue(['demand', 'items', i, 'productId'], `Product "${item.productId}" is listed twice`);
+    demanded.add(item.productId);
+  });
+
+  if (p.release.product.kind === 'sequence')
+    p.release.product.pattern.forEach((productId, i) => {
+      if (!productIds.has(productId))
+        issue(['release', 'product', 'pattern', i], `Unknown product "${productId}"`);
+    });
+
+  const seenTechIds = new Set(p.equipment.map((e) => e.id));
+  p.technicians.forEach((t, i) => {
+    if (seenTechIds.has(t.id)) issue(['technicians', i, 'id'], `Duplicate id "${t.id}"`);
+    seenTechIds.add(t.id);
+    const assigned = new Set<string>();
+    t.stationIds.forEach((stationId, j) => {
+      if (!workstations.has(stationId))
+        issue(['technicians', i, 'stationIds', j], `"${stationId}" is not a workstation`);
+      if (assigned.has(stationId))
+        issue(['technicians', i, 'stationIds', j], `"${stationId}" is assigned twice`);
+      assigned.add(stationId);
+    });
+  });
+}
+
+export const projectSchema = projectShape.superRefine(checkReferences).superRefine(checkPlanning);
 
 export type Project = z.infer<typeof projectSchema>;
 export type Floor = Project['floor'];
@@ -170,7 +267,11 @@ export type Connection = Project['connections'][number];
 export type PortRef = Connection['from'];
 export type Product = Project['products'][number];
 export type RoutingStep = Product['routing'][number];
-export type Duration = z.infer<typeof durationSchema>;
+export type Calendar = Project['calendar'];
+export type Demand = Project['demand'];
+export type Release = Project['release'];
+export type Technician = Project['technicians'][number];
+export type Transfer = Connection['transfer'];
 export type CycleTime = Project['cycleTimes'][number];
 
 /** An empty project with a default 30 m × 20 m floor and a 1 m grid. */
@@ -182,5 +283,9 @@ export function createProject(): Project {
     connections: [],
     products: [],
     cycleTimes: [],
+    calendar: { shiftLength: 8 * 3600 },
+    demand: { basis: 'mix', items: [] },
+    release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
+    technicians: [],
   };
 }
