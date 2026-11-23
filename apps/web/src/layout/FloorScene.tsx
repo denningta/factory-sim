@@ -4,6 +4,7 @@ import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-thr
 import * as THREE from 'three';
 import { useEditorStore } from './editorStore';
 import { buildGridGeometry } from './gridLayout';
+import { ConnectionLayer } from './ConnectionLayer';
 import { EquipmentLayer, FloorInteraction, LibraryDropTarget } from './EquipmentLayer';
 import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout } from './cameraFit';
 import { controlSettings } from './viewControls';
@@ -153,6 +154,7 @@ export function FloorScene() {
       <GridLines />
       <DimensionLabels />
       <EquipmentLayer />
+      <ConnectionLayer />
       <FloorInteraction />
       <LibraryDropTarget />
       <CameraRig />
