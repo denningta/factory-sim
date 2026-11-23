@@ -62,6 +62,15 @@ export interface RunOptions {
  * 3. else `idle` if work is waiting for a technician (manual cycle, load or unload, or the
  *    tech is walking towards the station);
  * 4. else `starved` (nothing to do, including while a batch is still accumulating).
+ *
+ * Technicians are released when the manual cycle, load or unload ends. A finished part held
+ * for downstream room (`blocked`) never holds a tech: on an automatic station the unload
+ * happens when the machine cycle ends, and the part then waits at the station without the
+ * tech. (Holding the tech while blocked can deadlock a line where one tech serves two
+ * stations.)
+ *
+ * Buffers with several outputs send out the oldest part whose next hop has room, so a part
+ * waiting for one output never holds back parts bound for another.
  */
 export type StationState =
   /** Processing a part (or a batch). */
