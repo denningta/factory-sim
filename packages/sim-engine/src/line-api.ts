@@ -28,9 +28,15 @@ export interface ModelIssue {
   severity: 'error' | 'warning';
 }
 
-/** An executable, validated line. Opaque: only `createRun` reads it. */
+declare const lineModelBrand: unique symbol;
+
+/**
+ * An executable, validated line. Opaque: only `createRun` reads it, and only a real
+ * `compileLine` result has the brand. It may hold closures, so it isn't postMessage-able:
+ * compile and run in the same worker.
+ */
 export interface LineModel {
-  readonly kind: 'line-model';
+  readonly [lineModelBrand]: true;
 }
 
 export type CompileResult =
@@ -47,7 +53,15 @@ export interface RunOptions {
   runLength: SimTime;
 }
 
-/** Station state colors in the UI: working green, starved yellow, blocked red, idle gray. */
+/**
+ * Station state colors in the UI: working green, starved yellow, blocked red, idle gray.
+ * Exactly one state at a time, decided in this order, so state fractions sum to 1:
+ * 1. `working` if any unit is processing (including a machine cycle on an automatic station);
+ * 2. else `blocked` if any finished part is held because downstream has no room;
+ * 3. else `idle` if work is waiting for a technician (manual cycle, load or unload, or the
+ *    tech is walking towards the station);
+ * 4. else `starved` (nothing to do, including while a batch is still accumulating).
+ */
 export type StationState =
   /** Processing a part (or a batch). */
   | 'working'
@@ -66,8 +80,27 @@ export type TechState = 'working' | 'walking' | 'idle';
  */
 export type LineEvent =
   | { t: SimTime; type: 'partReleased'; partId: number; productId: string; sourceId: string }
-  | { t: SimTime; type: 'partMoved'; partId: number; connectionId: string; arrivesAt: SimTime }
+  /**
+   * The part travels from `t` to `arrivesAt`: along a connection (transfer time, FL-4) or
+   * across a conveyor (footprint path at belt speed). The renderer interpolates the segment.
+   */
+  | {
+      t: SimTime;
+      type: 'partMoved';
+      partId: number;
+      via: { connectionId: string } | { equipmentId: string };
+      arrivesAt: SimTime;
+    }
+  /** The part is waiting at (queued in) a station, buffer or sink's input. */
   | { t: SimTime; type: 'partEntered'; partId: number; equipmentId: string }
+  /** Processing starts; `endsAt` is known unless the cycle waits on a technician. */
+  | {
+      t: SimTime;
+      type: 'partStarted';
+      partId: number;
+      equipmentId: string;
+      endsAt?: SimTime;
+    }
   | { t: SimTime; type: 'partExited'; partId: number; sinkId: string }
   | { t: SimTime; type: 'stationState'; stationId: string; state: StationState }
   | {
@@ -88,12 +121,19 @@ export interface FlowStats {
   throughputPerHour: number;
   /** Time-average parts in the system, in transit included (FL-4 AC2). */
   averageWip: number;
-  /** Mean seconds from release to exit, for parts that exited in the window. NaN if none. */
+  /**
+   * Mean seconds from release to exit, for parts that exited in the window. NaN if none
+   * (it becomes `null` if stats are ever sent as JSON; the API layer must map it).
+   */
   averageLeadTime: number;
 }
 
 export interface RunStats {
-  /** The measured window: `[warmUp, now]` during a run, `[warmUp, warmUp + runLength]` at the end. */
+  /**
+   * The measured window: `[warmUp, now]` during a run, `[warmUp, warmUp + runLength]` at the
+   * end. While `now <= warmUp` the window is empty: every count, rate and fraction is 0
+   * (state records then sum to 0, not 1) and lead time is NaN.
+   */
   window: { from: SimTime; to: SimTime };
   byProduct: Record<string, FlowStats>;
   total: FlowStats;
@@ -110,7 +150,11 @@ export interface Run {
   readonly done: boolean;
   /** Advances to `min(time, endTime)` (SE-2: play in slices, "run to end"). */
   runUntil(time: SimTime): void;
-  /** Runs the next event (SE-2 single-step). Returns false once the run is done. */
+  /**
+   * Advances to the next moment at which at least one `LineEvent` happens, and runs every
+   * kernel event up to it (SE-2 single-step: each step visibly changes something). Returns
+   * false once the run is done.
+   */
   step(): boolean;
   /**
    * Events since the last call, in time order. While disabled (SE-3 "animation off"),
