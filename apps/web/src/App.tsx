@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@factory-sim/schema';
 import { api } from './api/client';
+import { AccountPage } from './auth/AccountPage';
 import { SignIn } from './auth/SignIn';
 import { ProjectEditor } from './projects/ProjectEditor';
 import { ProjectList, type ProjectsApi } from './projects/ProjectList';
@@ -19,6 +20,7 @@ export function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [openId, setOpenId] = useState(idFromHash);
+  const [account, setAccount] = useState(false);
 
   useEffect(() => {
     api.session().then(setUser, async () => {
@@ -37,12 +39,19 @@ export function App() {
 
   if (user === undefined) return <p style={{ font: '14px sans-serif', padding: 16 }}>Loading…</p>;
   if (user === null) return <SignIn needsSetup={needsSetup} onSignedIn={setUser} />;
+  if (account) return <AccountPage user={user} onBack={() => setAccount(false)} />;
   if (openId) return <ProjectEditor key={openId} id={openId} onClose={() => open(null)} />;
   return (
     <ProjectList
       api={projectsApi}
       onOpen={open}
-      onSignOut={() => void api.logout().finally(() => setUser(null))}
+      onAccount={() => setAccount(true)}
+      onSignOut={() =>
+        void api.logout().finally(() => {
+          setAccount(false);
+          setUser(null);
+        })
+      }
     />
   );
 }

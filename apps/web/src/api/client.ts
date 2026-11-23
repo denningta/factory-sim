@@ -5,6 +5,7 @@ import {
   projectSummarySchema,
   sessionResponseSchema,
   setupStatusResponseSchema,
+  userListResponseSchema,
   type ApiErrorCode,
   type ProjectDetail,
   type ProjectSummary,
@@ -64,6 +65,12 @@ export const api = {
   logout: async (): Promise<void> => request('POST', '/api/auth/logout', null),
   session: async (): Promise<User> =>
     (await request('GET', '/api/auth/session', sessionResponseSchema)).user,
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> =>
+    request('POST', '/api/auth/password', null, { currentPassword, newPassword }),
+  listUsers: async (): Promise<User[]> =>
+    (await request('GET', '/api/users', userListResponseSchema)).users,
+  resetPassword: async (userId: string, newPassword: string): Promise<void> =>
+    request('PUT', `/api/users/${userId}/password`, null, { newPassword }),
   listProjects: async (): Promise<ProjectSummary[]> =>
     (await request('GET', '/api/projects', projectListResponseSchema)).projects,
   createProject: async (name: string): Promise<ProjectDetail> =>

@@ -7,6 +7,7 @@ import {
   projectSchema,
   instantiate,
   type Connection,
+  type CycleTime,
   type Equipment,
   type PortRef,
   type Floor,
@@ -118,6 +119,12 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Cycle times keyed by (product, station); part of the project document (seconds, PR-3). */
+  cycleTimes: CycleTime[];
+  /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
+  setCycleTime: (productId: string, stationId: string, seconds: number | null) => ProductResult;
+  /** Applies imported cells as one undo step. */
+  importCycleTimes: (entries: { productId: string; stationId: string; seconds: number }[]) => void;
   /** Appends a step at `stationId`, which must be a workstation (PR-2). */
   addRoutingStep: (productId: string, stationId: string) => RoutingStepResult;
   /** Reassigns a step to another workstation. */
@@ -206,12 +213,14 @@ export function createEditorStore() {
       equipment: Equipment[];
       products: Product[];
       connections: Connection[];
+      cycleTimes: CycleTime[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
       equipment: get().equipment,
       products: get().products,
       connections: get().connections,
+      cycleTimes: get().cycleTimes,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -259,8 +268,20 @@ export function createEditorStore() {
       get().products.find((p) => p.id === productId)?.routing ?? [];
     const findStep = (productId: string, stepId: string) =>
       routingOf(productId).find((s) => s.id === stepId);
-    const setRouting = (productId: string, routing: RoutingStep[]) =>
-      set({ products: get().products.map((p) => (p.id === productId ? { ...p, routing } : p)) });
+    /** Cycle times exist only where a routing uses the station, so a routing edit prunes them. */
+    const setRouting = (productId: string, routing: RoutingStep[]) => {
+      const used = new Set(routing.map((s) => s.stationId));
+      set({
+        products: get().products.map((p) => (p.id === productId ? { ...p, routing } : p)),
+        cycleTimes: get().cycleTimes.filter(
+          (c) => c.productId !== productId || used.has(c.stationId),
+        ),
+      });
+    };
+    const withTime = (list: CycleTime[], productId: string, stationId: string, value: number) => [
+      ...list.filter((c) => c.productId !== productId || c.stationId !== stationId),
+      { productId, stationId, time: { kind: 'fixed' as const, value } },
+    ];
     return {
       ...loadPrefs(),
       floor: createProject().floor,
@@ -268,6 +289,50 @@ export function createEditorStore() {
       selectType: (selectedTypeId) => set({ selectedTypeId }),
       equipment: [],
       products: [],
+      cycleTimes: [],
+      setCycleTime: (productId, stationId, seconds) => {
+        const product = get().products.find((p) => p.id === productId);
+        if (!product) return { ok: false, error: 'Product not found' };
+        if (!product.routing.some((s) => s.stationId === stationId))
+          return { ok: false, error: 'This product does not route through that station' };
+        const current = get().cycleTimes;
+        if (seconds === null) {
+          const next = current.filter(
+            (c) => c.productId !== productId || c.stationId !== stationId,
+          );
+          if (next.length === current.length) return { ok: true };
+          record();
+          set({ cycleTimes: next });
+          return { ok: true };
+        }
+        if (!Number.isFinite(seconds) || seconds <= 0)
+          return { ok: false, error: 'Cycle time must be greater than 0' };
+        const existing = current.find(
+          (c) => c.productId === productId && c.stationId === stationId,
+        );
+        if (existing?.time.value === seconds) return { ok: true };
+        record();
+        set({ cycleTimes: withTime(current, productId, stationId, seconds) });
+        return { ok: true };
+      },
+      importCycleTimes: (entries) => {
+        const valid = entries.filter(
+          (e) =>
+            Number.isFinite(e.seconds) &&
+            e.seconds > 0 &&
+            get()
+              .products.find((p) => p.id === e.productId)
+              ?.routing.some((s) => s.stationId === e.stationId),
+        );
+        if (valid.length === 0) return;
+        record();
+        set({
+          cycleTimes: valid.reduce(
+            (list, e) => withTime(list, e.productId, e.stationId, e.seconds),
+            get().cycleTimes,
+          ),
+        });
+      },
       addProduct: () => {
         const { products } = get();
         const ids = new Set(products.map((p) => p.id));
@@ -329,7 +394,10 @@ export function createEditorStore() {
       deleteProduct: (id) => {
         if (!get().products.some((p) => p.id === id)) return;
         record();
-        set({ products: get().products.filter((p) => p.id !== id) });
+        set({
+          products: get().products.filter((p) => p.id !== id),
+          cycleTimes: get().cycleTimes.filter((c) => c.productId !== id),
+        });
       },
       addRoutingStep: (productId, stationId) => {
         const error = notAStation(stationId);
@@ -507,6 +575,8 @@ export function createEditorStore() {
               ? { ...p, routing: p.routing.filter((s) => !gone.has(s.stationId)) }
               : p,
           ),
+          // Likewise a cycle time at one (PR-3).
+          cycleTimes: get().cycleTimes.filter((c) => !gone.has(c.stationId)),
           selectedIds: [],
           selectedConnectionId: null,
           pendingFrom: null,
@@ -583,6 +653,7 @@ export function createEditorStore() {
           floor: doc.floor,
           equipment: doc.equipment,
           products: doc.products,
+          cycleTimes: doc.cycleTimes,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,

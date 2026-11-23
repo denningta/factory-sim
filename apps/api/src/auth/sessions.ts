@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from 'node:crypto';
-import { eq, lt, or } from 'drizzle-orm';
+import { and, eq, lt, ne, or } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { sessions, users } from '../db/schema';
 
@@ -62,6 +62,18 @@ export async function deleteSession(db: Db, policy: SessionPolicy, id: string): 
 
 export async function deleteUserSessions(db: Db, userId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
+/** Ends every session of a user except the one presented (their own password change). */
+export async function deleteOtherSessions(
+  db: Db,
+  policy: SessionPolicy,
+  userId: string,
+  keepId: string,
+): Promise<void> {
+  await db
+    .delete(sessions)
+    .where(and(eq(sessions.userId, userId), ne(sessions.idHash, hashId(policy.secret, keepId))));
 }
 
 /** Housekeeping: drops sessions that can no longer resolve. Called on login. */
