@@ -169,6 +169,16 @@ describe('SE-6 AC3: pre-run checks report ModelIssues linked to the object', () 
     });
     q.products[0]!.routing.reverse();
     expect(issues(q).map((i) => i.code)).toContain('no_path');
+
+    // No connection from the last step to a sink: reported on that last step.
+    const r = lineProject(one());
+    r.connections = r.connections.filter((c) => c.id !== 'L1'); // S1 → sink
+    expect(issues(r)).toEqual([{ code: 'no_path', objectId: 'A-S1', severity: 'error' }]);
+
+    // The same station twice in a row: no path from a station back to itself.
+    const s2 = lineProject(one());
+    s2.products[0]!.routing.push({ id: 'A-S1-again', stationId: 'S1' });
+    expect(issues(s2)).toEqual([{ code: 'no_path', objectId: 'A-S1-again', severity: 'error' }]);
   });
 
   it('a manual station without a technician', () => {

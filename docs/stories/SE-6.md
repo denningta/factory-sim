@@ -51,3 +51,4 @@ _Added by the lead or builder during the story: design decisions, open questions
   - _Performance:_ `line.perf.test.ts` (run with `BENCH=1`) runs one week of a 20-station line in about 1 s with events on.
   - _Product owner decision (2026-11-23):_ `manual_station_without_tech` is raised only for manual workstations that some product's routing uses. Unrouted stations raise no issue.
   - _Source (line-api rule from #93):_ a part is released only when its first hop has room, so nothing queues at the source. The next release is due one interval after it.
+  - _Same station twice in a row_ in a routing reports `no_path` on the second step: no path leads from a station back to itself, not even a loop through a buffer or conveyor (for WS-3/FL-3). Repeated work at one station is one step with the combined cycle time.
