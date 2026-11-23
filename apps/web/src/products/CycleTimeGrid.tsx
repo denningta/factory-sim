@@ -1,79 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
-import { parseCycleTimeTable, parseDuration, stationsOf } from './cycleTimes';
+import { parseCycleTimeTable, stationsOf } from './cycleTimes';
+import { DurationEditor } from './DurationEditor';
 
 type Store = typeof defaultStore;
 
-const INVALID = 'Enter seconds or mm:ss, greater than 0';
-
 const cellStyle = { padding: '6px 10px', borderBottom: '1px solid #e5e7eb' } as const;
-
-/**
- * One grid cell. Valid text commits on blur or Enter; invalid text stays visible with its reason
- * and never reaches the store. Empty clears the cell. A focus-to-blur session is one undo step.
- */
-function TimeCell({
-  label,
-  value,
-  commit,
-  beginEdit,
-  endEdit,
-}: {
-  label: string;
-  /** Stored seconds, or null while the cell is empty. */
-  value: number | null;
-  commit: (seconds: number | null) => void;
-  beginEdit: () => number;
-  endEdit: (token: number) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const errorId = useId();
-  const session = useRef(0);
-  useEffect(() => () => endEdit(session.current), [endEdit]);
-  const missing = value === null && draft === null;
-  return (
-    <>
-      <input
-        type="text"
-        inputMode="decimal"
-        aria-label={label}
-        aria-invalid={error || missing ? 'true' : undefined}
-        aria-describedby={error ? errorId : undefined}
-        placeholder="sec"
-        value={draft ?? (value === null ? '' : String(value))}
-        onFocus={() => (session.current = beginEdit())}
-        onChange={(e) => {
-          const text = e.target.value;
-          setDraft(text);
-          setError(text.trim() === '' || parseDuration(text) !== null ? null : INVALID);
-        }}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        onBlur={() => {
-          // Commit only finished text: a keystroke-by-keystroke commit would leave a stale prefix
-          // ("2" of "2:3x") in the store when the final text is invalid. Invalid text stays with
-          // its error and the store keeps the last good value.
-          if (draft !== null && !error) {
-            commit(draft.trim() === '' ? null : parseDuration(draft));
-            setDraft(null);
-          }
-          endEdit(session.current);
-        }}
-        style={{
-          width: 72,
-          padding: 4,
-          textAlign: 'right',
-          borderColor: error ? '#b91c1c' : missing ? '#f59e0b' : undefined,
-        }}
-      />
-      {error && (
-        <div id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
-          {error}
-        </div>
-      )}
-    </>
-  );
-}
 
 /** Wireframe 2, "Cycle times": product × station grid, editable only where a routing uses the station (PR-3). */
 export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store }) {
@@ -81,6 +13,7 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
   const equipment = useStore((s) => s.equipment);
   const cycleTimes = useStore((s) => s.cycleTimes);
   const setCycleTime = useStore((s) => s.setCycleTime);
+  const setCycleTimeDuration = useStore((s) => s.setCycleTimeDuration);
   const importCycleTimes = useStore((s) => s.importCycleTimes);
   const beginEdit = useStore((s) => s.beginEdit);
   const endEdit = useStore((s) => s.endEdit);
@@ -89,10 +22,8 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
 
   const used = new Set(products.flatMap(stationsOf));
   const stations = equipment.filter((e) => e.behavior === 'workstation' && used.has(e.id));
-  const timeOf = (productId: string, stationId: string) => {
-    const t = cycleTimes.find((c) => c.productId === productId && c.stationId === stationId)?.time;
-    return t?.kind === 'fixed' ? t.value : null;
-  };
+  const timeOf = (productId: string, stationId: string) =>
+    cycleTimes.find((c) => c.productId === productId && c.stationId === stationId)?.time ?? null;
 
   const runImport = (text: string) => {
     const { entries, errors } = parseCycleTimeTable(text, { products, equipment });
@@ -116,7 +47,8 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
       ) : (
         <>
           <p style={{ color: '#6b7280', margin: 0 }}>
-            Seconds, or mm:ss. Highlighted cells still need a time.
+            Seconds, or mm:ss. Pick a distribution to model variability; samples below 0 are cut
+            off. Highlighted cells still need a time.
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table
@@ -146,10 +78,12 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                       {stations.map((s) =>
                         own.has(s.id) ? (
                           <td key={s.id} style={{ ...cellStyle, textAlign: 'right' }}>
-                            <TimeCell
-                              label={`Cycle time, ${p.name} at ${s.name}`}
-                              value={timeOf(p.id, s.id)}
-                              commit={(seconds) => setCycleTime(p.id, s.id, seconds)}
+                            <DurationEditor
+                              name={`${p.name} at ${s.name}`}
+                              fixedLabel={`Cycle time, ${p.name} at ${s.name}`}
+                              time={timeOf(p.id, s.id)}
+                              setTime={(d) => setCycleTimeDuration(p.id, s.id, d)}
+                              setFixed={(seconds) => setCycleTime(p.id, s.id, seconds)}
                               beginEdit={beginEdit}
                               endEdit={endEdit}
                             />

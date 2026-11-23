@@ -1,14 +1,10 @@
-import type { Duration, Labor } from '@factory-sim/schema';
+import type { Labor } from '@factory-sim/schema';
 import type { useEditorStore } from '../layout/editorStore';
-import { Field, parseNumber } from '../layout/Field';
+import { DurationEditor } from '../products/DurationEditor';
 
 type Store = typeof useEditorStore;
 
 const DEFAULT_HANDLING_TIME = 5;
-
-/** The editor writes fixed times; a time of another kind shows its mean so it stays readable. */
-const seconds = (d: Duration): number =>
-  d.kind === 'fixed' ? d.value : d.kind === 'triangular' ? d.mode : d.mean;
 
 /**
  * Workstation labor (TE-1): manual (tech present for the whole cycle) or automatic (tech only
@@ -35,21 +31,24 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
   };
   const timeField = (key: 'loadTime' | 'unloadTime', label: string) =>
     labor.mode === 'automatic' && (
-      <Field
-        beginEdit={beginEdit}
-        endEdit={endEdit}
-        key={`${key}-${equipmentId}`}
-        label={label}
-        value={String(seconds(labor[key]))}
-        commit={(t) => {
-          const n = parseNumber(t);
-          if (typeof n === 'string') return n;
-          const r = updateEquipment(equipmentId, {
-            labor: { ...labor, [key]: { kind: 'fixed', value: n } },
-          });
-          return r.ok ? null : r.error;
-        }}
-      />
+      <div key={`${key}-${equipmentId}`} style={{ display: 'grid', gap: 4 }}>
+        <span>{label}</span>
+        <DurationEditor
+          name={label}
+          fixedLabel={`${label} (s)`}
+          time={labor[key]}
+          setTime={(d) => updateEquipment(equipmentId, { labor: { ...labor, [key]: d } })}
+          // Handling times are required, so clearing the field is ignored.
+          setFixed={(seconds) =>
+            seconds !== null &&
+            updateEquipment(equipmentId, {
+              labor: { ...labor, [key]: { kind: 'fixed', value: seconds } },
+            })
+          }
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+        />
+      </div>
     );
   return (
     <>
@@ -74,8 +73,8 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
       </fieldset>
       {labor.mode === 'automatic' && (
         <div style={{ display: 'flex', gap: 8 }}>
-          {timeField('loadTime', 'Load time (s)')}
-          {timeField('unloadTime', 'Unload time (s)')}
+          {timeField('loadTime', 'Load time')}
+          {timeField('unloadTime', 'Unload time')}
         </div>
       )}
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>

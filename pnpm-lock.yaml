@@ -84,6 +84,9 @@ importers:
       '@factory-sim/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@factory-sim/sim-engine':
+        specifier: workspace:*
+        version: link:../../packages/sim-engine
       '@react-three/drei':
         specifier: ^10.7.9
         version: 10.7.9(@react-three/fiber@9.8.2(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.170.0))(@types/react@19.3.0)(@types/three@0.170.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.170.0)
