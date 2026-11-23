@@ -26,6 +26,8 @@ export interface RunSession {
   setSpeed(x: number): void;
   /** Off: no events are recorded and the run goes as fast as time slices allow. */
   setAnimate(on: boolean): void;
+  /** Animation off, then play at full speed until the run ends. */
+  runToEnd(): void;
   /** Called by the host once per animation frame; advances the clock while playing. */
   frame(wallSeconds: number): void;
   readonly now: number;
@@ -42,6 +44,10 @@ export interface RunSession {
 
 export type RunSessionResult =
   { ok: true; session: RunSession } | { ok: false; issues: ModelIssue[] };
+
+/** Speed range in sim seconds per wall second. */
+const MIN_SPEED = 1;
+const MAX_SPEED = 1000;
 
 export function createRunSession(project: Project, options: RunOptions): RunSessionResult {
   const compiled = compileLine(project);
@@ -85,11 +91,19 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       notify();
     },
     setSpeed(x) {
-      speed = pb.speed = x;
+      speed = pb.speed = Number.isFinite(x)
+        ? Math.min(MAX_SPEED, Math.max(MIN_SPEED, x))
+        : MIN_SPEED;
       notify();
     },
     setAnimate(on) {
       animate = pb.animate = on;
+      notify();
+    },
+    runToEnd() {
+      animate = pb.animate = false;
+      if (pb.run.done) return notify();
+      playing = true;
       notify();
     },
     frame(wallSeconds) {
