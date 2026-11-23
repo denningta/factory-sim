@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, OrthographicCamera, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
@@ -139,7 +139,17 @@ function Controls() {
   );
 }
 
-export function FloorScene() {
+/**
+ * The floor with its equipment and connections. `children` render inside the canvas (the
+ * simulation's parts); `interactive={false}` drops editing gestures for the simulate screen.
+ */
+export function FloorScene({
+  children,
+  interactive = true,
+}: {
+  children?: ReactNode;
+  interactive?: boolean;
+}) {
   const viewMode = useEditorStore((s) => s.viewMode);
   return (
     <Canvas>
@@ -155,8 +165,9 @@ export function FloorScene() {
       <DimensionLabels />
       <EquipmentLayer />
       <ConnectionLayer />
-      <FloorInteraction />
-      <LibraryDropTarget />
+      {interactive && <FloorInteraction />}
+      {interactive && <LibraryDropTarget />}
+      {children}
       <CameraRig />
       <Controls />
     </Canvas>
