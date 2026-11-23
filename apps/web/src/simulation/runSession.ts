@@ -8,6 +8,7 @@ import {
   type RunStats,
 } from '@factory-sim/sim-engine';
 import { buildLineGeometry, type PartPose } from './partTracks';
+import type { TechPose } from './techTracks';
 import { createPlayback, type Playback } from './playback';
 
 /**
@@ -36,6 +37,8 @@ export interface RunSession {
   stats(): RunStats;
   /** Parts on the floor at sim time `t` (none while animation is off). */
   poses(t: number): PartPose[];
+  /** Techs at sim time `t`, standing or walking. */
+  techPoses(t: number): TechPose[];
   /** Notified when play state, speed, animation, reset or the end of the run changes; not every frame. */
   subscribe(listener: () => void): () => void;
 }
@@ -116,6 +119,9 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       return speed;
     },
     stats: () => pb.run.stats(),
+    techPoses: () => {
+      throw new Error('not implemented');
+    },
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {
       listeners.add(listener);

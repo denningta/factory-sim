@@ -4,6 +4,7 @@ import { compileLine, createRun, type LineEvent, type Run } from '@factory-sim/s
 import { createEditorStore } from '../layout/editorStore';
 import { buildLineGeometry, createPartTracks, type LineGeometry } from './partTracks';
 import { createPlayback } from './playback';
+import { createTechTracks } from './techTracks';
 import { createRunSession } from './runSession';
 
 const A = { x: 0, z: 0 };
@@ -361,5 +362,117 @@ describe('RunSession: the interface SE-2, SE-4 and AN-1 build on', () => {
     ref.session.play();
     for (let i = 0; i < 100000 && !ref.session.done; i++) ref.session.frame(1);
     expect(s.stats()).toEqual(ref.session.stats());
+  });
+});
+
+describe('TE-2: techs walk between their stations', () => {
+  /** Two stations 12 m apart (centers), one tech at 2 m/s assigned to both. */
+  const twoStations = () => {
+    const store = createEditorStore();
+    const s = store.getState;
+    const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
+    const a = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
+    const b = s().placeEquipment('base-workstation', { x: 18, y: 0 })!;
+    const sink = s().placeEquipment('base-sink', { x: 24, y: 0 })!;
+    s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: a.id, portId: 'in' });
+    s().connect({ equipmentId: a.id, portId: 'out' }, { equipmentId: b.id, portId: 'in' });
+    s().connect({ equipmentId: b.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
+    const p = s().addProduct();
+    s().addRoutingStep(p.id, a.id);
+    s().addRoutingStep(p.id, b.id);
+    s().setCycleTime(p.id, a.id, 5);
+    s().setCycleTime(p.id, b.id, 5);
+    s().setReleaseInterval(20);
+    const tech = s().addTechnician();
+    s().setTechnicianStation(tech.id, a.id, true);
+    s().setTechnicianStation(tech.id, b.id, true);
+    s().updateTechnician(tech.id, { name: 'Ana', walkSpeed: 2 });
+    const st = s();
+    const project: Project = {
+      ...createProject(),
+      floor: st.floor,
+      equipment: st.equipment,
+      connections: st.connections,
+      products: st.products,
+      cycleTimes: st.cycleTimes,
+      technicians: st.technicians,
+      demand: st.demand,
+      release: st.release,
+    };
+    return { project, a, b, tech: st.technicians[0]! };
+  };
+  const events = (project: Project, until: number) => {
+    const run = newRun(project);
+    run.runUntil(until);
+    return run.drainEvents();
+  };
+
+  it('AC1: a tech walks a straight line between stations at its walk speed', () => {
+    const { project, a, b, tech } = twoStations();
+    const evs = events(project, 200);
+    const walk = evs.find((e) => e.type === 'techMoved' && e.fromId === a.id && e.toId === b.id);
+    if (!walk || walk.type !== 'techMoved') throw new Error('no walk from A to B');
+    const geometry = buildLineGeometry(project.equipment, project.connections);
+    const tracks = createTechTracks(geometry, [
+      { id: tech.id, name: tech.name, homeId: tech.stationIds[0] },
+    ]);
+    tracks.ingest(evs);
+    const walkTime = walk.arrivesAt - walk.t;
+    expect(walkTime).toBeCloseTo(12 / tech.walkSpeed, 9);
+    const from = geometry.equipment.get(a.id)!.center;
+    const to = geometry.equipment.get(b.id)!.center;
+    const quarter = tracks.at(walk.t + walkTime / 4)[0]!;
+    expect(quarter.state).toBe('walking');
+    expect(quarter.x).toBeCloseTo(from.x + (to.x - from.x) / 4, 9);
+    expect(quarter.z).toBeCloseTo(from.z + (to.z - from.z) / 4, 9);
+    const arrived = tracks.at(walk.arrivesAt)[0]!;
+    expect(arrived.state).toBe('standing');
+    expect([arrived.x, arrived.z]).toEqual([to.x, to.z]);
+  });
+
+  it('AC1: before it first moves a tech stands at its first station', () => {
+    const { project, a, tech } = twoStations();
+    const geometry = buildLineGeometry(project.equipment, project.connections);
+    const tracks = createTechTracks(geometry, [
+      { id: tech.id, name: tech.name, homeId: tech.stationIds[0] },
+    ]);
+    const c = geometry.equipment.get(a.id)!.center;
+    expect(tracks.at(0)).toEqual([
+      { techId: tech.id, name: tech.name, x: c.x, z: c.z, state: 'standing' },
+    ]);
+  });
+
+  it('AC2: walk time counts as walking in the tech utilization, not working', () => {
+    const { project, tech } = twoStations();
+    const r = createRunSession(project, { seed: 1, warmUp: 0, runLength: 600 });
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    s.setSpeed(1000);
+    s.play();
+    for (let i = 0; i < 1000 && !s.done; i++) s.frame(1);
+    const u = s.stats().techs[tech.id]!;
+    expect(u.walking).toBeGreaterThan(0);
+    // Each part is worked 5 s at A and 5 s at B (≈ 0.5 of 600 s, the last parts unfinished) and
+    // walked 6 s A → B plus 6 s back: walking is its own share and not part of working.
+    expect(u.working).toBeGreaterThan(0.4);
+    expect(u.working).toBeLessThan(0.5);
+    expect(u.walking).toBeGreaterThan(0.3);
+    expect(u.walking + u.working + u.idle).toBeCloseTo(1, 9);
+  });
+
+  it('AC3: the session exposes each tech as a named marker that walks while playing', () => {
+    const { project, tech } = twoStations();
+    const r = createRunSession(project, { seed: 1, warmUp: 0, runLength: 600 });
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    expect(s.techPoses(0).map((p) => p.name)).toEqual([tech.name]);
+    s.setSpeed(1);
+    s.play();
+    let walked = false;
+    for (let i = 0; i < 600 * 60 && !walked; i++) {
+      s.frame(1 / 60);
+      walked = s.techPoses(s.now)[0]!.state === 'walking';
+    }
+    expect(walked).toBe(true);
   });
 });
