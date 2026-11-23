@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createProject } from '@factory-sim/schema';
 import { createEditorStore, HISTORY_LIMIT, useEditorStore } from './editorStore';
-import { useEditorShortcuts } from './shortcuts';
+import { useEditorShortcuts, useUndoShortcuts } from './shortcuts';
 import { PropertiesPanel } from './PropertiesPanel';
 import { FloorPanel } from './FloorPanel';
 
@@ -195,6 +195,7 @@ describe('LE-3 keyboard shortcuts', () => {
   // The module-level store is what the editor uses.
   const Harness = () => {
     useEditorShortcuts(false);
+    useUndoShortcuts(false);
     return <input aria-label="text field" />;
   };
   const fresh = () => {
@@ -225,5 +226,21 @@ describe('LE-3 keyboard shortcuts', () => {
     await user.click(screen.getByLabelText('text field'));
     await user.keyboard('{Control>}z{/Control}');
     expect(useEditorStore.getState().equipment).toHaveLength(1);
+  });
+});
+
+describe('PR-1 undo on the Products screen', () => {
+  it('Ctrl+Z undoes a product edit with only the project-level undo shortcuts mounted', async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      useUndoShortcuts(false);
+      return null;
+    };
+    const { useEditorStore: s } = await import('./editorStore');
+    s.getState().loadDocument({ ...createProject() });
+    render(<Harness />);
+    s.getState().addProduct();
+    await user.keyboard('{Control>}z{/Control}');
+    expect(s.getState().products).toEqual([]);
   });
 });

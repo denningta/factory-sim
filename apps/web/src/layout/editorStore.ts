@@ -4,9 +4,11 @@ import {
   createProject,
   equipmentSchema,
   floorSchema,
+  projectSchema,
   instantiate,
   type Equipment,
   type Floor,
+  type Product,
   type Project,
 } from '@factory-sim/schema';
 import { dragTargets, idsInRect } from './selection';
@@ -46,6 +48,9 @@ function savePrefs(p: Prefs): void {
   }
 }
 
+/** Distinct from the neutral equipment colors so products read as products in the 3D view. */
+const PRODUCT_COLORS = ['#2563eb', '#c2410c', '#16a34a', '#9333ea', '#ca8a04', '#db2777'];
+
 const toRadians = (deg: number) => (deg * Math.PI) / 180;
 /** Keeps rotations in [0, 2π) so repeated 90° steps don't grow without bound. */
 const normalizeRadians = (r: number) => {
@@ -78,6 +83,15 @@ export interface EquipmentPatch {
   height?: number;
 }
 
+export type ProductResult = { ok: true } | { ok: false; error: string; field?: string };
+
+/** The fields PR-1 edits; the routing is PR-2's. */
+export interface ProductPatch {
+  partNumber?: string;
+  name?: string;
+  color?: string;
+}
+
 export interface EditorState extends Prefs {
   /** Project document content; always meters (ADR-0006). */
   floor: Floor;
@@ -91,6 +105,13 @@ export interface EditorState extends Prefs {
   selectType: (typeId: string | null) => void;
   /** Placed equipment; part of the project document (meters, radians). */
   equipment: Equipment[];
+  /** End items built on the line; part of the project document. */
+  products: Product[];
+  /** Adds a product with a unique default part number, name and color. */
+  addProduct: () => Product;
+  /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
+  updateProduct: (id: string, patch: ProductPatch) => ProductResult;
+  deleteProduct: (id: string) => void;
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -151,8 +172,13 @@ export function createEditorStore() {
     interface Snapshot {
       floor: Floor;
       equipment: Equipment[];
+      products: Product[];
     }
-    const snapshot = (): Snapshot => ({ floor: get().floor, equipment: get().equipment });
+    const snapshot = (): Snapshot => ({
+      floor: get().floor,
+      equipment: get().equipment,
+      products: get().products,
+    });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
     /** Set between beginEdit and endEdit; `pushed` once its first write took the snapshot. */
@@ -191,6 +217,70 @@ export function createEditorStore() {
       selectedTypeId: null,
       selectType: (selectedTypeId) => set({ selectedTypeId }),
       equipment: [],
+      products: [],
+      addProduct: () => {
+        const { products } = get();
+        const ids = new Set(products.map((p) => p.id));
+        const parts = new Set(products.map((p) => p.partNumber));
+        // Count up past anything taken so deleting a product never makes a default collide.
+        let n = products.length + 1;
+        while (ids.has(`prod-${n}`) || parts.has(`P-${n}`)) n++;
+        const product: Product = {
+          id: `prod-${n}`,
+          partNumber: `P-${n}`,
+          name: `Product ${n}`,
+          color: PRODUCT_COLORS[(n - 1) % PRODUCT_COLORS.length]!,
+          routing: [],
+        };
+        record();
+        set({ products: [...products, product] });
+        return product;
+      },
+      updateProduct: (id, patch) => {
+        const { products } = get();
+        const current = products.find((p) => p.id === id);
+        if (!current) return { ok: false, error: 'Product not found' };
+        // The schema accepts a whitespace-only name; a blank label is useless in the UI.
+        if (patch.name !== undefined && patch.name.trim() === '')
+          return { ok: false, field: 'name', error: 'Name cannot be empty' };
+        // One rule set: the project schema owns uniqueness and field rules (trimmed part numbers,
+        // case-sensitive), so the UI can never accept what a save would reject.
+        const candidate = products.map((p) => (p.id === id ? { ...p, ...patch } : p));
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor: get().floor,
+          equipment: get().equipment,
+          products: candidate,
+        });
+        if (!parsed.success) {
+          const issue = parsed.error.issues.find((i) => i.path[0] === 'products');
+          if (!issue) return { ok: false, error: 'Cannot save this change' };
+          {
+            const field = String(issue.path[2]);
+            const label = { partNumber: 'Part number', name: 'Name' }[field];
+            const custom = issue.code === 'custom';
+            return {
+              ok: false,
+              field,
+              error: custom
+                ? issue.message
+                : field === 'color'
+                  ? 'Pick a color'
+                  : label
+                    ? `${label} cannot be empty`
+                    : issue.message,
+            };
+          }
+        }
+        record();
+        set({ products: parsed.data.products });
+        return { ok: true };
+      },
+      deleteProduct: (id) => {
+        if (!get().products.some((p) => p.id === id)) return;
+        record();
+        set({ products: get().products.filter((p) => p.id !== id) });
+      },
       selectedIds: [],
       placeEquipment: (typeId, point) => {
         const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
@@ -310,6 +400,7 @@ export function createEditorStore() {
         set({
           floor: doc.floor,
           equipment: doc.equipment,
+          products: doc.products,
           selectedIds: [],
           selectedTypeId: null,
           canUndo: false,
