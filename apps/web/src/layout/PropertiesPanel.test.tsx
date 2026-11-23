@@ -292,6 +292,6 @@ describe('FL-2 connection capacity', () => {
     await user.clear(size);
     await user.type(size, '1.5');
     expect((await screen.findByRole('alert')).textContent).toBeTruthy();
-    expect(store.getState().connections[0]!.capacity).not.toBe(1.5);
+    expect(store.getState().connections[0]!.capacity).toBe(1);
   });
 });
