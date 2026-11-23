@@ -17,6 +17,8 @@ function releasedShares(setup: (s: ReturnType<typeof createEditorStore>['getStat
     s().addRoutingStep(p.id, ws.id);
     s().setCycleTime(p.id, ws.id, 1);
   }
+  const tech = s().addTechnician();
+  s().setTechnicianStation(tech.id, ws.id, true);
   s().setDemandValue(a.id, 60);
   setup(s);
   const st = s();
@@ -27,7 +29,7 @@ function releasedShares(setup: (s: ReturnType<typeof createEditorStore>['getStat
     connections: st.connections,
     products: st.products,
     cycleTimes: st.cycleTimes,
-    technicians: [],
+    technicians: st.technicians,
     demand: st.demand,
     release: st.release,
   };

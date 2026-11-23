@@ -23,6 +23,7 @@ import {
   type Project,
   type RoutingStep,
 } from '@factory-sim/schema';
+import { intervalForShift, toMix } from '../products/demand';
 import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
 import type { DisplayUnit } from './units';
@@ -261,6 +262,8 @@ export function createEditorStore() {
       connections: Connection[];
       cycleTimes: CycleTime[];
       technicians: Technician[];
+      demand: Demand;
+      release: Release;
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -269,6 +272,8 @@ export function createEditorStore() {
       connections: get().connections,
       cycleTimes: get().cycleTimes,
       technicians: get().technicians,
+      demand: get().demand,
+      release: get().release,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -305,6 +310,17 @@ export function createEditorStore() {
       if (!get().equipment.some((e) => ids.has(e.id))) return;
       record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
+    };
+    /** Per-shift demand fixes the release interval: shift length ÷ units. {} when it doesn't apply. */
+    const intervalFor = (d: Demand): { release?: Release } => {
+      if (d.basis !== 'perShift') return {};
+      const seconds = intervalForShift(
+        get().shiftLength,
+        d.items.reduce((t, i) => t + i.value, 0),
+      );
+      return seconds === null
+        ? {}
+        : { release: { ...get().release, interval: { kind: 'fixed', value: seconds } } };
     };
     /** Why `id` can't be a routing step's station, or null if it can (schema: workstations). */
     const notAStation = (id: string): string | null => {
@@ -417,20 +433,78 @@ export function createEditorStore() {
       demand: { basis: 'mix', items: [] },
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
-      setDemandBasis: () => {
-        throw new Error('not implemented');
+      setDemandBasis: (basis) => {
+        const { demand, products } = get();
+        if (demand.basis === basis) return;
+        const weights = new Map(demand.items.map((i) => [i.productId, i.value]));
+        const ids = products.map((p) => p.id);
+        // Mix needs a total of 100; units keep each product's number as it is.
+        const items =
+          basis === 'mix'
+            ? toMix(ids, weights)
+            : ids.map((productId) => ({ productId, value: weights.get(productId) ?? 0 }));
+        record();
+        set({ demand: { basis, items }, ...intervalFor({ basis, items }) });
       },
-      setDemandValue: () => {
-        throw new Error('not implemented');
+      setDemandValue: (productId, value) => {
+        const { demand, products } = get();
+        if (!products.some((p) => p.id === productId))
+          return { ok: false, error: 'Product not found' };
+        const max = demand.basis === 'mix' ? 100 : Infinity;
+        if (!Number.isFinite(value) || value < 0 || value > max)
+          return {
+            ok: false,
+            error: demand.basis === 'mix' ? 'Enter a percentage from 0 to 100' : 'Enter 0 or more',
+          };
+        const current = new Map(demand.items.map((i) => [i.productId, i.value]));
+        const ids = products.map((p) => p.id);
+        let items: Demand['items'];
+        if (demand.basis === 'mix') {
+          // The others share what's left in their current proportions, so the total stays 100.
+          const others = ids.filter((id) => id !== productId);
+          const rest = new Map(others.map((id) => [id, current.get(id) ?? 0]));
+          items = [
+            { productId, value: others.length === 0 ? 100 : value },
+            ...(others.length === 0 ? [] : toMix(others, rest, 100 - value)),
+          ];
+          items.sort((x, y) => ids.indexOf(x.productId) - ids.indexOf(y.productId));
+        } else {
+          current.set(productId, value);
+          items = ids.map((id) => ({ productId: id, value: current.get(id) ?? 0 }));
+        }
+        const next = { basis: demand.basis, items };
+        record();
+        set({ demand: next, ...intervalFor(next) });
+        return { ok: true };
       },
-      setReleaseMode: () => {
-        throw new Error('not implemented');
+      setReleaseMode: (mode) => {
+        const { release, products } = get();
+        let product: Release['product'];
+        if (mode === 'sequence') {
+          if (release.product.kind === 'sequence' || products.length === 0) return;
+          product = { kind: 'sequence', pattern: products.map((p) => p.id) };
+        } else {
+          product = mode === 'random' ? { kind: 'random' } : { kind: 'smooth' };
+          if (release.product.kind === product.kind) return;
+        }
+        record();
+        set({ release: { ...release, product } });
       },
-      setReleaseInterval: () => {
-        throw new Error('not implemented');
+      setReleaseInterval: (seconds) => {
+        const interval = durationSchema.safeParse({ kind: 'fixed', value: seconds });
+        if (!interval.success) return { ok: false, error: 'Enter a number of seconds above 0' };
+        record();
+        set({ release: { ...get().release, interval: interval.data } });
+        return { ok: true };
       },
-      setReleasePattern: () => {
-        throw new Error('not implemented');
+      setReleasePattern: (productIds) => {
+        if (productIds.length === 0) return { ok: false, error: 'Add at least one product' };
+        const known = new Set(get().products.map((p) => p.id));
+        if (productIds.some((id) => !known.has(id)))
+          return { ok: false, error: 'Unknown product in the sequence' };
+        record();
+        set({ release: { ...get().release, product: { kind: 'sequence', pattern: productIds } } });
+        return { ok: true };
       },
       addTechnician: () => {
         const { technicians } = get();
@@ -546,10 +620,35 @@ export function createEditorStore() {
       },
       deleteProduct: (id) => {
         if (!get().products.some((p) => p.id === id)) return;
+        const products = get().products.filter((p) => p.id !== id);
+        const { demand, release } = get();
+        // Demand and the pattern may only name products that exist, or autosave fails validation.
+        const kept = demand.items.filter((i) => i.productId !== id);
+        const items =
+          demand.basis === 'mix'
+            ? toMix(
+                kept.map((i) => i.productId),
+                new Map(kept.map((i) => [i.productId, i.value])),
+              )
+            : kept;
+        const nextDemand = { basis: demand.basis, items };
+        let nextRelease = release;
+        if (release.product.kind === 'sequence') {
+          const pattern = release.product.pattern.filter((p) => p !== id);
+          nextRelease = {
+            ...release,
+            product: pattern.length > 0 ? { kind: 'sequence', pattern } : { kind: 'smooth' },
+          };
+        }
+        const derived = intervalFor(nextDemand);
         record();
         set({
-          products: get().products.filter((p) => p.id !== id),
+          products,
           cycleTimes: get().cycleTimes.filter((c) => c.productId !== id),
+          demand: nextDemand,
+          release: derived.release
+            ? { ...nextRelease, interval: derived.release.interval }
+            : nextRelease,
         });
       },
       addRoutingStep: (productId, stationId) => {
@@ -817,6 +916,9 @@ export function createEditorStore() {
           products: doc.products,
           cycleTimes: doc.cycleTimes,
           technicians: doc.technicians,
+          demand: doc.demand,
+          release: doc.release,
+          shiftLength: doc.calendar.shiftLength,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,
