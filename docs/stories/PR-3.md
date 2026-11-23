@@ -17,7 +17,7 @@ issue: 25
 ## Acceptance criteria
 
 - [ ] Editable product × station grid, filled only where the routing uses that station
-- [ ] Each cell takes a fixed time or a distribution (see WS-2)
+- [ ] Each cell takes a fixed time (distributions per cell are WS-2's scope)
 - [ ] Missing cycle times are flagged before a run
 - [ ] Import from CSV/paste from Excel
 
@@ -25,4 +25,6 @@ issue: 25
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- Cycle times exist in the schema keyed by (product, station) with `time: { kind: 'fixed', value }` (seconds). **Distributions (AC2) are defined with WS-2/PR-4 in Sprint 4**, so this story ships fixed times and a cell UI that can take another `kind` later. Note the partial AC2 in the PR. CSV/paste import parses into the same schema (seconds; accept mm:ss as display input).
+- **AC change (product owner, 2026-11-22):** "or a distribution" moved to WS-2, so PR-3 ships complete with fixed times. Build the cell so WS-2 can add other `time.kind`s.
+- Cycle times exist in the schema keyed by (product, station) with `time: { kind: 'fixed', value }` (seconds). CSV/paste import parses into the same schema (seconds; accept mm:ss as display input).
+- From the PR-1 review (#81): move `cycleTimes` into the editor store and the LE-3 undo snapshot, so undoing a product delete also restores its cycle times.

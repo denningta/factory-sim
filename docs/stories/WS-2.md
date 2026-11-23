@@ -19,7 +19,10 @@ issue: 36
 - [ ] Supported: fixed, normal (mean, std dev), triangular (min, most likely, max), lognormal, exponential
 - [ ] A small histogram previews the distribution
 - [ ] Negative samples are prevented (truncated)
+- [ ] Each cycle-time cell in the product × station grid (PR-3) can take any of these distributions
 
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **AC added (product owner, 2026-11-22):** the PR-3 grid's "or a distribution" criterion moved here. The lead extends `durationSchema` with the new kinds (a schema bump) before this story starts.
