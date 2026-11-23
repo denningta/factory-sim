@@ -23,3 +23,5 @@ issue: 24
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- Routing steps already exist in the schema (`product.routing[] = {id, stationId}`, stations must be workstations). AC3 reachability: compute it over v3 connections (port graph from each source), as a pure, tested function. FL-3 reuses it for routing at splits.

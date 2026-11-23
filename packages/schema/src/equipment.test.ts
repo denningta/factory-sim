@@ -58,6 +58,7 @@ describe('instantiate: placed instances own a copy of their type settings', () =
       footprint: type.footprint,
       height: type.height,
       color: type.color,
+      ports: type.ports,
       position: { x: 3, y: 4 },
       rotation: 0,
     });
@@ -81,7 +82,7 @@ describe('instantiate: placed instances own a copy of their type settings', () =
   });
 });
 
-describe('schema v1 → v2 upgrade (real chain)', () => {
+describe('schema v1 → current upgrade (real chain)', () => {
   const v1 = {
     schemaVersion: 1,
     floor: { width: 30, length: 20, gridSpacing: 1 },
@@ -116,17 +117,28 @@ describe('schema v1 → v2 upgrade (real chain)', () => {
     const result = loadProject(v1);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.project.schemaVersion).toBe(2);
+    expect(result.project.schemaVersion).toBe(3);
     expect(result.project.equipment[0]).toEqual({
       ...v1.equipment[0],
       color: '#8a94a6',
       params: { capacity: 1, batchSize: 1 },
+      ports: [
+        { id: 'in', kind: 'input', u: 0, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
     });
     expect(result.project.equipment[1]).toMatchObject({
       footprint: { width: 0.6, length: 4 },
       params: { speed: 0.2 },
     });
-    expect(result.project.connections).toEqual(v1.connections);
+    expect(result.project.connections).toEqual([
+      {
+        id: 'k1',
+        from: { equipmentId: 's1', portId: 'out' },
+        to: { equipmentId: 'c1', portId: 'in' },
+        capacity: 0,
+      },
+    ]);
   });
 
   it.each([
@@ -152,5 +164,92 @@ describe('schema v1 → v2 upgrade (real chain)', () => {
     const result = loadProject(broken);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain('equipment[0]');
+  });
+});
+
+describe('ports (schema v3, FL-1/EQ-4 contract)', () => {
+  it('gives each built-in type default ports: input at one end, output at the other', () => {
+    const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+    expect(ws.ports).toEqual([
+      { id: 'in', kind: 'input', u: 0, v: -0.5 },
+      { id: 'out', kind: 'output', u: 0, v: 0.5 },
+    ]);
+    const src = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'source')!;
+    const snk = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'sink')!;
+    expect(src.ports.map((p) => p.kind)).toEqual(['output']);
+    expect(snk.ports.map((p) => p.kind)).toEqual(['input']);
+  });
+
+  it('enforces the port rules per behavior', () => {
+    const src = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'source')!;
+    const withInput = { ...src, ports: [...src.ports, { id: 'in', kind: 'input', u: 0, v: -0.5 }] };
+    expect(equipmentTypeSchema.safeParse(withInput).success).toBe(false);
+    const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+    const noOutput = { ...ws, ports: ws.ports.filter((p) => p.kind === 'input') };
+    const r = equipmentTypeSchema.safeParse(noOutput);
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0]?.message).toMatch(/at least one output/);
+  });
+
+  it('keeps ports on the footprint and their ids unique', () => {
+    const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+    const off = { ...ws, ports: [{ ...ws.ports[0]!, u: 0.6 }, ws.ports[1]!] };
+    expect(equipmentTypeSchema.safeParse(off).success).toBe(false);
+    const interior = { ...ws, ports: [{ ...ws.ports[0]!, u: 0.1, v: 0.2 }, ws.ports[1]!] };
+    expect(equipmentTypeSchema.safeParse(interior).success).toBe(false);
+    const side = { ...ws, ports: [{ ...ws.ports[0]!, u: -0.5, v: 0.1 }, ws.ports[1]!] };
+    expect(equipmentTypeSchema.safeParse(side).success).toBe(true);
+    const dup = { ...ws, ports: [ws.ports[0]!, { ...ws.ports[1]!, id: 'in' }] };
+    expect(equipmentTypeSchema.safeParse(dup).success).toBe(false);
+  });
+
+  it('instantiate copies ports independently of the type', () => {
+    const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+    const e = instantiate(ws, { id: 'w1', position: { x: 0, y: 0 } });
+    expect(e.ports).toEqual(ws.ports);
+    e.ports[0]!.u = 0.25;
+    expect(ws.ports[0]!.u).toBe(0);
+  });
+});
+
+describe('schema v2 → v3 upgrade', () => {
+  it('maps v2 connections onto the default ports, with no buffer', () => {
+    const v2 = {
+      schemaVersion: 2,
+      floor: { width: 30, length: 20, gridSpacing: 1 },
+      equipment: [
+        { ...instantiate(BASE_EQUIPMENT_TYPES[3]!, { id: 'src', position: { x: 1, y: 1 } }) },
+        { ...instantiate(BASE_EQUIPMENT_TYPES[4]!, { id: 'snk', position: { x: 9, y: 1 } }) },
+      ].map(({ ports: _p, ...e }) => e),
+      connections: [{ id: 'k', from: 'src', to: 'snk' }],
+      products: [],
+      cycleTimes: [],
+    };
+    const result = loadProject(v2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.connections[0]).toEqual({
+      id: 'k',
+      from: { equipmentId: 'src', portId: 'out' },
+      to: { equipmentId: 'snk', portId: 'in' },
+      capacity: 0,
+    });
+  });
+
+  it('reports a v2 connection out of a sink instead of inventing a port', () => {
+    const v2 = {
+      schemaVersion: 2,
+      floor: { width: 30, length: 20, gridSpacing: 1 },
+      equipment: [
+        instantiate(BASE_EQUIPMENT_TYPES[4]!, { id: 'snk', position: { x: 9, y: 1 } }),
+        instantiate(BASE_EQUIPMENT_TYPES[0]!, { id: 'w', position: { x: 1, y: 1 } }),
+      ].map(({ ports: _p, ...e }) => e),
+      connections: [{ id: 'k', from: 'snk', to: 'w' }],
+      products: [],
+      cycleTimes: [],
+    };
+    const result = loadProject(v2);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('has no port "out"');
   });
 });

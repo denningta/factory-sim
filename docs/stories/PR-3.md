@@ -26,4 +26,5 @@ issue: 25
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - **AC change (product owner, 2026-11-22):** "or a distribution" moved to WS-2, so PR-3 ships complete with fixed times. Build the cell so WS-2 can add other `time.kind`s.
+- Cycle times exist in the schema keyed by (product, station) with `time: { kind: 'fixed', value }` (seconds). CSV/paste import parses into the same schema (seconds; accept mm:ss as display input).
 - From the PR-1 review (#81): move `cycleTimes` into the editor store and the LE-3 undo snapshot, so undoing a product delete also restores its cycle times.

@@ -23,3 +23,5 @@ issue: 7
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- Ports already exist in schema v3, with defaults from `defaultPorts(behavior)`: input at `v = −0.5`, output at `v = +0.5`. This story adds _editing_ them in the type definition (EQ-3).

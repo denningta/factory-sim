@@ -18,6 +18,8 @@ import { projectSchema } from './project';
  * | GET    /api/users          | —                    | UserListResponse (admin) | PL-6  |
  * | POST   /api/users          | CreateUserRequest    | User (admin)             | PL-6  |
  * | PATCH  /api/users/:id      | UpdateUserRequest    | User (admin)             | PL-6  |
+ * | POST   /api/auth/password  | ChangePasswordRequest| 204                      | PL-9  |
+ * | PUT    /api/users/:id/password | ResetPasswordRequest | 204 (admin)         | PL-9  |
  * | GET    /api/projects       | —                    | ProjectListResponse      | SC-1  |
  * | POST   /api/projects       | CreateProjectRequest | ProjectDetail            | SC-1  |
  * | GET    /api/projects/:id   | —                    | ProjectDetail            | SC-1  |
@@ -96,6 +98,22 @@ export const updateUserRequestSchema = z
     message: 'Nothing to update',
   });
 
+/**
+ * A signed-in user changes their own password (PL-9). A wrong `currentPassword` answers
+ * `unauthorized`, and the sign-in throttle applies. Ends the user's other sessions and keeps
+ * the current one.
+ */
+export const changePasswordRequestSchema = z.strictObject({
+  currentPassword: passwordInputSchema,
+  newPassword: newPasswordSchema,
+});
+
+/**
+ * An admin sets another user's password (PL-9). Ends all of that user's sessions. For their
+ * own account, admins use the change flow, and this route answers 403 `forbidden`.
+ */
+export const resetPasswordRequestSchema = z.strictObject({ newPassword: newPasswordSchema });
+
 // ---- Projects (SC-1) ----
 
 export const projectNameSchema = z.string().trim().min(1).max(200);
@@ -149,6 +167,7 @@ export const apiErrorCodeSchema = z.enum([
   'forbidden', // 403: signed in but not allowed (e.g. not an admin)
   'not_found', // 404
   'payload_too_large', // 413: body over the API's limit (Fastify default 1 MiB)
+  'unsupported_media_type', // 415: mutating routes accept only application/json
   'conflict', // 409: setup already done, email taken, stale baseRevision
   'rate_limited', // 429: too many failed sign-ins; retry later
   'internal', // 500: details are logged, never returned
@@ -167,6 +186,8 @@ export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
 export type CreateUserRequest = z.input<typeof createUserRequestSchema>;
 export type UpdateUserRequest = z.infer<typeof updateUserRequestSchema>;
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
 export type ProjectListResponse = z.infer<typeof projectListResponseSchema>;
