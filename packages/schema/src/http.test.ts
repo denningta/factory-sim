@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   PASSWORD_MIN_LENGTH,
   apiErrorSchema,
+  changePasswordRequestSchema,
+  resetPasswordRequestSchema,
   createProject,
   createUserRequestSchema,
   loginRequestSchema,
@@ -51,6 +53,28 @@ describe('HTTP contract: auth (PL-6)', () => {
   it('rejects an empty user update', () => {
     expect(updateUserRequestSchema.safeParse({}).success).toBe(false);
     expect(updateUserRequestSchema.safeParse({ disabled: true }).success).toBe(true);
+  });
+});
+
+describe('HTTP contract: passwords (PL-9)', () => {
+  it('changing a password needs the current one and a policy-compliant new one', () => {
+    expect(
+      changePasswordRequestSchema.safeParse({ currentPassword: 'old', newPassword: longPassword })
+        .success,
+    ).toBe(true);
+    expect(
+      changePasswordRequestSchema.safeParse({ currentPassword: '', newPassword: longPassword })
+        .success,
+    ).toBe(false);
+    expect(
+      changePasswordRequestSchema.safeParse({ currentPassword: 'old', newPassword: 'short' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('an admin reset applies the password policy', () => {
+    expect(resetPasswordRequestSchema.safeParse({ newPassword: longPassword }).success).toBe(true);
+    expect(resetPasswordRequestSchema.safeParse({ newPassword: 'short' }).success).toBe(false);
   });
 });
 

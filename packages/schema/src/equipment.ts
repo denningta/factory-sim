@@ -6,7 +6,7 @@ import { z } from 'zod';
  * projects (EQ-1 built-ins, EQ-3 user types). A placed instance copies its type's
  * settings and then owns them, so editing a type never silently changes a project.
  *
- * Input/output points (EQ-4, FL-1) are added by a later schema version.
+ * Ports (v3) are the input/output points connections attach to (FL-1, EQ-4).
  */
 
 export const idSchema = z.string().min(1);
@@ -74,11 +74,89 @@ function withBehavior<S extends z.core.$ZodLooseShape>(shape: S) {
 
 export const footprintSchema = z.strictObject({ width: metersSchema, length: metersSchema });
 
+/**
+ * A connection point on the footprint (FL-1, EQ-4). `u`/`v` are fractions of the footprint
+ * in the equipment's own frame (−0.5…0.5 across `width` and along `length`), so ports stay
+ * on the footprint when it is resized (EQ-2). Rotation and position come from the instance.
+ */
+export const portSchema = z
+  .strictObject({
+    id: idSchema,
+    kind: z.enum(['input', 'output']),
+    u: z.number().min(-0.5).max(0.5),
+    v: z.number().min(-0.5).max(0.5),
+  })
+  .refine((p) => Math.abs(p.u) === 0.5 || Math.abs(p.v) === 0.5, {
+    message: 'A port must sit on the footprint edge (u or v = ±0.5)',
+  });
+
+/** What each behavior needs: sources only emit, sinks only absorb, the rest do both. */
+const PORT_RULES: Record<
+  (typeof EQUIPMENT_BEHAVIORS)[number],
+  { input: 'none' | 'some'; output: 'none' | 'some' }
+> = {
+  source: { input: 'none', output: 'some' },
+  sink: { input: 'some', output: 'none' },
+  workstation: { input: 'some', output: 'some' },
+  buffer: { input: 'some', output: 'some' },
+  conveyor: { input: 'some', output: 'some' },
+};
+
+function checkPorts(
+  e: { behavior: string; ports: { id: string; kind: 'input' | 'output' }[] },
+  ctx: z.RefinementCtx,
+): void {
+  const seen = new Set<string>();
+  e.ports.forEach((port, i) => {
+    if (seen.has(port.id))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ports', i, 'id'],
+        message: `Duplicate port id "${port.id}"`,
+      });
+    seen.add(port.id);
+  });
+  const rule = Object.hasOwn(PORT_RULES, e.behavior)
+    ? PORT_RULES[e.behavior as keyof typeof PORT_RULES]
+    : undefined;
+  if (!rule) return;
+  for (const kind of ['input', 'output'] as const) {
+    const count = e.ports.filter((p) => p.kind === kind).length;
+    if (rule[kind] === 'none' && count > 0)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ports'],
+        message: `A ${e.behavior} has no ${kind} ports`,
+      });
+    if (rule[kind] === 'some' && count === 0)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ports'],
+        message: `A ${e.behavior} needs at least one ${kind} port`,
+      });
+  }
+}
+
+/**
+ * Default ports (EQ-4): material flows along the footprint's length, entering at one end
+ * and leaving at the other.
+ */
+export function defaultPorts(
+  behavior: (typeof EQUIPMENT_BEHAVIORS)[number],
+): z.infer<typeof portSchema>[] {
+  const input = { id: 'in', kind: 'input' as const, u: 0, v: -0.5 };
+  const output = { id: 'out', kind: 'output' as const, u: 0, v: 0.5 };
+  if (behavior === 'source') return [output];
+  if (behavior === 'sink') return [input];
+  return [input, output];
+}
+
 /** The settings a type defines and an instance copies. */
 const typeSettings = {
   footprint: footprintSchema,
   height: metersSchema,
   color: colorSchema,
+  ports: z.array(portSchema),
 };
 
 /** A library entry (EQ-1 built-in or EQ-3 user-defined). */
@@ -86,7 +164,7 @@ export const equipmentTypeSchema = withBehavior({
   id: idSchema,
   name: z.string().trim().min(1),
   ...typeSettings,
-});
+}).superRefine(checkPorts);
 
 /** Floor-plan coordinates in meters; the renderer maps y onto its ground axis. */
 export const pointSchema = z.strictObject({ x: z.number(), y: z.number() });
@@ -101,11 +179,12 @@ export const equipmentSchema = withBehavior({
   /** Radians about the vertical axis. */
   rotation: z.number(),
   ...typeSettings,
-});
+}).superRefine(checkPorts);
 
 export type EquipmentType = z.infer<typeof equipmentTypeSchema>;
 export type Equipment = z.infer<typeof equipmentSchema>;
 export type EquipmentBehavior = Equipment['behavior'];
+export type Port = z.infer<typeof portSchema>;
 export type BehaviorParams<B extends EquipmentBehavior> = z.infer<
   (typeof behaviorParamsSchemas)[B]
 >;
@@ -123,6 +202,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     footprint: { width: 2, length: 1.5 },
     height: 1.2,
     color: '#8a94a6',
+    ports: defaultPorts('workstation'),
   },
   {
     id: 'base-buffer',
@@ -132,6 +212,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     footprint: { width: 1.2, length: 1 },
     height: 2,
     color: '#a68a64',
+    ports: defaultPorts('buffer'),
   },
   {
     id: 'base-conveyor',
@@ -141,6 +222,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     footprint: { width: 0.6, length: 3 },
     height: 0.9,
     color: '#5f6b7a',
+    ports: defaultPorts('conveyor'),
   },
   {
     id: 'base-source',
@@ -150,6 +232,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     footprint: { width: 1, length: 1 },
     height: 1,
     color: '#6b7f99',
+    ports: defaultPorts('source'),
   },
   {
     id: 'base-sink',
@@ -159,6 +242,7 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
     footprint: { width: 1, length: 1 },
     height: 1,
     color: '#7a6b99',
+    ports: defaultPorts('sink'),
   },
 ];
 

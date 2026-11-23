@@ -57,16 +57,7 @@ describe('PR-1 products: create, edit and delete', () => {
   it('loadDocument loads the document products', () => {
     const a = store.getState().addProduct();
     const other = createEditorStore();
-    other.getState().loadDocument({
-      ...({
-        schemaVersion: 2,
-        floor: store.getState().floor,
-        equipment: [],
-        connections: [],
-        cycleTimes: [],
-      } as const),
-      products: [a],
-    });
+    other.getState().loadDocument({ ...createProject(), products: [a] });
     expect(other.getState().products).toEqual([a]);
   });
 });
