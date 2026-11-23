@@ -84,8 +84,7 @@ describe('PR-3 each cell takes a fixed time', () => {
       'Cycle time, Product 1 at Saw',
     )) as HTMLInputElement;
     expect(input.value).toBe('30');
-    await user.clear(input);
-    await user.type(input, 'abc');
+    await user.type(input, 'x'); // appended: "30x"; clearing the cell would clear the stored time
     expect((await screen.findByRole('alert')).textContent).toMatch(/seconds|mm:ss/i);
     expect(s().cycleTimes[0]!.time).toEqual({ kind: 'fixed', value: 30 });
   });

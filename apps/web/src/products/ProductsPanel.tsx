@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { preRunIssues } from './preRunIssues';
+import { CycleTimeGrid } from './CycleTimeGrid';
 import { RoutingEditor } from './RoutingEditor';
 
 type Store = typeof defaultStore;
@@ -181,6 +182,7 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
       </section>
       <div style={{ padding: 24, background: '#f9fafb' }}>
         {selected && <RoutingEditor product={selected} useStore={useStore} />}
+        <CycleTimeGrid useStore={useStore} />
       </div>
     </div>
   );

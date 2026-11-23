@@ -36,7 +36,6 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
       (p) => {
         if (cancelled) return;
         let revision = p.revision;
-        // Cycle times aren't edited yet; carry them through unchanged.
         let base: Project = p.document;
         useEditorStore.getState().loadDocument(base);
         setName(p.name);
@@ -48,10 +47,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             setStop(s === 'stopped' || s === 'conflict' ? (err ?? null) : null);
           },
           save: async () => {
-            const { floor, equipment, products } = useEditorStore.getState();
-            // A deleted product's cycle times would reference an unknown product.
-            const known = new Set(products.map((p) => p.id));
-            const cycleTimes = base.cycleTimes.filter((c) => known.has(c.productId));
+            const { floor, equipment, products, cycleTimes } = useEditorStore.getState();
             const document = { ...base, floor, equipment, products, cycleTimes };
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
@@ -62,7 +58,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           if (
             s.floor !== prev.floor ||
             s.equipment !== prev.equipment ||
-            s.products !== prev.products
+            s.products !== prev.products ||
+            s.cycleTimes !== prev.cycleTimes
           )
             saver?.markDirty();
         });
