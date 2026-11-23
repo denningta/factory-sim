@@ -318,6 +318,7 @@ describe('FL-4 connection transfer time', () => {
     const time = screen.getByLabelText(/transfer time \(s\)/i);
     await user.clear(time);
     await user.type(time, '6');
+    await user.tab(); // the duration editor commits on blur or Enter
     expect(transfer()).toEqual({ kind: 'fixed', time: { kind: 'fixed', value: 6 } });
     await user.click(screen.getByRole('radio', { name: /distance and speed/i }));
     const speed = screen.getByLabelText(/speed \(m\/s\)/i);
@@ -328,6 +329,25 @@ describe('FL-4 connection transfer time', () => {
     expect(screen.getByText(/^distance/i).textContent).toMatch(/s\b/);
     await user.click(screen.getByRole('radio', { name: /instant/i }));
     expect(transfer()).toEqual({ kind: 'instant' });
+  });
+
+  it('in ft mode the speed is entered in ft/min and stored in m/s', async () => {
+    const user = userEvent.setup();
+    store.getState().setUnit('ft');
+    connect();
+    await user.click(await screen.findByRole('radio', { name: /distance and speed/i }));
+    const speed = screen.getByLabelText(/speed \(ft\/min\)/i);
+    await user.clear(speed);
+    await user.type(speed, '100');
+    expect((transfer() as { speed: number }).speed).toBeCloseTo(0.508, 3);
+  });
+
+  it('a non-fixed transfer time stays visible and editable', async () => {
+    connect();
+    store.getState().updateConnection(store.getState().connections[0]!.id, {
+      transfer: { kind: 'fixed', time: { kind: 'normal', mean: 5, stdDev: 1 } },
+    });
+    expect(await screen.findByDisplayValue('5')).toBeTruthy();
   });
 
   it('shows an inline error for a bad speed and does not write it', async () => {

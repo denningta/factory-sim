@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { Field, parseNumber } from './Field';
+import { DurationEditor } from '../products/DurationEditor';
 import { LaborEditor } from '../technicians/LaborEditor';
 import { BASE_EQUIPMENT_TYPES, type Connection, type Equipment } from '@factory-sim/schema';
 import { portWorldPosition } from './ports';
@@ -81,6 +82,7 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
   function transferTime(conn: Connection, distance: number | null) {
     const t = conn.transfer;
     const speedUnit = unit === 'ft' ? 'ft/min' : 'm/s';
+    // Results are ignored: every value written here is valid by construction.
     const pickKind = (k: Connection['transfer']['kind']) => {
       if (k === t.kind) return;
       if (k === 'instant') updateConnection(conn.id, { transfer: { kind: 'instant' } });
@@ -110,21 +112,22 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
           {radio('fixed', 'Fixed time')}
           {radio('speed', 'From distance and speed')}
         </fieldset>
-        {t.kind === 'fixed' && t.time.kind === 'fixed' && (
-          <Field
+        {t.kind === 'fixed' && (
+          <DurationEditor
+            key={`tt-${conn.id}`}
+            name="Transfer time"
+            fixedLabel="Transfer time (s)"
+            time={t.time}
+            setTime={(d) => updateConnection(conn.id, { transfer: { kind: 'fixed', time: d } })}
+            // A transfer always has a time, so clearing the field is ignored.
+            setFixed={(seconds) =>
+              seconds !== null &&
+              updateConnection(conn.id, {
+                transfer: { kind: 'fixed', time: { kind: 'fixed', value: seconds } },
+              })
+            }
             beginEdit={beginEdit}
             endEdit={endEdit}
-            key={`tt-${conn.id}`}
-            label="Transfer time (s)"
-            value={String(t.time.value)}
-            commit={(text) => {
-              const n = parseNumber(text);
-              if (typeof n === 'string') return n;
-              const r = updateConnection(conn.id, {
-                transfer: { kind: 'fixed', time: { kind: 'fixed', value: n } },
-              });
-              return r.ok ? null : r.error;
-            }}
           />
         )}
         {t.kind === 'speed' && (
