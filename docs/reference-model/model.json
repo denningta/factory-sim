@@ -1,0 +1,779 @@
+{
+  "schemaVersion": 4,
+  "floor": {
+    "width": 20,
+    "length": 40,
+    "gridSpacing": 1
+  },
+  "equipment": [
+    {
+      "id": "source",
+      "name": "Material release",
+      "typeId": "base-source",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1,
+        "length": 1
+      },
+      "height": 1,
+      "color": "#6b7f99",
+      "ports": [
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "source",
+      "params": {}
+    },
+    {
+      "id": "s1",
+      "name": "S1 Saw",
+      "typeId": "base-workstation",
+      "position": {
+        "x": 0,
+        "y": 3
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2,
+        "length": 1.5
+      },
+      "height": 1.2,
+      "color": "#8a94a6",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 1,
+        "batchSize": 1,
+        "labor": {
+          "mode": "manual"
+        }
+      }
+    },
+    {
+      "id": "b1",
+      "name": "B1 Saw out",
+      "typeId": "base-buffer",
+      "position": {
+        "x": 0,
+        "y": 6
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1.2,
+        "length": 1
+      },
+      "height": 2,
+      "color": "#a68a64",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        },
+        {
+          "id": "out-bypass",
+          "kind": "output",
+          "u": -0.5,
+          "v": 0
+        }
+      ],
+      "behavior": "buffer",
+      "params": {
+        "capacity": 3
+      }
+    },
+    {
+      "id": "s2",
+      "name": "S2 CNC",
+      "typeId": "base-workstation",
+      "position": {
+        "x": 4,
+        "y": 9
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2,
+        "length": 1.5
+      },
+      "height": 1.2,
+      "color": "#8a94a6",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 1,
+        "batchSize": 1,
+        "labor": {
+          "mode": "automatic",
+          "loadTime": {
+            "kind": "fixed",
+            "value": 5
+          },
+          "unloadTime": {
+            "kind": "fixed",
+            "value": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "b2",
+      "name": "B2 Weld in",
+      "typeId": "base-buffer",
+      "position": {
+        "x": 0,
+        "y": 12
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1.2,
+        "length": 1
+      },
+      "height": 2,
+      "color": "#a68a64",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        },
+        {
+          "id": "in-bypass",
+          "kind": "input",
+          "u": -0.5,
+          "v": 0
+        }
+      ],
+      "behavior": "buffer",
+      "params": {
+        "capacity": 4
+      }
+    },
+    {
+      "id": "s3",
+      "name": "S3 Weld",
+      "typeId": "base-workstation",
+      "position": {
+        "x": 0,
+        "y": 15
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2,
+        "length": 1.5
+      },
+      "height": 1.2,
+      "color": "#8a94a6",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 1,
+        "batchSize": 1,
+        "labor": {
+          "mode": "manual"
+        }
+      }
+    },
+    {
+      "id": "b3",
+      "name": "B3 Weld out",
+      "typeId": "base-buffer",
+      "position": {
+        "x": 0,
+        "y": 18
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1.2,
+        "length": 1
+      },
+      "height": 2,
+      "color": "#a68a64",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        },
+        {
+          "id": "out-bypass",
+          "kind": "output",
+          "u": -0.5,
+          "v": 0
+        }
+      ],
+      "behavior": "buffer",
+      "params": {
+        "capacity": 4
+      }
+    },
+    {
+      "id": "s4",
+      "name": "S4 Assemble",
+      "typeId": "base-workstation",
+      "position": {
+        "x": 4,
+        "y": 21
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2,
+        "length": 1.5
+      },
+      "height": 1.2,
+      "color": "#8a94a6",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 1,
+        "batchSize": 1,
+        "labor": {
+          "mode": "manual"
+        }
+      }
+    },
+    {
+      "id": "b4",
+      "name": "B4 Inspect in",
+      "typeId": "base-buffer",
+      "position": {
+        "x": 0,
+        "y": 24
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1.2,
+        "length": 1
+      },
+      "height": 2,
+      "color": "#a68a64",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        },
+        {
+          "id": "in-bypass",
+          "kind": "input",
+          "u": -0.5,
+          "v": 0
+        }
+      ],
+      "behavior": "buffer",
+      "params": {
+        "capacity": 3
+      }
+    },
+    {
+      "id": "s5",
+      "name": "S5 Inspect",
+      "typeId": "base-workstation",
+      "position": {
+        "x": 0,
+        "y": 27
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2,
+        "length": 1.5
+      },
+      "height": 1.2,
+      "color": "#8a94a6",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 1,
+        "batchSize": 1,
+        "labor": {
+          "mode": "manual"
+        }
+      }
+    },
+    {
+      "id": "sink",
+      "name": "Shipping",
+      "typeId": "base-sink",
+      "position": {
+        "x": 0,
+        "y": 30
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1,
+        "length": 1
+      },
+      "height": 1,
+      "color": "#7a6b99",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        }
+      ],
+      "behavior": "sink",
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "c-source-s1",
+      "from": {
+        "equipmentId": "source",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s1",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-s1-b1",
+      "from": {
+        "equipmentId": "s1",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "b1",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b1-s2",
+      "from": {
+        "equipmentId": "b1",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s2",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b1-b2",
+      "from": {
+        "equipmentId": "b1",
+        "portId": "out-bypass"
+      },
+      "to": {
+        "equipmentId": "b2",
+        "portId": "in-bypass"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-s2-b2",
+      "from": {
+        "equipmentId": "s2",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "b2",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b2-s3",
+      "from": {
+        "equipmentId": "b2",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s3",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-s3-b3",
+      "from": {
+        "equipmentId": "s3",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "b3",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b3-s4",
+      "from": {
+        "equipmentId": "b3",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s4",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b3-b4",
+      "from": {
+        "equipmentId": "b3",
+        "portId": "out-bypass"
+      },
+      "to": {
+        "equipmentId": "b4",
+        "portId": "in-bypass"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-s4-b4",
+      "from": {
+        "equipmentId": "s4",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "b4",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-b4-s5",
+      "from": {
+        "equipmentId": "b4",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s5",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c-s5-sink",
+      "from": {
+        "equipmentId": "s5",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "sink",
+        "portId": "in"
+      },
+      "capacity": null,
+      "transfer": {
+        "kind": "fixed",
+        "time": {
+          "kind": "fixed",
+          "value": 20
+        }
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "A",
+      "partNumber": "A-100",
+      "name": "Bracket A",
+      "color": "#3b82f6",
+      "routing": [
+        {
+          "id": "A-1",
+          "stationId": "s1",
+          "name": "Cut stock"
+        },
+        {
+          "id": "A-2",
+          "stationId": "s2",
+          "name": "Machine"
+        },
+        {
+          "id": "A-3",
+          "stationId": "s3",
+          "name": "Weld"
+        },
+        {
+          "id": "A-4",
+          "stationId": "s5",
+          "name": "Inspect"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "partNumber": "B-200",
+      "name": "Frame B",
+      "color": "#f59e0b",
+      "routing": [
+        {
+          "id": "B-1",
+          "stationId": "s1",
+          "name": "Cut stock"
+        },
+        {
+          "id": "B-2",
+          "stationId": "s3",
+          "name": "Weld"
+        },
+        {
+          "id": "B-3",
+          "stationId": "s4",
+          "name": "Assemble"
+        },
+        {
+          "id": "B-4",
+          "stationId": "s5",
+          "name": "Inspect"
+        }
+      ]
+    }
+  ],
+  "cycleTimes": [
+    {
+      "productId": "A",
+      "stationId": "s1",
+      "time": {
+        "kind": "fixed",
+        "value": 40
+      }
+    },
+    {
+      "productId": "A",
+      "stationId": "s2",
+      "time": {
+        "kind": "fixed",
+        "value": 45
+      }
+    },
+    {
+      "productId": "A",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 90
+      }
+    },
+    {
+      "productId": "A",
+      "stationId": "s5",
+      "time": {
+        "kind": "triangular",
+        "min": 24,
+        "mode": 30,
+        "max": 36
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s1",
+      "time": {
+        "kind": "fixed",
+        "value": 35
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 80
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s4",
+      "time": {
+        "kind": "fixed",
+        "value": 60
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s5",
+      "time": {
+        "kind": "normal",
+        "mean": 25,
+        "stdDev": 3
+      }
+    }
+  ],
+  "calendar": {
+    "shiftLength": 28800
+  },
+  "demand": {
+    "basis": "mix",
+    "items": [
+      {
+        "productId": "A",
+        "value": 60
+      },
+      {
+        "productId": "B",
+        "value": 40
+      }
+    ]
+  },
+  "release": {
+    "interval": {
+      "kind": "fixed",
+      "value": 30
+    },
+    "product": {
+      "kind": "sequence",
+      "pattern": ["A", "A", "B", "A", "B"]
+    }
+  },
+  "technicians": [
+    {
+      "id": "tech-1",
+      "name": "Tech 1",
+      "walkSpeed": 1.2,
+      "stationIds": ["s1", "s2"]
+    },
+    {
+      "id": "tech-2",
+      "name": "Tech 2",
+      "walkSpeed": 1.2,
+      "stationIds": ["s3"]
+    },
+    {
+      "id": "tech-3",
+      "name": "Tech 3",
+      "walkSpeed": 1.2,
+      "stationIds": ["s4", "s5"]
+    }
+  ]
+}
