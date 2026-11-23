@@ -6,10 +6,12 @@ import {
   floorSchema,
   projectSchema,
   instantiate,
+  type Connection,
   type Equipment,
   type Floor,
   type Product,
   type Project,
+  type RoutingStep,
 } from '@factory-sim/schema';
 import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
@@ -83,6 +85,8 @@ export interface EquipmentPatch {
   height?: number;
 }
 
+export type RoutingStepResult = { ok: true; step: RoutingStep } | { ok: false; error: string };
+
 export type ProductResult = { ok: true } | { ok: false; error: string; field?: string };
 
 /** The fields PR-1 edits; the routing is PR-2's. */
@@ -112,6 +116,15 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Appends a step at `stationId`, which must be a workstation (PR-2). */
+  addRoutingStep: (productId: string, stationId: string) => RoutingStepResult;
+  /** Reassigns a step to another workstation. */
+  setRoutingStepStation: (productId: string, stepId: string, stationId: string) => RoutingStepResult;
+  /** Moves a step to index `to` (clamped); the rest keep their order. */
+  moveRoutingStep: (productId: string, stepId: string, to: number) => void;
+  removeRoutingStep: (productId: string, stepId: string) => void;
+  /** Connections; part of the project document. Edited by FL-1; read here for reachability. */
+  connections: Connection[];
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -281,6 +294,19 @@ export function createEditorStore() {
         record();
         set({ products: get().products.filter((p) => p.id !== id) });
       },
+      addRoutingStep: () => {
+        throw new Error('not implemented');
+      },
+      setRoutingStepStation: () => {
+        throw new Error('not implemented');
+      },
+      moveRoutingStep: () => {
+        throw new Error('not implemented');
+      },
+      removeRoutingStep: () => {
+        throw new Error('not implemented');
+      },
+      connections: [],
       selectedIds: [],
       placeEquipment: (typeId, point) => {
         const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
