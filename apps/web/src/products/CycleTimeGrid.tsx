@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { Duration, DurationKind } from '@factory-sim/schema';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { parseCycleTimeTable, parseDuration, stationsOf } from './cycleTimes';
+import { previewHistogram } from './distributions';
 
 type Store = typeof defaultStore;
 
@@ -75,12 +77,200 @@ function TimeCell({
   );
 }
 
+const KINDS: { kind: DurationKind; label: string }[] = [
+  { kind: 'fixed', label: 'Fixed' },
+  { kind: 'normal', label: 'Normal' },
+  { kind: 'triangular', label: 'Triangular' },
+  { kind: 'lognormal', label: 'Lognormal' },
+  { kind: 'exponential', label: 'Exponential' },
+];
+
+type Param = { key: string; label: string; zeroOk?: boolean };
+const PARAMS: Record<Exclude<DurationKind, 'fixed'>, Param[]> = {
+  normal: [
+    { key: 'mean', label: 'Mean' },
+    { key: 'stdDev', label: 'Std dev', zeroOk: true },
+  ],
+  triangular: [
+    { key: 'min', label: 'Min', zeroOk: true },
+    { key: 'mode', label: 'Most likely', zeroOk: true },
+    { key: 'max', label: 'Max' },
+  ],
+  lognormal: [
+    { key: 'mean', label: 'Mean' },
+    { key: 'stdDev', label: 'Std dev', zeroOk: true },
+  ],
+  exponential: [{ key: 'mean', label: 'Mean' }],
+};
+
+const parseParam = (text: string, zeroOk?: boolean) =>
+  parseDuration(text) ?? (zeroOk && /^0+(\.0+)?$/.test(text.trim()) ? 0 : null);
+
+/** Bars for a seeded sample of the distribution; shows the shape, not exact values. */
+function Histogram({ label, time }: { label: string; time: Duration }) {
+  const key = JSON.stringify(time);
+  const h = useMemo(() => previewHistogram(JSON.parse(key) as Duration), [key]);
+  const peak = Math.max(...h.bins.map((b) => b.count));
+  const w = 4;
+  const fmt = (n: number) => String(Math.round(n * 10) / 10);
+  return (
+    <svg
+      role="img"
+      aria-label={label}
+      width={h.bins.length * w}
+      height={46}
+      style={{ background: '#f9fafb' }}
+    >
+      {h.bins.map((b, i) => {
+        const height = (b.count / peak) * 32;
+        return (
+          <rect key={i} x={i * w} y={32 - height} width={w - 1} height={height} fill="#3b82f6" />
+        );
+      })}
+      <text x={0} y={44} fontSize={10} fill="#6b7280">
+        {fmt(h.bins[0]!.from)}–{fmt(h.bins[h.bins.length - 1]!.to)} s
+      </text>
+    </svg>
+  );
+}
+
+/**
+ * One grid cell (WS-2): a kind selector, the kind's parameters, and a histogram of the stored
+ * distribution. Parameters commit together once all are valid; until then the store keeps the last
+ * good value. Switching kind starts with blank parameters rather than reinterpreting the old ones.
+ */
+function DurationCell({
+  name,
+  time,
+  setTime,
+  setFixed,
+  beginEdit,
+  endEdit,
+}: {
+  /** "Product 1 at Saw", used in every accessible name. */
+  name: string;
+  time: Duration | null;
+  setTime: (d: Duration) => { ok: boolean; error?: string };
+  setFixed: (seconds: number | null) => void;
+  beginEdit: () => number;
+  endEdit: (token: number) => void;
+}) {
+  const [kindDraft, setKindDraft] = useState<DurationKind | null>(null);
+  const [text, setText] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
+  const session = useRef(0);
+  const stored = JSON.stringify(time);
+  // A store change (undo, import, commit) supersedes any half-edited state.
+  useEffect(() => {
+    setKindDraft(null);
+    setText({});
+    setError(null);
+  }, [stored]);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
+
+  const kind = kindDraft ?? time?.kind ?? 'fixed';
+  const params = kind === 'fixed' ? [] : PARAMS[kind];
+  const shown = (p: Param) => {
+    const own = time?.kind === kind ? (time as Record<string, unknown>)[p.key] : undefined;
+    return text[p.key] ?? (typeof own === 'number' ? String(own) : '');
+  };
+  const incomplete = params.some((p) => shown(p).trim() === '');
+
+  const commitParams = (next: Record<string, string>) => {
+    if (kind === 'fixed') return;
+    const values: Record<string, number | null> = {};
+    for (const p of PARAMS[kind]) {
+      const t = next[p.key] ?? shown(p);
+      if (t.trim() === '') return; // still incomplete
+      values[p.key] = parseParam(t, p.zeroOk);
+      if (values[p.key] === null) return setError('Enter seconds or mm:ss');
+    }
+    const result = setTime({ kind, ...values } as Duration);
+    setError(result.ok ? null : (result.error ?? 'Invalid cycle time'));
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 4, justifyItems: 'end' }}>
+      <select
+        aria-label={`Distribution, ${name}`}
+        value={kind}
+        onChange={(e) => {
+          setKindDraft(e.target.value as DurationKind);
+          setText({});
+          setError(null);
+        }}
+        style={{ fontSize: 12 }}
+      >
+        {KINDS.map((k) => (
+          <option key={k.kind} value={k.kind}>
+            {k.kind}
+          </option>
+        ))}
+      </select>
+      {kind === 'fixed' ? (
+        <TimeCell
+          label={`Cycle time, ${name}`}
+          value={time?.kind === 'fixed' ? time.value : null}
+          commit={setFixed}
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+        />
+      ) : (
+        <div style={{ display: 'flex', gap: 4 }}>
+          {params.map((p) => {
+            const bad =
+              text[p.key] !== undefined &&
+              text[p.key]!.trim() !== '' &&
+              parseParam(text[p.key]!, p.zeroOk) === null;
+            return (
+              <input
+                key={p.key}
+                type="text"
+                inputMode="decimal"
+                aria-label={`${p.label}, ${name}`}
+                aria-invalid={bad || error || incomplete ? 'true' : undefined}
+                aria-describedby={error ? errorId : undefined}
+                placeholder={p.label}
+                title={p.label}
+                value={shown(p)}
+                onFocus={() => (session.current = beginEdit())}
+                onChange={(e) => setText({ ...text, [p.key]: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                onBlur={() => {
+                  commitParams(text);
+                  endEdit(session.current);
+                }}
+                style={{
+                  width: 56,
+                  padding: 4,
+                  textAlign: 'right',
+                  borderColor: bad || error ? '#b91c1c' : incomplete ? '#f59e0b' : undefined,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+      {error && (
+        <div id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
+          {error}
+        </div>
+      )}
+      {time && time.kind !== 'fixed' && (
+        <Histogram label={`Distribution preview, ${name}`} time={time} />
+      )}
+    </div>
+  );
+}
+
 /** Wireframe 2, "Cycle times": product × station grid, editable only where a routing uses the station (PR-3). */
 export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store }) {
   const products = useStore((s) => s.products);
   const equipment = useStore((s) => s.equipment);
   const cycleTimes = useStore((s) => s.cycleTimes);
   const setCycleTime = useStore((s) => s.setCycleTime);
+  const setCycleTimeDuration = useStore((s) => s.setCycleTimeDuration);
   const importCycleTimes = useStore((s) => s.importCycleTimes);
   const beginEdit = useStore((s) => s.beginEdit);
   const endEdit = useStore((s) => s.endEdit);
@@ -89,10 +279,8 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
 
   const used = new Set(products.flatMap(stationsOf));
   const stations = equipment.filter((e) => e.behavior === 'workstation' && used.has(e.id));
-  const timeOf = (productId: string, stationId: string) => {
-    const t = cycleTimes.find((c) => c.productId === productId && c.stationId === stationId)?.time;
-    return t?.kind === 'fixed' ? t.value : null;
-  };
+  const timeOf = (productId: string, stationId: string) =>
+    cycleTimes.find((c) => c.productId === productId && c.stationId === stationId)?.time ?? null;
 
   const runImport = (text: string) => {
     const { entries, errors } = parseCycleTimeTable(text, { products, equipment });
@@ -116,7 +304,8 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
       ) : (
         <>
           <p style={{ color: '#6b7280', margin: 0 }}>
-            Seconds, or mm:ss. Highlighted cells still need a time.
+            Seconds, or mm:ss. Pick a distribution to model variability; samples below 0 are cut
+            off. Highlighted cells still need a time.
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table
@@ -146,10 +335,11 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                       {stations.map((s) =>
                         own.has(s.id) ? (
                           <td key={s.id} style={{ ...cellStyle, textAlign: 'right' }}>
-                            <TimeCell
-                              label={`Cycle time, ${p.name} at ${s.name}`}
-                              value={timeOf(p.id, s.id)}
-                              commit={(seconds) => setCycleTime(p.id, s.id, seconds)}
+                            <DurationCell
+                              name={`${p.name} at ${s.name}`}
+                              time={timeOf(p.id, s.id)}
+                              setTime={(d) => setCycleTimeDuration(p.id, s.id, d)}
+                              setFixed={(seconds) => setCycleTime(p.id, s.id, seconds)}
                               beginEdit={beginEdit}
                               endEdit={endEdit}
                             />

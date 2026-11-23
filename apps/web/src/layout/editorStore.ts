@@ -11,6 +11,7 @@ import {
   type Connection,
   type CycleTime,
   type Duration,
+  durationSchema,
   type Equipment,
   type PortRef,
   type Floor,
@@ -342,8 +343,37 @@ export function createEditorStore() {
         set({ cycleTimes: withTime(current, productId, stationId, seconds) });
         return { ok: true };
       },
-      setCycleTimeDuration: () => {
-        throw new Error('not implemented');
+      setCycleTimeDuration: (productId, stationId, time) => {
+        const product = get().products.find((p) => p.id === productId);
+        if (!product) return { ok: false, error: 'Product not found' };
+        if (!product.routing.some((s) => s.stationId === stationId))
+          return { ok: false, error: 'This product does not route through that station' };
+        const current = get().cycleTimes;
+        if (time === null) {
+          const next = current.filter(
+            (c) => c.productId !== productId || c.stationId !== stationId,
+          );
+          if (next.length === current.length) return { ok: true };
+          record();
+          set({ cycleTimes: next });
+          return { ok: true };
+        }
+        const parsed = durationSchema.safeParse(time);
+        if (!parsed.success)
+          return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid cycle time' };
+        const existing = current.find(
+          (c) => c.productId === productId && c.stationId === stationId,
+        );
+        if (existing && JSON.stringify(existing.time) === JSON.stringify(parsed.data))
+          return { ok: true };
+        record();
+        set({
+          cycleTimes: [
+            ...current.filter((c) => c.productId !== productId || c.stationId !== stationId),
+            { productId, stationId, time: parsed.data },
+          ],
+        });
+        return { ok: true };
       },
       importCycleTimes: (entries) => {
         const valid = entries.filter(
