@@ -242,34 +242,39 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
               />
             ))}
           </div>
-          {Object.entries(first.params).map(([key, v]) => {
-            const isSpeed = key === 'speed';
-            return (
-              <Field
-                beginEdit={beginEdit}
-                endEdit={endEdit}
-                key={`${key}-${first.id}`}
-                label={
-                  isSpeed
-                    ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
-                    : (PARAM_LABELS[key] ?? key)
-                }
-                value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
-                commit={(t) => {
-                  const parsed = parseNumber(t);
-                  if (typeof parsed === 'string') return parsed;
-                  const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
-                  const r = updateEquipment(first.id, { params: { [key]: n } });
-                  setLinked(
-                    !r.ok && r.field && r.field !== key ? { key: r.field, message: r.error } : null,
-                  );
-                  return r.ok ? null : r.error;
-                }}
-                extraError={linked?.key === key ? linked.message : null}
-                onBlur={() => setLinked(null)}
-              />
-            );
-          })}
+          {/* Numeric params only; labor mode (TE-1) gets its own editor. */}
+          {Object.entries(first.params)
+            .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
+            .map(([key, v]) => {
+              const isSpeed = key === 'speed';
+              return (
+                <Field
+                  beginEdit={beginEdit}
+                  endEdit={endEdit}
+                  key={`${key}-${first.id}`}
+                  label={
+                    isSpeed
+                      ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
+                      : (PARAM_LABELS[key] ?? key)
+                  }
+                  value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
+                  commit={(t) => {
+                    const parsed = parseNumber(t);
+                    if (typeof parsed === 'string') return parsed;
+                    const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
+                    const r = updateEquipment(first.id, { params: { [key]: n } });
+                    setLinked(
+                      !r.ok && r.field && r.field !== key
+                        ? { key: r.field, message: r.error }
+                        : null,
+                    );
+                    return r.ok ? null : r.error;
+                  }}
+                  extraError={linked?.key === key ? linked.message : null}
+                  onBlur={() => setLinked(null)}
+                />
+              );
+            })}
         </>
       ) : (
         <p style={{ margin: 0 }}>

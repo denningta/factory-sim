@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { projectSchema } from '@factory-sim/schema';
+import { createProject, projectSchema } from '@factory-sim/schema';
 import { createEditorStore } from '../layout/editorStore';
 import { preRunIssues } from './preRunIssues';
 
@@ -56,7 +56,7 @@ describe('PR-3 each cell takes a fixed time', () => {
     s().setCycleTime(p1.id, saw, 30);
     s().setCycleTime(p1.id, cnc, 60);
     const doc = {
-      schemaVersion: 3,
+      ...createProject(),
       floor: s().floor,
       equipment: s().equipment,
       connections: s().connections,
@@ -114,7 +114,7 @@ describe('PR-3 cycle times live in the editor store and undo history (PR-1 revie
     const { saw, p1 } = setup();
     s().setCycleTime(p1.id, saw, 30);
     const doc = {
-      schemaVersion: 3 as const,
+      ...createProject(),
       floor: s().floor,
       equipment: s().equipment,
       connections: s().connections,

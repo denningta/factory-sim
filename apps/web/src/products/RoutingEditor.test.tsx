@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Equipment } from '@factory-sim/schema';
+import { createProject, type Equipment } from '@factory-sim/schema';
 import { createEditorStore } from '../layout/editorStore';
 import { ProductsPanel } from './ProductsPanel';
 
@@ -118,7 +118,7 @@ describe('PR-2 steps whose station is unreachable by connections are flagged (UI
     store.getState().addRoutingStep(p.id, fed.id);
     store.getState().addRoutingStep(p.id, island.id);
     store.getState().loadDocument({
-      schemaVersion: 3,
+      ...createProject(),
       floor: store.getState().floor,
       equipment: store.getState().equipment,
       products: store.getState().products,
@@ -129,6 +129,7 @@ describe('PR-2 steps whose station is unreachable by connections are flagged (UI
           from: { equipmentId: src.id, portId: 'out' },
           to: { equipmentId: fed.id, portId: 'in' },
           capacity: 0,
+          transfer: { kind: 'instant' },
         },
       ],
     });

@@ -25,4 +25,6 @@ issue: 36
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
+- **Contract (schema v4):** `durationSchema` has `fixed`, `normal{mean,stdDev}`, `triangular{min,mode,max}`, `lognormal{mean,stdDev}` (of the duration itself) and `exponential{mean}`, all in seconds. Sampling and truncation at 0 belong to the engine (SE-6). The histogram preview samples with a seeded `createRng` from `@factory-sim/sim-engine`. Code that reads `time.value` must check `kind === 'fixed'` first.
+
 - **AC added (product owner, 2026-11-22):** the PR-3 grid's "or a distribution" criterion moved here. The lead extends `durationSchema` with the new kinds (a schema bump) before this story starts.

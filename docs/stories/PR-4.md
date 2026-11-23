@@ -23,3 +23,5 @@ issue: 26
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
+
+- **Contract (schema v4):** `project.demand = {basis: 'perShift'|'mix', items: [{productId, value}]}` (mix sums to 100) and `project.release = {interval: Duration, product: {kind: 'smooth'|'random'} | {kind: 'sequence', pattern}}`. The three options map to: fixed interval → `fixed` interval + `smooth`; random by mix → `random`; heijunka → `sequence`. `project.calendar.shiftLength` converts per-shift demand into an interval in the UI. The AC3 'mix within 2%' test runs on the line model (SE-6).
