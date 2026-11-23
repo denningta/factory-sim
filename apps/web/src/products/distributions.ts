@@ -21,6 +21,8 @@ export function sampleDuration(d: Duration, rng: { next(): number }): number {
     case 'normal':
       return Math.max(0, d.mean + d.stdDev * normal());
     case 'triangular': {
+      // The schema guarantees min < max (min == max is rejected), so the divisions below are safe;
+      // mode == min or mode == max just puts all the weight on one side.
       const u = rng.next();
       const cut = (d.mode - d.min) / (d.max - d.min);
       return u < cut

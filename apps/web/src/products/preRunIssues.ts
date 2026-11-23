@@ -1,5 +1,5 @@
 import type { Project } from '@factory-sim/schema';
-import { missingCycleTimes } from './cycleTimes';
+import { missingCycleTimes, stationsOf } from './cycleTimes';
 
 export interface PreRunIssue {
   code: 'no_products' | 'missing_cycle_times' | 'manual_station_without_tech';
@@ -31,9 +31,12 @@ export function preRunIssues(
     });
   }
   // A manual station needs a tech present for the whole cycle; an automatic one runs alone.
+  // Only stations some routing visits count: an unrouted one never runs, so staffing it is moot.
+  const routed = new Set(project.products.flatMap(stationsOf));
   const unstaffed = project.equipment.filter(
     (e) =>
       e.behavior === 'workstation' &&
+      routed.has(e.id) &&
       e.params.labor.mode === 'manual' &&
       !project.technicians.some((t) => t.stationIds.includes(e.id)),
   );
