@@ -7,6 +7,7 @@ import {
   projectSchema,
   instantiate,
   type Connection,
+  type CycleTime,
   type Equipment,
   type Floor,
   type Product,
@@ -116,6 +117,12 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Cycle times keyed by (product, station); part of the project document (seconds, PR-3). */
+  cycleTimes: CycleTime[];
+  /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
+  setCycleTime: (productId: string, stationId: string, seconds: number | null) => ProductResult;
+  /** Applies imported cells as one undo step. */
+  importCycleTimes: (entries: { productId: string; stationId: string; seconds: number }[]) => void;
   /** Appends a step at `stationId`, which must be a workstation (PR-2). */
   addRoutingStep: (productId: string, stationId: string) => RoutingStepResult;
   /** Reassigns a step to another workstation. */
@@ -247,6 +254,13 @@ export function createEditorStore() {
       selectType: (selectedTypeId) => set({ selectedTypeId }),
       equipment: [],
       products: [],
+      cycleTimes: [],
+      setCycleTime: () => {
+        throw new Error('not implemented');
+      },
+      importCycleTimes: () => {
+        throw new Error('not implemented');
+      },
       addProduct: () => {
         const { products } = get();
         const ids = new Set(products.map((p) => p.id));
