@@ -27,7 +27,7 @@ const stochastic = (): LineSpec => ({
   products: ['A', 'B'],
   stations: [
     { id: 'S1', cycle: { A: { kind: 'exponential', mean: 40 }, B: fixed(35) } },
-    { id: 'S2', cycle: { A: { kind: 'normal', mean: 50, stdDev: 10 } } },
+    { id: 'S2', cycle: { A: { kind: 'normal', mean: 50, stdDev: 10 }, B: fixed(30) } },
     {
       id: 'S3',
       cycle: {
@@ -65,6 +65,7 @@ describe('SE-6 AC2: same seed and project give identical events and statistics, 
 
   const full = (enabled: boolean) => {
     const r = createRun(model(), opts);
+    if (!enabled) r.drainEvents(); // initial states, recorded at createRun
     r.setEventsEnabled(enabled);
     r.runUntil(r.endTime);
     return { events: r.drainEvents(), stats: r.stats() };

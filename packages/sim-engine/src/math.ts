@@ -91,12 +91,116 @@ export function log(input: number): number {
   return k === 0 ? f - s * (f - R) : dk * ln2Hi - (s * (f - R) - dk * ln2Lo - f);
 }
 
-/** e^x from exact operations only. Stub until SE-6 lands. */
-export function exp(_x: number): number {
-  throw new Error('Not implemented yet (SE-6)');
+const halF = [0.5, -0.5];
+const expHi = 7.09782712893383973096e2; // above: overflow
+const expLo = -7.4513321910194110842e2; // below: underflow to 0
+const ln2HiPair = [6.9314718036912381649e-1, -6.9314718036912381649e-1];
+const ln2LoPair = [1.90821492927058770002e-10, -1.90821492927058770002e-10];
+const invLn2 = 1.442695040888963387;
+const P1 = 1.66666666666666019037e-1;
+const P2 = -2.77777777770155933842e-3;
+const P3 = 6.61375632143793436117e-5;
+const P4 = -1.6533902205465251539e-6;
+const P5 = 4.13813679705723846039e-8;
+const twoM1000 = 9.3326361850321887899e-302; // 2^-1000
+
+/**
+ * e^x from exact operations only (lognormal samples). A port of fdlibm's `__ieee754_exp`
+ * (e_exp.c), accurate to < 1 ulp; same bit-exactness rationale as `log`.
+ */
+export function exp(input: number): number {
+  let x = input;
+  const [hx0] = words(x);
+  const xsb = (hx0 >>> 31) & 1;
+  const hx = hx0 & 0x7fffffff;
+  if (hx >= 0x40862e42) {
+    // |x| >= 709.78…: overflow, underflow, Inf or NaN
+    if (Number.isNaN(x)) return x;
+    if (x === -Infinity) return 0;
+    if (x > expHi) return Infinity;
+    if (x < expLo) return 0;
+  }
+  let hi = 0;
+  let lo = 0;
+  let k = 0;
+  if (hx > 0x3fd62e42) {
+    // |x| > 0.5 ln2: reduce to x = k ln2 + r, |r| <= 0.5 ln2
+    if (hx < 0x3ff0a2b2) {
+      hi = x - ln2HiPair[xsb]!;
+      lo = ln2LoPair[xsb]!;
+      k = 1 - xsb - xsb;
+    } else {
+      k = Math.trunc(invLn2 * x + halF[xsb]!);
+      hi = x - k * ln2HiPair[0]!;
+      lo = k * ln2LoPair[0]!;
+    }
+    x = hi - lo;
+  } else if (hx < 0x3e300000) {
+    return 1 + x; // |x| < 2^-28
+  }
+  const t = x * x;
+  const c = x - t * (P1 + t * (P2 + t * (P3 + t * (P4 + t * P5))));
+  if (k === 0) return 1 - ((x * c) / (c - 2) - x);
+  const y = 1 - (lo - (x * c) / (2 - c) - hi);
+  const [hy] = words(y);
+  if (k >= -1021) return withHiWord(y, hy + (k << 20));
+  return withHiWord(y, hy + ((k + 1000) << 20)) * twoM1000;
 }
 
-/** [sin x, cos x] from exact operations only. Stub until SE-6 lands. */
-export function sinCos(_x: number): [sin: number, cos: number] {
-  throw new Error('Not implemented yet (SE-6)');
+const pio2Hi = 1.57079632673412561417; // first 33 bits of pi/2
+const pio2Lo = 6.07710050650619224932e-11; // pi/2 - pio2Hi
+const twoOverPi = 6.36619772367581382433e-1;
+const S1 = -1.66666666666666324348e-1;
+const S2 = 8.33333333332248946124e-3;
+const S3 = -1.98412698298579493134e-4;
+const S4 = 2.75573137070700676789e-6;
+const S5 = -2.50507602534068634195e-8;
+const S6 = 1.58969099521155010221e-10;
+const C1 = 4.16666666666666019037e-2;
+const C2 = -1.38888888888741095749e-3;
+const C3 = 2.48015872894767294178e-5;
+const C4 = -2.75573143513906633035e-7;
+const C5 = 2.0875723212981748279e-9;
+const C6 = -1.13596475577881948265e-11;
+
+/** fdlibm `__kernel_sin` on [−π/4, π/4]; `y` is the tail of the reduced argument. */
+function kernelSin(x: number, y: number): number {
+  const z = x * x;
+  const v = z * x;
+  const r = S2 + z * (S3 + z * (S4 + z * (S5 + z * S6)));
+  return x - (z * (0.5 * y - v * r) - y - v * S1);
+}
+
+/** fdlibm `__kernel_cos` (FreeBSD k_cos.c) on [−π/4, π/4]. */
+function kernelCos(x: number, y: number): number {
+  const z = x * x;
+  const w = z * z;
+  const r = z * (C1 + z * (C2 + z * C3)) + w * w * (C4 + z * (C5 + z * C6));
+  const hz = 0.5 * z;
+  const a = 1 - hz;
+  return a + (1 - a - hz + (z * r - x * y));
+}
+
+/**
+ * [sin x, cos x] from exact operations only (port positions on rotated equipment). Range
+ * reduction by a two-part π/2 is accurate for |x| < 2^20, far beyond any rotation; fdlibm
+ * kernels do the rest.
+ */
+export function sinCos(x: number): [sin: number, cos: number] {
+  const k = Math.round(x * twoOverPi);
+  const head = x - k * pio2Hi;
+  const r = head - k * pio2Lo;
+  const tail = head - r - k * pio2Lo;
+  const s = kernelSin(r, tail);
+  const c = kernelCos(r, tail);
+  switch (k & 3) {
+    case 0:
+      return [s, c];
+    case 1:
+      return [c, -s];
+    case 2:
+      return [-s, -c];
+    default:
+      return [-c, s];
+  }
 }
