@@ -4,7 +4,7 @@ epic: Workstation config
 points: 3
 priority: Must
 sprint: 4
-depends_on: [SE-1]
+depends_on: [SE-1, SE-6]
 builder_model: sonnet
 owner: builder
 issue: 37
