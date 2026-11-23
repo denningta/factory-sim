@@ -7,7 +7,8 @@
  * Engine rules (line-api.ts): the source releases only when the first hop has room
  * (nothing queues at it) and the next release is due one interval later; load/unload counts
  * as working; a station releases its tech before it blocks; a buffer sends out the oldest
- * part that can move (each part waits on its own next place, FIFO).
+ * part that can move (a part blocked on its next place does not hold back later ones; each
+ * place's waiters are FIFO).
  */
 import type { Entity, Resource, Simulation, TimeWeighted } from './api';
 import type { CompiledLine, Leg, ProductDef, StationDef } from './line-compile';
