@@ -119,7 +119,11 @@ export interface EditorState extends Prefs {
   /** Appends a step at `stationId`, which must be a workstation (PR-2). */
   addRoutingStep: (productId: string, stationId: string) => RoutingStepResult;
   /** Reassigns a step to another workstation. */
-  setRoutingStepStation: (productId: string, stepId: string, stationId: string) => RoutingStepResult;
+  setRoutingStepStation: (
+    productId: string,
+    stepId: string,
+    stationId: string,
+  ) => RoutingStepResult;
   /** Moves a step to index `to` (clamped); the rest keep their order. */
   moveRoutingStep: (productId: string, stepId: string, to: number) => void;
   removeRoutingStep: (productId: string, stepId: string) => void;
@@ -224,6 +228,18 @@ export function createEditorStore() {
       record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
     };
+    /** Why `id` can't be a routing step's station, or null if it can (schema: workstations). */
+    const notAStation = (id: string): string | null => {
+      const e = get().equipment.find((q) => q.id === id);
+      if (!e) return 'Station not found';
+      return e.behavior === 'workstation' ? null : `${e.name} is not a workstation`;
+    };
+    const routingOf = (productId: string) =>
+      get().products.find((p) => p.id === productId)?.routing ?? [];
+    const findStep = (productId: string, stepId: string) =>
+      routingOf(productId).find((s) => s.id === stepId);
+    const setRouting = (productId: string, routing: RoutingStep[]) =>
+      set({ products: get().products.map((p) => (p.id === productId ? { ...p, routing } : p)) });
     return {
       ...loadPrefs(),
       floor: createProject().floor,
@@ -294,17 +310,56 @@ export function createEditorStore() {
         record();
         set({ products: get().products.filter((p) => p.id !== id) });
       },
-      addRoutingStep: () => {
-        throw new Error('not implemented');
+      addRoutingStep: (productId, stationId) => {
+        const error = notAStation(stationId);
+        if (error) return { ok: false, error };
+        const product = get().products.find((p) => p.id === productId);
+        if (!product) return { ok: false, error: 'Product not found' };
+        // Ids are unique across the whole document (schema rule), not just this routing.
+        const taken = new Set<string>([
+          ...get().equipment.map((e) => e.id),
+          ...get().connections.map((c) => c.id),
+          ...get().products.flatMap((p) => [p.id, ...p.routing.map((s) => s.id)]),
+        ]);
+        let n = 1;
+        while (taken.has(`step-${n}`)) n++;
+        const step: RoutingStep = { id: `step-${n}`, stationId };
+        record();
+        setRouting(productId, [...product.routing, step]);
+        return { ok: true, step };
       },
-      setRoutingStepStation: () => {
-        throw new Error('not implemented');
+      setRoutingStepStation: (productId, stepId, stationId) => {
+        const error = notAStation(stationId);
+        if (error) return { ok: false, error };
+        const step = findStep(productId, stepId);
+        if (!step) return { ok: false, error: 'Step not found' };
+        if (step.stationId === stationId) return { ok: true, step };
+        const next = { ...step, stationId };
+        record();
+        setRouting(
+          productId,
+          routingOf(productId).map((s) => (s.id === stepId ? next : s)),
+        );
+        return { ok: true, step: next };
       },
-      moveRoutingStep: () => {
-        throw new Error('not implemented');
+      moveRoutingStep: (productId, stepId, to) => {
+        const routing = routingOf(productId);
+        const from = routing.findIndex((s) => s.id === stepId);
+        if (from < 0) return;
+        const target = Math.max(0, Math.min(routing.length - 1, Math.trunc(to)));
+        if (target === from) return;
+        const next = routing.filter((s) => s.id !== stepId);
+        next.splice(target, 0, routing[from]!);
+        record();
+        setRouting(productId, next);
       },
-      removeRoutingStep: () => {
-        throw new Error('not implemented');
+      removeRoutingStep: (productId, stepId) => {
+        if (!findStep(productId, stepId)) return;
+        record();
+        setRouting(
+          productId,
+          routingOf(productId).filter((s) => s.id !== stepId),
+        );
       },
       connections: [],
       selectedIds: [],
@@ -417,7 +472,16 @@ export function createEditorStore() {
         const gone = new Set(get().selectedIds);
         if (!get().equipment.some((e) => gone.has(e.id))) return;
         record();
-        set({ equipment: get().equipment.filter((e) => !gone.has(e.id)), selectedIds: [] });
+        set({
+          equipment: get().equipment.filter((e) => !gone.has(e.id)),
+          // A step at a deleted station would make the document invalid (PR-2).
+          products: get().products.map((p) =>
+            p.routing.some((s) => gone.has(s.stationId))
+              ? { ...p, routing: p.routing.filter((s) => !gone.has(s.stationId)) }
+              : p,
+          ),
+          selectedIds: [],
+        });
       },
       loadDocument: (doc) => {
         past = [];
@@ -427,6 +491,7 @@ export function createEditorStore() {
           floor: doc.floor,
           equipment: doc.equipment,
           products: doc.products,
+          connections: doc.connections,
           selectedIds: [],
           selectedTypeId: null,
           canUndo: false,
