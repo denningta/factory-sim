@@ -74,7 +74,7 @@ const engineRestrictedProperties = [
 ];
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'docs/**'] },
+  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'docs/**', '.worktrees/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

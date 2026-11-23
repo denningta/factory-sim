@@ -33,6 +33,12 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 6. **Merge**: lead pings you with link and summary. You read the reviewer's comment, check the demo/screenshots, and merge on GitHub.
 7. **Close**: lead `/close-story <ID>`: closes the issue, removes the worktree (branch kept), picks the next story.
 
+## Token budget (product owner, 2026-11-22)
+
+- **Reviewer:** the lead clears its context before each new PR. Re-reviews look only at the diff since the last review. Local test runs are limited to the affected packages, because CI runs everything.
+- **Builders:** a fresh session per story, narrow reads, quiet command output, small screenshots looked at once, and short reports (`.claude/agents/builder.md`).
+- **Lead:** no reviewer pass for docs-only lead PRs. Notes for in-flight stories go on their issue.
+
 ## Answering agents
 
 - herdr shows each agent as **working / idle / blocked / done**. _Blocked_ = waiting on a permission prompt or question.
