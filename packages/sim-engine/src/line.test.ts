@@ -52,11 +52,7 @@ const stochastic = (): LineSpec => ({
   ],
 });
 
-describe('SE-6 AC1: reference model', () => {
-  it.todo(
-    'runs the 5-station, 2-product reference model and matches expected.json (lands with the lead PR)',
-  );
-});
+// SE-6 AC1 (reference model) lives in reference-model.test.ts.
 
 describe('SE-6 AC2: same seed and project give identical events and statistics, events on or off', () => {
   let compiled: LineModel | undefined;

@@ -34,7 +34,7 @@ describe('blocking and buffers', () => {
   it('a finite buffer fills, then S1 blocks', () => {
     const { stats } = runLine(two(10, 20, { linkCapacity: 0, inserts: { 0: { buffer: 5 } } }));
     expect(stats.stations['S1']!.blocked).toBeCloseTo(0.5, 2);
-    expect(stats.total.averageWip).toBeCloseTo(8, 0); // S1 + 5 in buffer + S2 + 1 at the source
+    expect(stats.total.averageWip).toBeCloseTo(7, 0); // S1 + 5 in the buffer + S2; nothing waits at the source
   });
 
   it('an unlimited connection never blocks', () => {

@@ -4,10 +4,10 @@
  * `Place` with a capacity and a FIFO of parts waiting for room. Room is reserved the moment
  * it is granted and the move is delivered as a zero-delay event, like the kernel's queues.
  *
- * Engine rules (line-api.ts): the source waits while the line is full and releases again
- * one interval after its last release; load/unload counts as working; a station releases
- * its tech before it blocks; a buffer sends out the oldest part that can move (each part
- * waits on its own next place, FIFO).
+ * Engine rules (line-api.ts): the source releases only when the first hop has room
+ * (nothing queues at it) and the next release is due one interval later; load/unload counts
+ * as working; a station releases its tech before it blocks; a buffer sends out the oldest
+ * part that can move (each part waits on its own next place, FIFO).
  */
 import type { Entity, Resource, Simulation, TimeWeighted } from './api';
 import type { CompiledLine, Leg, ProductDef, StationDef } from './line-compile';
@@ -342,12 +342,15 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
         );
     }
 
+  /** Where a part on `leg` needs room first: the connection, or the node on a direct hand-off. */
+  const firstPlace = (leg: Leg) =>
+    leg.connection.capacity === 0
+      ? nodePlaces.get(leg.node.id)!
+      : connPlaces.get(leg.connection.id)!;
+
   const advance = (part: Part) => {
     const leg = part.product.def.route[part.leg]!;
-    const target =
-      leg.connection.capacity === 0
-        ? nodePlaces.get(leg.node.id)!
-        : connPlaces.get(leg.connection.id)!;
+    const target = firstPlace(leg);
     requestRoom(target, () => depart(part, leg, target));
   };
 
@@ -424,33 +427,33 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   }));
   const interval = durationSampler(rng.fork('release'), line.release.interval);
   const pickProduct = productPicker(line, products, rng.fork('release-product'));
-  const source = place(1);
-  let releaseDue = false;
-  source.onLeave = () => {
-    if (releaseDue) defer(release);
-  };
+  /** Parts exist only once they leave the source, so it never holds one: no capacity. */
+  const source = place(Infinity);
+  /**
+   * A release is due: wait for room on the first hop (nothing queues at the source), then
+   * release the part into the line. The next release is due one interval after this one.
+   */
   const due = () => {
-    if (source.used === 0) release();
-    else releaseDue = true;
-  };
-  const release = () => {
-    releaseDue = false;
     const product = pickProduct();
-    const part: Part = sim.createEntity({ product, leg: 0, holder: source });
-    source.used++;
-    for (const f of [product.flow, total]) {
-      f.released++;
-      f.wip.update(f.wip.current + 1);
-    }
-    emit({
-      t: sim.now,
-      type: 'partReleased',
-      partId: part.id,
-      productId: product.def.id,
-      sourceId: line.sourceId,
+    const leg = product.def.route[0]!;
+    const target = firstPlace(leg);
+    requestRoom(target, () => {
+      const part: Part = sim.createEntity({ product, leg: 0, holder: source });
+      source.used++;
+      for (const f of [product.flow, total]) {
+        f.released++;
+        f.wip.update(f.wip.current + 1);
+      }
+      emit({
+        t: sim.now,
+        type: 'partReleased',
+        partId: part.id,
+        productId: product.def.id,
+        sourceId: line.sourceId,
+      });
+      depart(part, leg, target);
+      sim.schedule(interval(), due);
     });
-    advance(part);
-    sim.schedule(interval(), due);
   };
 
   // ---- run control ----
