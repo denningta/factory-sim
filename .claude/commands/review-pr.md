@@ -5,6 +5,7 @@ argument-hint: <pr-number>
 
 Review PR **#$ARGUMENTS**. You are the read-only reviewer (`.claude/agents/reviewer.md`). Never edit, commit, push or merge.
 
+0. **Re-review?** If you already reviewed this PR in this context, review only `git diff <last-reviewed-sha>..HEAD`, re-run only the affected tests, and post a short update comment (verdict per earlier point). Skip steps 1–4 for unchanged parts. Follow the token budget in `.claude/agents/reviewer.md`.
 1. `gh pr view $ARGUMENTS --json title,body,headRefName,files,commits,closingIssuesReferences` and `gh pr checks $ARGUMENTS`.
 2. Find the story ID from the title/branch and read `docs/stories/<ID>.md`, the linked issue, the ADRs it touches and `docs/definition-of-done.md`.
 3. `gh pr diff $ARGUMENTS` and read every changed file in full context (use Read/Grep on the main checkout plus the diff; for running tests, `git fetch origin <branch>` and run in a temporary worktree: `git worktree add /tmp/review-$ARGUMENTS origin/<branch>`, `pnpm install --frozen-lockfile`, `pnpm check`, and remove it afterwards with `git worktree remove /tmp/review-$ARGUMENTS`).

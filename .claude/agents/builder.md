@@ -18,3 +18,13 @@ Start with `/implement-story <ID>` when prompted. Read `CLAUDE.md` first.
 - Don't tick the acceptance-criteria checkboxes in `docs/stories/*.md`. Status lives in the GitHub issue, and the PR's criterion → test table is the evidence. Do write design decisions in the story's Notes section.
 - When review feedback arrives, address every point (fix it or reply with a reason), push, and report back in one short message.
 - Finish by printing: `PR READY: #<number> <url>` so the lead can find it.
+
+## Token budget
+
+Every line you read or print stays in your context for the rest of the story. Keep it lean.
+
+- **Read narrowly:** read the story, its Notes, the ADRs it names and the files you'll change. Find things with `grep -rn`/Glob first, then Read only the relevant range (`offset`/`limit`). Never read lockfiles, `dist/`, `coverage/` or generated files.
+- **Quiet commands:** pipe noisy output: `pnpm check 2>&1 | tail -30`, run one package or one file while iterating (`pnpm --filter <pkg> test -- <file>`), and run the full `pnpm check` once before committing. On failure, show only the failing test's lines. Use `gh … --json <fields>` with `--jq`, never full `gh pr view` dumps.
+- **Screenshots:** capture at 1280×800 or smaller, only the regions the story touches, and look at each image once.
+- **Don't re-verify** what didn't change. After a review fix, re-run the affected tests, then `pnpm check` once.
+- **Reports:** your final message is a short summary (what changed, decisions, open questions), not a replay of the diff.
