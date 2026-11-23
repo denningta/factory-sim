@@ -18,9 +18,12 @@ import {
   type Labor,
   type Product,
   type Technician,
+  type Demand,
+  type Release,
   type Project,
   type RoutingStep,
 } from '@factory-sim/schema';
+import { intervalForShift, toMix } from '../products/demand';
 import { dragTargets, idsInRect } from './selection';
 import { MAX_GRID_LINES, snapToGrid } from './gridLayout';
 import type { DisplayUnit } from './units';
@@ -101,6 +104,8 @@ export interface EquipmentPatch {
 
 export type RoutingStepResult = { ok: true; step: RoutingStep } | { ok: false; error: string };
 
+export type ReleaseMode = 'fixed' | 'random' | 'sequence';
+
 export type ProductResult = { ok: true } | { ok: false; error: string; field?: string };
 
 /** The fields PR-1 edits; the routing is PR-2's. */
@@ -130,6 +135,22 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Demand per product (PR-4); part of the project document. */
+  demand: Demand;
+  /** Release rule (PR-4); part of the project document. */
+  release: Release;
+  /** Seconds per shift (read-only here); turns per-shift demand into a release interval. */
+  shiftLength: number;
+  /** Switches between units per shift and % of mix, converting the values. */
+  setDemandBasis: (basis: Demand['basis']) => void;
+  /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
+  setDemandValue: (productId: string, value: number) => ProductResult;
+  /** Fixed interval = `smooth` product order; random = by mix; sequence = repeating pattern. */
+  setReleaseMode: (mode: ReleaseMode) => void;
+  /** Seconds between releases (a fixed interval). */
+  setReleaseInterval: (seconds: number) => ProductResult;
+  /** The repeating heijunka pattern, as product ids. */
+  setReleasePattern: (productIds: string[]) => ProductResult;
   /** Technicians; part of the project document (TE-1). */
   technicians: Technician[];
   /** Adds a technician named "Tech N" with the default walk speed (1.2 m/s). */
@@ -244,6 +265,8 @@ export function createEditorStore() {
       connections: Connection[];
       cycleTimes: CycleTime[];
       technicians: Technician[];
+      demand: Demand;
+      release: Release;
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -252,6 +275,8 @@ export function createEditorStore() {
       connections: get().connections,
       cycleTimes: get().cycleTimes,
       technicians: get().technicians,
+      demand: get().demand,
+      release: get().release,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -288,6 +313,19 @@ export function createEditorStore() {
       if (!get().equipment.some((e) => ids.has(e.id))) return;
       record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
+    };
+    /** Products whose mix % the user set this session; later edits leave them alone. */
+    const editedDemand = new Set<string>();
+    /** Per-shift demand fixes the release interval: shift length ÷ units. {} when it doesn't apply. */
+    const intervalFor = (d: Demand): { release?: Release } => {
+      if (d.basis !== 'perShift') return {};
+      const seconds = intervalForShift(
+        get().shiftLength,
+        d.items.reduce((t, i) => t + i.value, 0),
+      );
+      return seconds === null
+        ? {}
+        : { release: { ...get().release, interval: { kind: 'fixed', value: seconds } } };
     };
     /** Why `id` can't be a routing step's station, or null if it can (schema: workstations). */
     const notAStation = (id: string): string | null => {
@@ -397,6 +435,98 @@ export function createEditorStore() {
         });
       },
       technicians: [],
+      demand: { basis: 'mix', items: [] },
+      release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
+      shiftLength: 28800,
+      setDemandBasis: (basis) => {
+        const { demand, products } = get();
+        if (demand.basis === basis) return;
+        const weights = new Map(demand.items.map((i) => [i.productId, i.value]));
+        const ids = products.map((p) => p.id);
+        // Mix needs a total of 100; units keep each product's number as it is.
+        const items =
+          basis === 'mix'
+            ? toMix(ids, weights)
+            : ids.map((productId) => ({ productId, value: weights.get(productId) ?? 0 }));
+        editedDemand.clear();
+        record();
+        set({ demand: { basis, items }, ...intervalFor({ basis, items }) });
+      },
+      setDemandValue: (productId, value) => {
+        const { demand, products } = get();
+        if (!products.some((p) => p.id === productId))
+          return { ok: false, error: 'Product not found' };
+        const max = demand.basis === 'mix' ? 100 : Infinity;
+        if (!Number.isFinite(value) || value < 0 || value > max)
+          return {
+            ok: false,
+            error: demand.basis === 'mix' ? 'Enter a percentage from 0 to 100' : 'Enter 0 or more',
+          };
+        const current = new Map(demand.items.map((i) => [i.productId, i.value]));
+        const ids = products.map((p) => p.id);
+        let items: Demand['items'];
+        if (demand.basis === 'mix') {
+          // Products the user already set keep their value; only the rest absorb the remainder,
+          // so 3+ products can be set exactly. If that can't fit, everyone else rescales.
+          const others = ids.filter((id) => id !== productId);
+          const open = others.filter((id) => !editedDemand.has(id));
+          const fixed = others.filter((id) => editedDemand.has(id));
+          const fixedSum = fixed.reduce((t, id) => t + (current.get(id) ?? 0), 0);
+          const absorb = open.length > 0 && 100 - value - fixedSum >= 0;
+          const share = absorb ? open : others;
+          const kept = absorb ? fixed : [];
+          const rest = toMix(
+            share,
+            new Map(share.map((id) => [id, current.get(id) ?? 0])),
+            Math.round((100 - value - (absorb ? fixedSum : 0)) * 100) / 100,
+          );
+          editedDemand.add(productId);
+          items = [
+            { productId, value: others.length === 0 ? 100 : value },
+            ...kept.map((id) => ({ productId: id, value: current.get(id) ?? 0 })),
+            ...rest,
+          ];
+          items.sort((x, y) => ids.indexOf(x.productId) - ids.indexOf(y.productId));
+        } else {
+          current.set(productId, value);
+          items = ids.map((id) => ({ productId: id, value: current.get(id) ?? 0 }));
+        }
+        const next = { basis: demand.basis, items };
+        record();
+        set({ demand: next, ...intervalFor(next) });
+        return { ok: true };
+      },
+      setReleaseMode: (mode) => {
+        const { release, products } = get();
+        let product: Release['product'];
+        if (mode === 'sequence') {
+          if (release.product.kind === 'sequence' || products.length === 0) return;
+          product = { kind: 'sequence', pattern: products.map((p) => p.id) };
+        } else {
+          product = mode === 'random' ? { kind: 'random' } : { kind: 'smooth' };
+          if (release.product.kind === product.kind) return;
+        }
+        record();
+        set({ release: { ...release, product } });
+      },
+      setReleaseInterval: (seconds) => {
+        if (get().demand.basis === 'perShift')
+          return { ok: false, error: 'The interval follows from units per shift' };
+        const interval = durationSchema.safeParse({ kind: 'fixed', value: seconds });
+        if (!interval.success) return { ok: false, error: 'Enter a number of seconds above 0' };
+        record();
+        set({ release: { ...get().release, interval: interval.data } });
+        return { ok: true };
+      },
+      setReleasePattern: (productIds) => {
+        if (productIds.length === 0) return { ok: false, error: 'Add at least one product' };
+        const known = new Set(get().products.map((p) => p.id));
+        if (productIds.some((id) => !known.has(id)))
+          return { ok: false, error: 'Unknown product in the sequence' };
+        record();
+        set({ release: { ...get().release, product: { kind: 'sequence', pattern: productIds } } });
+        return { ok: true };
+      },
       addTechnician: () => {
         const { technicians } = get();
         const used = new Set(technicians.map((t) => t.id));
@@ -511,10 +641,36 @@ export function createEditorStore() {
       },
       deleteProduct: (id) => {
         if (!get().products.some((p) => p.id === id)) return;
+        const products = get().products.filter((p) => p.id !== id);
+        editedDemand.delete(id);
+        const { demand, release } = get();
+        // Demand and the pattern may only name products that exist, or autosave fails validation.
+        const kept = demand.items.filter((i) => i.productId !== id);
+        const items =
+          demand.basis === 'mix'
+            ? toMix(
+                kept.map((i) => i.productId),
+                new Map(kept.map((i) => [i.productId, i.value])),
+              )
+            : kept;
+        const nextDemand = { basis: demand.basis, items };
+        let nextRelease = release;
+        if (release.product.kind === 'sequence') {
+          const pattern = release.product.pattern.filter((p) => p !== id);
+          nextRelease = {
+            ...release,
+            product: pattern.length > 0 ? { kind: 'sequence', pattern } : { kind: 'smooth' },
+          };
+        }
+        const derived = intervalFor(nextDemand);
         record();
         set({
-          products: get().products.filter((p) => p.id !== id),
+          products,
           cycleTimes: get().cycleTimes.filter((c) => c.productId !== id),
+          demand: nextDemand,
+          release: derived.release
+            ? { ...nextRelease, interval: derived.release.interval }
+            : nextRelease,
         });
       },
       addRoutingStep: (productId, stationId) => {
@@ -776,12 +932,16 @@ export function createEditorStore() {
         past = [];
         future = [];
         session = null;
+        editedDemand.clear();
         set({
           floor: doc.floor,
           equipment: doc.equipment,
           products: doc.products,
           cycleTimes: doc.cycleTimes,
           technicians: doc.technicians,
+          demand: doc.demand,
+          release: doc.release,
+          shiftLength: doc.calendar.shiftLength,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,
