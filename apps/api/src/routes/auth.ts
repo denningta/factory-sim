@@ -1,4 +1,5 @@
 import {
+  changePasswordRequestSchema,
   loginRequestSchema,
   setupRequestSchema,
   userIdSchema,
@@ -9,7 +10,13 @@ import {
 import { eq, sql } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 import { dummyHash, hashPassword, verifyPassword } from '../auth/passwords';
-import { createSession, deleteSession, purgeExpired, type UserRow } from '../auth/sessions';
+import {
+  createSession,
+  deleteOtherSessions,
+  deleteSession,
+  purgeExpired,
+  type UserRow,
+} from '../auth/sessions';
 import {
   clearSessionCookie,
   requireUser,
@@ -95,6 +102,30 @@ export const authRoutes: FastifyPluginAsync<{ ctx: AppContext }> = async (app, {
     // A new id on every login prevents session fixation.
     setSessionCookie(ctx, reply, await createSession(ctx.db, ctx.policy, user.id, now));
     return { user: toUser(user) };
+  });
+
+  app.post('/api/auth/password', { preHandler: requireUser(ctx) }, async (request, reply) => {
+    const { currentPassword, newPassword } = parseWith(changePasswordRequestSchema, request.body);
+    const user = request.user!;
+    // Same throttle as sign-in, so this endpoint can't be used to guess a password.
+    const key = `${user.email}|${request.ip}`;
+    const wait = ctx.throttle.attempt(key);
+    if (wait > 0) {
+      throw new HttpError('rate_limited', 'Too many failed attempts; try again later', {
+        'retry-after': String(wait),
+      });
+    }
+    if (!(await verifyPassword(user.passwordHash, currentPassword))) {
+      throw new HttpError('unauthorized', 'Current password is incorrect');
+    }
+    ctx.throttle.succeed(key);
+    await ctx.db
+      .update(users)
+      .set({ passwordHash: await hashPassword(newPassword) })
+      .where(eq(users.id, user.id));
+    // A stolen session must not outlive the password change; this browser stays signed in.
+    await deleteOtherSessions(ctx.db, ctx.policy, user.id, sessionCookie(request)!);
+    return reply.code(204).send();
   });
 
   app.post('/api/auth/logout', async (request, reply) => {

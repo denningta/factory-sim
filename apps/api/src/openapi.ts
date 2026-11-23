@@ -1,11 +1,13 @@
 import {
   apiErrorSchema,
+  changePasswordRequestSchema,
   createProjectRequestSchema,
   createUserRequestSchema,
   loginRequestSchema,
   projectDetailSchema,
   projectListResponseSchema,
   projectSummarySchema,
+  resetPasswordRequestSchema,
   sessionResponseSchema,
   setupRequestSchema,
   setupStatusResponseSchema,
@@ -71,6 +73,21 @@ export function openApiDocument() {
       },
       '/api/auth/session': {
         get: { summary: 'Current user', responses: { ...ok(sessionResponseSchema), ...errors } },
+      },
+      '/api/auth/password': {
+        post: {
+          summary: 'Change my password; ends my other sessions',
+          requestBody: body(changePasswordRequestSchema),
+          responses: { '204': { description: 'Changed' }, ...errors },
+        },
+      },
+      '/api/users/{id}/password': {
+        put: {
+          summary: "Set another user's password and end their sessions (admin)",
+          parameters: idParam,
+          requestBody: body(resetPasswordRequestSchema),
+          responses: { '204': { description: 'Reset' }, ...errors },
+        },
       },
       '/api/users': {
         get: {

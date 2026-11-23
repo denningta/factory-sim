@@ -14,10 +14,12 @@ export function ProjectList({
   api,
   onOpen,
   onSignOut,
+  onAccount,
 }: {
   api: ProjectsApi;
   onOpen: (id: string) => void;
   onSignOut?: () => void;
+  onAccount?: () => void;
 }) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,10 @@ export function ProjectList({
     <section style={{ maxWidth: 640, margin: '0 auto', padding: 24, font: '14px sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Projects</h1>
-        {onSignOut && <button onClick={onSignOut}>Sign out</button>}
+        <span>
+          {onAccount && <button onClick={onAccount}>Account</button>}{' '}
+          {onSignOut && <button onClick={onSignOut}>Sign out</button>}
+        </span>
       </header>
       <form
         onSubmit={(e) => {

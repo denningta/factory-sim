@@ -51,6 +51,10 @@ export function toErrorResponse(error: Error & { statusCode?: number; code?: str
     const e = new HttpError('payload_too_large', 'Request body too large');
     return { status: e.status, body: e.body() };
   }
+  if (error.code === 'FST_ERR_CTP_INVALID_MEDIA_TYPE') {
+    const e = new HttpError('unsupported_media_type', 'Send application/json');
+    return { status: e.status, body: e.body() };
+  }
   const status = error.statusCode;
   if (status !== undefined && status >= 400 && status < 500) {
     // Other client errors Fastify raises (400, 415, 405, ...): keep the status.

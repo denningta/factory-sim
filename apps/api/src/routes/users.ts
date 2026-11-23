@@ -1,5 +1,6 @@
 import {
   createUserRequestSchema,
+  resetPasswordRequestSchema,
   updateUserRequestSchema,
   userIdSchema,
   type User,
@@ -47,5 +48,22 @@ export const userRoutes: FastifyPluginAsync<{ ctx: AppContext }> = async (app, {
     // Disabling must take effect immediately, not when the idle window runs out.
     if (row.disabled) await deleteUserSessions(ctx.db, row.id);
     return toUser(row);
+  });
+
+  app.put<{ Params: { id: string } }>('/api/users/:id/password', admin, async (request, reply) => {
+    const id = userIdSchema.safeParse(request.params.id);
+    if (!id.success) throw new HttpError('not_found', 'User not found');
+    const { newPassword } = parseWith(resetPasswordRequestSchema, request.body);
+    if (id.data === request.user!.id) {
+      throw new HttpError('forbidden', 'Change your own password from your account instead');
+    }
+    const [row] = await ctx.db
+      .update(users)
+      .set({ passwordHash: await hashPassword(newPassword) })
+      .where(eq(users.id, id.data))
+      .returning({ id: users.id });
+    if (!row) throw new HttpError('not_found', 'User not found');
+    await deleteUserSessions(ctx.db, row.id);
+    return reply.code(204).send();
   });
 };

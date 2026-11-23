@@ -36,7 +36,7 @@ describe('UserAdmin', () => {
         currentUserId={ME.id}
       />,
     );
-    await screen.findByText(ENG.email);
+    await screen.findByText(/eng@plant\.test \(user\)/);
     expect(screen.queryByRole('button', { name: /reset password.*admin@/i })).toBeNull();
   });
 });
