@@ -6,7 +6,6 @@ import {
   floorSchema,
   projectSchema,
   instantiate,
-  validateProject,
   type Connection,
   type Equipment,
   type PortRef,
@@ -147,6 +146,9 @@ export interface EditorState extends Prefs {
   clickPort: (ref: PortRef) => ConnectResult;
   connect: (from: PortRef, to: PortRef) => ConnectResult;
   selectConnection: (id: string | null) => void;
+  /** Ids being dragged right now (empty otherwise); their ports and arrows are hidden. */
+  draggingIds: string[];
+  setDragging: (ids: string[]) => void;
   /** Session-only edit history (LE-3). */
   canUndo: boolean;
   canRedo: boolean;
@@ -455,16 +457,19 @@ export function createEditorStore() {
         while (taken.has(`cn-${n}`)) n++;
         const next = [...connections, { id: `cn-${n}`, from, to, capacity: 0 }];
         // The schema owns the rules: no self-link, output→input only, no duplicates.
-        const parsed = validateProject({ ...createProject(), floor, equipment, connections: next });
-        if (!parsed.ok) {
-          // The schema message is a bulleted list headed by a preamble; show just the reason.
-          const reason = parsed.error.split('\n').find((l) => l.startsWith('- '));
-          return { ok: false, error: reason ? reason.replace(/^- (\S+: )?/, '') : parsed.error };
-        }
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor,
+          equipment,
+          connections: next,
+        });
+        if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
         record();
         set({ connections: next, selectedConnectionId: `cn-${n}`, selectedIds: [] });
         return { ok: true };
       },
+      draggingIds: [],
+      setDragging: (draggingIds) => set({ draggingIds }),
       selectConnection: (id) =>
         set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {

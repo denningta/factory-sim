@@ -3,13 +3,13 @@ import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Equipment, PortRef } from '@factory-sim/schema';
 import { useEditorStore } from './editorStore';
-import { portWorldPosition } from './ports';
+import { hideDragged, portWorldPosition } from './ports';
 
 const FLOW = '#475569';
 const SELECTED = '#2563eb';
 const PENDING = '#f59e0b';
 const ARROW_Y = 0.08;
-const PORT_Y = 0.15;
+const PORT_LIFT = 0.1;
 
 function portPoint(equipment: readonly Equipment[], ref: PortRef) {
   const e = equipment.find((q) => q.id === ref.equipmentId);
@@ -65,8 +65,13 @@ function Arrow({
 
 /** Connection arrows and the clickable port markers that draw them. */
 export function ConnectionLayer() {
-  const equipment = useEditorStore((s) => s.equipment);
-  const connections = useEditorStore((s) => s.connections);
+  const allEquipment = useEditorStore((s) => s.equipment);
+  const allConnections = useEditorStore((s) => s.connections);
+  const draggingIds = useEditorStore((s) => s.draggingIds);
+  const { equipment, connections } = useMemo(
+    () => hideDragged(allEquipment, allConnections, draggingIds),
+    [allEquipment, allConnections, draggingIds],
+  );
   const selectedId = useEditorStore((s) => s.selectedConnectionId);
   const pending = useEditorStore((s) => s.pendingFrom);
 
@@ -104,12 +109,15 @@ export function ConnectionLayer() {
           return (
             <mesh
               key={`${e.id}:${p.id}`}
-              position={[at.x, PORT_Y, at.y]}
+              // Above the equipment top so the equipment's own pick handler can't swallow the click.
+              position={[at.x, e.height + PORT_LIFT, at.y]}
+              renderOrder={3}
               onPointerDown={onPort(ref)}
               name={`port:${e.id}:${p.id}`}
             >
               <sphereGeometry args={[0.28, 16, 12]} />
               <meshBasicMaterial
+                depthTest={false}
                 color={active ? PENDING : p.kind === 'output' ? '#16a34a' : '#dc2626'}
               />
             </mesh>
