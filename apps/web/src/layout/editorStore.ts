@@ -12,7 +12,9 @@ import {
   type Equipment,
   type PortRef,
   type Floor,
+  type Labor,
   type Product,
+  type Technician,
   type Project,
   type RoutingStep,
 } from '@factory-sim/schema';
@@ -83,6 +85,8 @@ export interface EquipmentPatch {
   name?: string;
   position?: Partial<Point>;
   params?: Record<string, number>;
+  /** Workstation labor mode (TE-1); validated with the rest of the equipment. */
+  labor?: Labor;
   /** Meters. */
   footprint?: { width?: number; length?: number };
   /** Meters. */
@@ -120,6 +124,15 @@ export interface EditorState extends Prefs {
   /** Validates with the schema plus part-number uniqueness; on failure nothing changes. */
   updateProduct: (id: string, patch: ProductPatch) => ProductResult;
   deleteProduct: (id: string) => void;
+  /** Technicians; part of the project document (TE-1). */
+  technicians: Technician[];
+  /** Adds a technician named "Tech N" with the default walk speed (1.2 m/s). */
+  addTechnician: () => Technician;
+  /** Validates name (non-blank) and walk speed (m/s, > 0); on failure nothing changes. */
+  updateTechnician: (id: string, patch: { name?: string; walkSpeed?: number }) => ProductResult;
+  deleteTechnician: (id: string) => void;
+  /** Assigns or unassigns a tech to a workstation; other equipment is rejected. */
+  setTechnicianStation: (techId: string, stationId: string, assigned: boolean) => ProductResult;
   /** Cycle times keyed by (product, station); part of the project document (seconds, PR-3). */
   cycleTimes: CycleTime[];
   /** Sets a fixed time, or clears the cell with `null`. The station must be in the routing. */
@@ -333,6 +346,19 @@ export function createEditorStore() {
             get().cycleTimes,
           ),
         });
+      },
+      technicians: [],
+      addTechnician: () => {
+        throw new Error('TE-1: not implemented');
+      },
+      updateTechnician: () => {
+        throw new Error('TE-1: not implemented');
+      },
+      deleteTechnician: () => {
+        throw new Error('TE-1: not implemented');
+      },
+      setTechnicianStation: () => {
+        throw new Error('TE-1: not implemented');
       },
       addProduct: () => {
         const { products } = get();

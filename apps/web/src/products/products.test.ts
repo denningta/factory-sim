@@ -100,13 +100,15 @@ describe('PR-1 part numbers must be unique', () => {
 
 describe('PR-1 a run needs at least one product', () => {
   it('reports no_products when there are none', () => {
-    expect(preRunIssues({ products: [], cycleTimes: [], equipment: [] })).toEqual([
+    expect(preRunIssues({ products: [], cycleTimes: [], equipment: [], technicians: [] })).toEqual([
       { code: 'no_products', message: expect.stringMatching(/at least one product/i) },
     ]);
   });
 
   it('reports nothing once a product exists', () => {
     const a = createEditorStore().getState().addProduct();
-    expect(preRunIssues({ products: [a], cycleTimes: [], equipment: [] })).toEqual([]);
+    expect(preRunIssues({ products: [a], cycleTimes: [], equipment: [], technicians: [] })).toEqual(
+      [],
+    );
   });
 });

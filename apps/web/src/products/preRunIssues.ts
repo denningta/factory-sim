@@ -2,7 +2,7 @@ import type { Project } from '@factory-sim/schema';
 import { missingCycleTimes } from './cycleTimes';
 
 export interface PreRunIssue {
-  code: 'no_products' | 'missing_cycle_times';
+  code: 'no_products' | 'missing_cycle_times' | 'manual_station_without_tech';
   message: string;
 }
 
@@ -10,7 +10,7 @@ const SHOWN = 3;
 
 /** Reasons a run can't start yet. The run button (SIM) disables itself while this is non-empty. */
 export function preRunIssues(
-  project: Pick<Project, 'products' | 'cycleTimes' | 'equipment'>,
+  project: Pick<Project, 'products' | 'cycleTimes' | 'equipment' | 'technicians'>,
 ): PreRunIssue[] {
   if (project.products.length === 0)
     return [{ code: 'no_products', message: 'A run needs at least one product. Add one first.' }];
