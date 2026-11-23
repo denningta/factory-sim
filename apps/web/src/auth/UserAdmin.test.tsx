@@ -39,4 +39,18 @@ describe('UserAdmin', () => {
     await screen.findByText(/eng@plant\.test \(user\)/);
     expect(screen.queryByRole('button', { name: /reset password.*admin@/i })).toBeNull();
   });
+
+  it('AC2: a password typed for one user is not pre-filled for another', async () => {
+    const OTHER = user('00000000-0000-4000-8000-000000000003', 'ops@plant.test');
+    render(
+      <UserAdmin
+        api={{ listUsers: async () => [ME, ENG, OTHER], resetPassword: async () => {} }}
+        currentUserId={ME.id}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /reset password.*eng@/i }));
+    await userEvent.type(screen.getByLabelText(/new password/i), 'typed for eng');
+    await userEvent.click(screen.getByRole('button', { name: /reset password.*ops@/i }));
+    expect((screen.getByLabelText(/new password/i) as HTMLInputElement).value).toBe('');
+  });
 });

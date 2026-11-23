@@ -57,7 +57,7 @@ export function toErrorResponse(error: Error & { statusCode?: number; code?: str
   }
   const status = error.statusCode;
   if (status !== undefined && status >= 400 && status < 500) {
-    // Other client errors Fastify raises (400, 415, 405, ...): keep the status.
+    // Other client errors Fastify raises (400, 405, ...): keep the status.
     return { status, body: new HttpError('validation', error.message).body() };
   }
   return { status: 500, body: new HttpError('internal', 'Internal server error').body() };

@@ -20,6 +20,12 @@ export function UserAdmin({ api, currentUserId }: { api: UserAdminApi; currentUs
     api.listUsers().then(setUsers, (e: unknown) => setError(message(e)));
   }, [api]);
 
+  const startReset = (id: string | null) => {
+    setResetting(id);
+    setPassword('');
+    setError(null);
+  };
+
   const submit = async (user: User) => {
     setError(null);
     setNotice(null);
@@ -48,7 +54,7 @@ export function UserAdmin({ api, currentUserId }: { api: UserAdminApi; currentUs
             {u.email} ({u.role}
             {u.disabled ? ', disabled' : ''}){' '}
             {u.id !== currentUserId && resetting !== u.id && (
-              <button onClick={() => setResetting(u.id)}>Reset password for {u.email}</button>
+              <button onClick={() => startReset(u.id)}>Reset password for {u.email}</button>
             )}
             {resetting === u.id && (
               <form
@@ -69,7 +75,7 @@ export function UserAdmin({ api, currentUserId }: { api: UserAdminApi; currentUs
                   />
                 </label>{' '}
                 <button type="submit">Set password</button>{' '}
-                <button type="button" onClick={() => setResetting(null)}>
+                <button type="button" onClick={() => startReset(null)}>
                   Cancel
                 </button>
               </form>

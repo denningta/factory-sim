@@ -18,13 +18,13 @@ describe('ChangePassword', () => {
 
   it('AC1: shows the server error, e.g. a wrong current password', async () => {
     const changePassword = vi.fn(async () => {
-      throw new Error('Invalid email or password');
+      throw new Error('Current password is incorrect');
     });
     render(<ChangePassword api={{ changePassword }} />);
     await userEvent.type(screen.getByLabelText(/current password/i), 'x');
     await userEvent.type(screen.getByLabelText(/new password/i), 'a brand new passphrase');
     await userEvent.click(screen.getByRole('button', { name: /change password/i }));
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/invalid/i));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/incorrect/i));
   });
 
   it('AC1: the new password field uses new-password and shows the 12-character minimum', () => {

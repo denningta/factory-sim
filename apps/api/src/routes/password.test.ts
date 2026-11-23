@@ -176,6 +176,40 @@ describe('admin password reset', () => {
   });
 });
 
+describe('change password throttle', () => {
+  it('N5: a wrong current password counts toward the sign-in throttle and success clears it', async () => {
+    const { t, cookie } = await withUser();
+    const change = (currentPassword: string) =>
+      t.call('POST', '/api/auth/password', { currentPassword, newPassword: NEW_PASSWORD }, cookie);
+    // Four wrong guesses plus a correct one: success clears the count...
+    for (let i = 0; i < 4; i++) expect((await change('wrong wrong wrong')).statusCode).toBe(401);
+    expect((await change(PASSWORD)).statusCode).toBe(204);
+    // ...so five more wrong guesses are all still answered 401, not 429.
+    for (let i = 0; i < 5; i++) {
+      expect(
+        (
+          await t.call(
+            'POST',
+            '/api/auth/password',
+            { currentPassword: 'wrong wrong wrong', newPassword: PASSWORD },
+            cookie,
+          )
+        ).statusCode,
+      ).toBe(401);
+    }
+    // The shared sign-in key is also counted: a sixth wrong guess is throttled.
+    const res = await t.call(
+      'POST',
+      '/api/auth/password',
+      { currentPassword: 'wrong wrong wrong', newPassword: PASSWORD },
+      cookie,
+    );
+    expect(res.statusCode).toBe(429);
+    // Sign-in with the same email/IP shares the lockout.
+    expect((await t.login('eng@plant.test', NEW_PASSWORD)).res.statusCode).toBe(429);
+  });
+});
+
 describe('media types', () => {
   it('non-JSON bodies answer 415 unsupported_media_type', async () => {
     const t = await testApp();

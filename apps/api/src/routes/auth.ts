@@ -119,12 +119,12 @@ export const authRoutes: FastifyPluginAsync<{ ctx: AppContext }> = async (app, {
       throw new HttpError('unauthorized', 'Current password is incorrect');
     }
     ctx.throttle.succeed(key);
-    await ctx.db
-      .update(users)
-      .set({ passwordHash: await hashPassword(newPassword) })
-      .where(eq(users.id, user.id));
+    const passwordHash = await hashPassword(newPassword);
     // A stolen session must not outlive the password change; this browser stays signed in.
-    await deleteOtherSessions(ctx.db, ctx.policy, user.id, sessionCookie(request)!);
+    await ctx.db.transaction(async (tx) => {
+      await tx.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+      await deleteOtherSessions(tx, ctx.policy, user.id, sessionCookie(request)!);
+    });
     return reply.code(204).send();
   });
 
