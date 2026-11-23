@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Product } from '@factory-sim/schema';
+import type { Demand, Product } from '@factory-sim/schema';
 import { useEditorStore as defaultStore, type ReleaseMode } from '../layout/editorStore';
 
 type Store = typeof defaultStore;
@@ -162,7 +162,10 @@ export function DemandPanel({ useStore = defaultStore }: { useStore?: Store }) {
       <p style={{ color: '#6b7280', margin: 0 }}>How work enters the line</p>
       <label style={label}>
         Demand as
-        <select value={demand.basis} onChange={(e) => setDemandBasis(e.target.value as never)}>
+        <select
+          value={demand.basis}
+          onChange={(e) => setDemandBasis(e.target.value as Demand['basis'])}
+        >
           <option value="mix">% of mix</option>
           <option value="perShift">Units per shift</option>
         </select>

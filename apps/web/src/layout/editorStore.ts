@@ -311,6 +311,8 @@ export function createEditorStore() {
       record();
       set({ equipment: get().equipment.map((e) => (ids.has(e.id) ? f(e) : e)) });
     };
+    /** Products whose mix % the user set this session; later edits leave them alone. */
+    const editedDemand = new Set<string>();
     /** Per-shift demand fixes the release interval: shift length ÷ units. {} when it doesn't apply. */
     const intervalFor = (d: Demand): { release?: Release } => {
       if (d.basis !== 'perShift') return {};
@@ -443,6 +445,7 @@ export function createEditorStore() {
           basis === 'mix'
             ? toMix(ids, weights)
             : ids.map((productId) => ({ productId, value: weights.get(productId) ?? 0 }));
+        editedDemand.clear();
         record();
         set({ demand: { basis, items }, ...intervalFor({ basis, items }) });
       },
@@ -460,12 +463,25 @@ export function createEditorStore() {
         const ids = products.map((p) => p.id);
         let items: Demand['items'];
         if (demand.basis === 'mix') {
-          // The others share what's left in their current proportions, so the total stays 100.
+          // Products the user already set keep their value; only the rest absorb the remainder,
+          // so 3+ products can be set exactly. If that can't fit, everyone else rescales.
           const others = ids.filter((id) => id !== productId);
-          const rest = new Map(others.map((id) => [id, current.get(id) ?? 0]));
+          const open = others.filter((id) => !editedDemand.has(id));
+          const fixed = others.filter((id) => editedDemand.has(id));
+          const fixedSum = fixed.reduce((t, id) => t + (current.get(id) ?? 0), 0);
+          const absorb = open.length > 0 && 100 - value - fixedSum >= 0;
+          const share = absorb ? open : others;
+          const kept = absorb ? fixed : [];
+          const rest = toMix(
+            share,
+            new Map(share.map((id) => [id, current.get(id) ?? 0])),
+            Math.round((100 - value - (absorb ? fixedSum : 0)) * 100) / 100,
+          );
+          editedDemand.add(productId);
           items = [
             { productId, value: others.length === 0 ? 100 : value },
-            ...(others.length === 0 ? [] : toMix(others, rest, 100 - value)),
+            ...kept.map((id) => ({ productId: id, value: current.get(id) ?? 0 })),
+            ...rest,
           ];
           items.sort((x, y) => ids.indexOf(x.productId) - ids.indexOf(y.productId));
         } else {
@@ -491,6 +507,8 @@ export function createEditorStore() {
         set({ release: { ...release, product } });
       },
       setReleaseInterval: (seconds) => {
+        if (get().demand.basis === 'perShift')
+          return { ok: false, error: 'The interval follows from units per shift' };
         const interval = durationSchema.safeParse({ kind: 'fixed', value: seconds });
         if (!interval.success) return { ok: false, error: 'Enter a number of seconds above 0' };
         record();
@@ -621,6 +639,7 @@ export function createEditorStore() {
       deleteProduct: (id) => {
         if (!get().products.some((p) => p.id === id)) return;
         const products = get().products.filter((p) => p.id !== id);
+        editedDemand.delete(id);
         const { demand, release } = get();
         // Demand and the pattern may only name products that exist, or autosave fails validation.
         const kept = demand.items.filter((i) => i.productId !== id);
@@ -910,6 +929,7 @@ export function createEditorStore() {
         past = [];
         future = [];
         session = null;
+        editedDemand.clear();
         set({
           floor: doc.floor,
           equipment: doc.equipment,

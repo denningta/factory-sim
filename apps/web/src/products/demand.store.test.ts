@@ -141,3 +141,30 @@ describe('PR-4 AC2: release rule options', () => {
     expect(s().shiftLength).toBe(3600);
   });
 });
+
+describe('PR-4 review polish', () => {
+  it('3 products: A=50, B=30, C=20 can be set exactly (only unedited products absorb)', () => {
+    const c = s().addProduct();
+    const [a, b] = s().products;
+    s().setDemandValue(a!.id, 50);
+    s().setDemandValue(b!.id, 30);
+    s().setDemandValue(c.id, 20);
+    expect([a!.id, b!.id, c.id].map(value)).toEqual([50, 30, 20]);
+    expect(valid()).toBe(true);
+  });
+
+  it('rescales the others when the unedited ones cannot absorb the change', () => {
+    const c = s().addProduct();
+    const [a, b] = s().products;
+    s().setDemandValue(b!.id, 30);
+    s().setDemandValue(a!.id, 80); // 30 is taken, only 20 left for the rest: B and C rescale
+    const total = [a!.id, b!.id, c.id].map(value).reduce((t, n) => t! + n!, 0);
+    expect(total).toBeCloseTo(100, 5);
+    expect(value(a!.id)).toBe(80);
+  });
+
+  it('rejects a release interval while demand is per shift', () => {
+    s().setDemandBasis('perShift');
+    expect(s().setReleaseInterval(30).ok).toBe(false);
+  });
+});
