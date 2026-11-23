@@ -137,7 +137,11 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
-  packages/sim-engine: {}
+  packages/sim-engine:
+    dependencies:
+      '@factory-sim/schema':
+        specifier: workspace:*
+        version: link:../schema
 
   spikes/pl-5-rendering:
     dependencies:
