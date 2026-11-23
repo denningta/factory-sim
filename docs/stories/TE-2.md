@@ -22,4 +22,5 @@ issue: 34
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- The engine already emits `techMoved` (straight line, distance / walkSpeed) and `techState`, and counts walking separately from working, so AC2 needed no engine change; the web adds `techTracks` (poses on the sim clock) and `TechLayer` (capsule + name sprite, orange while walking).
+- A tech stands at its first assigned station until its first `techMoved`. Tech tracks are kept when Animate is toggled off and on; the marker may be stale until the tech's next walk, which starts from its own station.

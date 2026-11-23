@@ -52,6 +52,11 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
   const model: LineModel = compiled.model;
   const geometry = buildLineGeometry(project.equipment, project.connections);
   const colors = new Map(project.products.map((p) => [p.id, p.color]));
+  const techInfo = project.technicians.map((t) => ({
+    id: t.id,
+    name: t.name,
+    homeId: t.stationIds[0],
+  }));
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());
 
@@ -59,7 +64,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
   let speed = 1;
   let animate = true;
   const start = (): Playback => {
-    const pb = createPlayback(createRun(model, options), geometry, colors);
+    const pb = createPlayback(createRun(model, options), geometry, colors, { techs: techInfo });
     pb.speed = speed;
     pb.animate = animate;
     return pb;
@@ -119,9 +124,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       return speed;
     },
     stats: () => pb.run.stats(),
-    techPoses: () => {
-      throw new Error('not implemented');
-    },
+    techPoses: (t) => pb.techs.at(t),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {
       listeners.add(listener);
