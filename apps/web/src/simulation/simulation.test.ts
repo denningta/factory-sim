@@ -378,7 +378,7 @@ describe('SE-2 AC1: play, pause, single-step, reset', () => {
     expect(s.playing).toBe(false);
     const t1 = s.now;
     s.step();
-    expect(s.now).toBeGreaterThanOrEqual(t1);
+    expect(s.now).toBeGreaterThan(t1);
     expect(s.now).toBeGreaterThan(0);
   });
 
