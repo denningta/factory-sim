@@ -28,7 +28,7 @@ Read `CLAUDE.md`, `docs/agent-team.md` and `docs/stories/README.md` at the start
 - **Fresh contexts:** `/clear` the reviewer between PRs. Builders get a new session per story (`/exit` after merge, `/dispatch` for the next one).
 - **No reviewer pass for lead docs-only PRs** (story Notes, runbook wording): the lead self-checks and the product owner merges. Contract, CI, `.claude` and code PRs are always reviewed.
 - Put notes for in-flight stories on their GitHub issue, not in a PR (fewer PRs and no Notes conflicts).
-- Wait on agents with the background watcher, not polling loops. Read panes filtered (`grep` for `PR READY`/`PR UPDATED`/questions), and read review comments by verdict and headings only.
+- Wait on builders with `scripts/watch-builders.sh` run in the background (Bash `run_in_background`; it exits on a state change and wakes you; restart it after each wake-up), not polling loops. Wait on the reviewer with `herdr agent prompt reviewer … --wait`. Read panes filtered (`grep` for `PR READY`/`PR UPDATED`/questions), and read review comments by verdict and headings only.
 
 ## Rules
 
