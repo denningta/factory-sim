@@ -6,6 +6,7 @@ import { currentProject } from './currentProject';
 import { KpiPanel } from './KpiPanel';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
+import { UtilizationPanel } from './UtilizationPanel';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
 import { createRunSession, type RunSessionResult } from './runSession';
@@ -34,6 +35,13 @@ export function SimulateScreen({
   );
   const shiftLength = useEditorStore((s) => s.shiftLength);
   const products = useEditorStore((s) => s.products);
+  const equipment = useEditorStore((s) => s.equipment);
+  const technicians = useEditorStore((s) => s.technicians);
+  // The engine reports utilization for workstations only.
+  const stations = useMemo(
+    () => equipment.filter((e) => e.behavior === 'workstation'),
+    [equipment],
+  );
   const result = useMemo<RunSessionResult>(
     () => createRunSession(currentProject(), applied.options),
     [applied],
@@ -52,7 +60,10 @@ export function SimulateScreen({
       )}
       <div style={{ overflowY: 'auto' }}>
         {result.ok && (
-          <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
+          <>
+            <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
+            <UtilizationPanel session={result.session} stations={stations} techs={technicians} />
+          </>
         )}
         <RunSettingsPanel
           initial={settings}

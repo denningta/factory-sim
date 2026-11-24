@@ -75,7 +75,11 @@ describe('AN-2 AC3: sortable table and stacked bars', () => {
     expect(names(table)).toEqual(['Weld', 'Cut']);
     await userEvent.click(within(table).getByRole('button', { name: /Working/ }));
     expect(names(table)).toEqual(['Cut', 'Weld']); // highest first
-    expect(within(table).getByRole('columnheader', { name: /Working/ }).getAttribute('aria-sort')).toBe('descending');
+    expect(
+      within(table)
+        .getByRole('columnheader', { name: /Working/ })
+        .getAttribute('aria-sort'),
+    ).toBe('descending');
     await userEvent.click(within(table).getByRole('button', { name: /Working/ }));
     expect(names(table)).toEqual(['Weld', 'Cut']);
   });
