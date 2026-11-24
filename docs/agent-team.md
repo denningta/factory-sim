@@ -55,7 +55,7 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 
 ## Guardrails (already configured)
 
-- **Branch protection on main**: PR + green `check` required, no force pushes, no deletions. All agents use your GitHub account, so GitHub approvals can't separate you from them. The rule that holds is that **only the lead merges**: a PreToolUse hook (`scripts/hooks/guard-merge.sh`) blocks `gh pr merge` for every agent except `lead` (`CLAUDE_CODE_AGENT`), and requires `--squash` without `--admin`.
+- **Branch protection on main**: PR + green `check` required, no force pushes, no deletions. All agents use your GitHub account, so GitHub approvals can't separate you from them. The rule that holds is that **only the lead merges**: a PreToolUse hook (`scripts/hooks/guard-merge.sh`) blocks `gh pr merge` for every agent except `lead` (`CLAUDE_CODE_AGENT`), and requires `--squash` without `--admin`; a SessionStart hook puts `scripts/bin` first on `PATH`, whose `gh` wrapper refuses merges, `gh api …/merge` and aliases for non-lead agents (this also catches scripts and `node -e`). Both are defence in depth: all agents share your GitHub account, so GitHub itself can't tell them apart.
 - **Shared permissions** (`.claude/settings.json`): allows pnpm, git (push only `story/*`), gh issue/pr/run, docker compose, herdr agent/pane/worktree. Denies pushing main, force push, `reset --hard`, `sudo`, reading `.env`.
 - **Hook**: after every Edit/Write, prettier and the owning package's type check run; type errors are fed back to the agent.
 - **Secrets**: `.env` is git-ignored and unreadable by agents; use `.env.example`.

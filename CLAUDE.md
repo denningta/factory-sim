@@ -74,7 +74,7 @@ A hook runs prettier and the owning package's type check after every Edit/Write.
 - **Builders**: one story per worktree, branch `story/<ID>`. Change only what the story needs. If the story requires a change to `packages/schema`, the **public API** of `packages/sim-engine`, `docs/adr/`, CI or `.claude/`, **stop and report to the lead**. Don't work around it.
 - **Lead**: owns ADRs, packages/schema, the sim-engine API, the backlog/issues and dispatch. Doesn't implement feature stories (except PL-3 and API definitions).
 - **Reviewer**: read-only. Runs tests, comments on PRs, never edits or merges.
-- **Nobody** pushes to `main`, force-pushes, or edits acceptance criteria. Only the lead merges PRs (squash, enforced by `scripts/hooks/guard-merge.sh`); the product owner merges what the merge rule reserves for them.
+- **Nobody** pushes to `main`, force-pushes, or edits acceptance criteria. Only the lead merges PRs (squash; guarded by `scripts/hooks/guard-merge.sh` and the `scripts/bin/gh` wrapper); the product owner merges what the merge rule reserves for them.
 - If acceptance criteria are ambiguous, write the question in the PR/issue and pick the simplest reading that satisfies them; don't invent scope.
 
 ## Git and PRs
