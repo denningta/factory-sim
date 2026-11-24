@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# gh wrapper, first on PATH for agent sessions (scripts/hooks/session-env.sh). Refuses merges
+# unless the caller is the lead agent, so merges started from scripts, `node -e` or package
+# scripts are caught too. Everything else runs the real gh unchanged.
+set -uo pipefail
+
+self_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+real=""
+IFS=: read -ra dirs <<<"$PATH"
+for d in "${dirs[@]}"; do
+  [ -z "$d" ] && continue
+  [ "$(cd "$d" 2>/dev/null && pwd)" = "$self_dir" ] && continue
+  if [ -x "$d/gh" ]; then real="$d/gh"; break; fi
+done
+[ -n "$real" ] || { echo "gh wrapper: real gh not found on PATH" >&2; exit 127; }
+
+args=" $* "
+blocked=""
+case "$args" in
+  *" alias "*) blocked="gh aliases" ;;
+  *" api "*) case "$args" in *"/merge"* | *mergePullRequest*) blocked="merging through gh api" ;; esac ;;
+esac
+if [ -z "$blocked" ]; then
+  # `gh [global flags] pr [flags] merge ...`
+  seen_pr=""
+  for a in "$@"; do
+    if [ "$a" = "pr" ]; then seen_pr=1; elif [ -n "$seen_pr" ] && [ "$a" = "merge" ]; then blocked="gh pr merge"; break; fi
+  done
+fi
+
+if [ -n "$blocked" ] && [ "${CLAUDE_CODE_AGENT:-}" != "lead" ]; then
+  echo "Refused: $blocked is reserved for the lead agent (agent: ${CLAUDE_CODE_AGENT:-unknown})." >&2
+  exit 1
+fi
+if [ "$blocked" = "gh aliases" ] || [ "$blocked" = "merging through gh api" ]; then
+  echo "Refused: $blocked (the lead merges with gh pr merge --squash)." >&2
+  exit 1
+fi
+exec "$real" "$@"
