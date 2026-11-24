@@ -177,3 +177,41 @@ describe('AN-1: live KPI panel', () => {
     expect(Number(wip)).toBeGreaterThan(0);
   });
 });
+
+describe('SE-7: run settings panel', () => {
+  it('AC1: shows the saved run settings from the project', () => {
+    useEditorStore
+      .getState()
+      .applyRun(
+        {
+          warmUp: 3600,
+          length: { unit: 'seconds', value: 7200 },
+          seed: { mode: 'fixed', value: 42 },
+        },
+        8 * 3600,
+      );
+    render(<SimulateScreen />);
+    expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('1');
+    expect((screen.getByLabelText('Run length') as HTMLInputElement).value).toBe('2');
+    expect((screen.getByLabelText('Run length unit') as HTMLSelectElement).value).toBe('hours');
+    expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('42');
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
+  });
+
+  it('AC2/AC3: Apply saves to the project; a warm-up not shorter than the run is refused', async () => {
+    render(<SimulateScreen />);
+    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
+    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '8');
+    await userEvent.click(button('Apply'));
+    expect(screen.getByText(/shorter/)).toBeTruthy();
+    expect(useEditorStore.getState().run.warmUp).toBe(0);
+    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
+    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '2');
+    await userEvent.click(button('Apply'));
+    expect(useEditorStore.getState().run.warmUp).toBe(7200);
+    useEditorStore.getState().undo();
+    await waitFor(() =>
+      expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('0'),
+    );
+  });
+});

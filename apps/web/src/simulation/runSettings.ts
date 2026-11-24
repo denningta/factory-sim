@@ -1,3 +1,4 @@
+import type { Project } from '@factory-sim/schema';
 import type { RunOptions } from '@factory-sim/sim-engine';
 
 export interface RunSettings {
@@ -21,7 +22,7 @@ export const DEFAULT_RUN_SETTINGS: RunSettings = {
 };
 
 /** Why the settings can't run, or null. */
-export function validateRunSettings(s: RunSettings): string | null {
+export function validateRunSettings(s: RunSettings, _shiftLength = 28800): string | null {
   if (!(Number.isFinite(s.warmUpHours) && s.warmUpHours >= 0)) return 'Warm-up must be 0 or more';
   if (!(Number.isFinite(s.runLength) && s.runLength > 0)) return 'Run length must be more than 0';
   if (s.seedMode === 'fixed' && !(Number.isInteger(s.seed) && s.seed >= 0 && s.seed <= MAX_SEED))
@@ -38,4 +39,14 @@ export function toRunOptions(
   const seed = s.seedMode === 'random' ? Math.floor(random() * 2 ** 31) : s.seed;
   const unit = s.runUnit === 'shifts' ? shiftLength : 3600;
   return { options: { seed, warmUp: s.warmUpHours * 3600, runLength: s.runLength * unit }, seed };
+}
+
+/** The saved run settings as the panel edits them (hours, not seconds). */
+export function fromProjectRun(_run: Project['run']): RunSettings {
+  throw new Error('not implemented');
+}
+
+/** The panel's settings in the project document's form. */
+export function toProjectRun(_s: RunSettings): Project['run'] {
+  throw new Error('not implemented');
 }
