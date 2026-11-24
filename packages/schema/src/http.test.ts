@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   PASSWORD_MIN_LENGTH,
+  BASE_EQUIPMENT_TYPES,
   apiErrorSchema,
+  equipmentTypeListResponseSchema,
+  userEquipmentTypeSchema,
   changePasswordRequestSchema,
   resetPasswordRequestSchema,
   createProject,
@@ -119,5 +122,30 @@ describe('HTTP contract: errors', () => {
     expect(apiErrorSchema.safeParse({ error: { code: 'teapot', message: '' } }).success).toBe(
       false,
     );
+  });
+});
+
+describe('HTTP contract: equipment library (EQ-3)', () => {
+  const cnc = {
+    ...BASE_EQUIPMENT_TYPES[0]!,
+    id: uuid,
+    name: '5-axis CNC',
+    color: '#336699',
+  };
+
+  it('accepts a user-defined type with a UUID id', () => {
+    expect(userEquipmentTypeSchema.parse(cnc).name).toBe('5-axis CNC');
+    expect(equipmentTypeListResponseSchema.parse({ types: [cnc] }).types).toHaveLength(1);
+  });
+
+  it('rejects ids that could collide with built-ins', () => {
+    const r = userEquipmentTypeSchema.safeParse({ ...cnc, id: 'base-workstation' });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(['id']);
+  });
+
+  it('validates params against the base behavior', () => {
+    const bad = { ...cnc, params: { capacity: 10 } };
+    expect(userEquipmentTypeSchema.safeParse(bad).success).toBe(false);
   });
 });
