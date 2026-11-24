@@ -1,10 +1,12 @@
 import { ApiRequestError } from '../api/client';
 
-export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict' | 'stopped';
+export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict' | 'stopped' | 'signin';
 
 export interface Autosaver {
   markDirty: () => void;
   flush: () => Promise<void>;
+  /** Retries the held save after the user signs in again. */
+  resume: () => void;
   dispose: () => void;
 }
 
@@ -78,6 +80,9 @@ export function createAutosaver(opts: {
       if (!saving) schedule();
     },
     flush: run,
+    resume: () => {
+      throw new Error('not implemented');
+    },
     dispose: () => {
       stopped = true;
       clearTimeout(timer);

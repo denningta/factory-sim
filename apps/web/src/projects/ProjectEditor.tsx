@@ -12,6 +12,7 @@ import { documentForSave } from './document';
 const AUTOSAVE_MS = 2000; // well inside the 5 s requirement, leaves room for the request
 
 const LABEL: Record<Exclude<SaveStatus, 'stopped'>, string> = {
+  signin: 'Session expired. Sign in to save your changes.',
   saved: 'All changes saved',
   unsaved: 'Unsaved changes…',
   saving: 'Saving…',

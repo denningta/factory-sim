@@ -111,7 +111,7 @@ describe('autosave', () => {
     expect(statuses.at(-1)).toBe('error');
   });
 
-  it.each(['validation', 'unauthorized', 'not_found', 'payload_too_large'] as const)(
+  it.each(['validation', 'not_found', 'payload_too_large'] as const)(
     'AC2: a %s error stops retrying and reports the server message',
     async (code) => {
       const save = vi.fn().mockRejectedValue(new ApiRequestError(code, 'Server says no'));
@@ -125,4 +125,21 @@ describe('autosave', () => {
       expect(save).toHaveBeenCalledTimes(1);
     },
   );
+
+  it('SC-2: an expired session holds the edits, stops retrying, and resume() saves them', async () => {
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiRequestError('unauthorized', 'Sign in again'))
+      .mockResolvedValue(undefined);
+    const { saver, statuses } = setup(save);
+    saver.markDirty();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(statuses.at(-1)).toBe('signin');
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(save).toHaveBeenCalledTimes(1);
+    saver.resume();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(statuses.at(-1)).toBe('saved');
+  });
 });
