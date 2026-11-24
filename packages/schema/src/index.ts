@@ -121,6 +121,12 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
     }
     return next;
   },
+  // v4 → v5: saved run settings; defaults match SE-4's session defaults.
+  4: (doc) => ({
+    run: { warmUp: 0, length: { unit: 'shifts', value: 1 }, seed: { mode: 'fixed', value: 1 } },
+    ...doc,
+    schemaVersion: 5,
+  }),
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({
