@@ -22,4 +22,7 @@ issue: 3
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- Live state comes from the engine's `stationState` events (same stream as the parts), kept as the latest state per station in `playback.stationStates`. While Animate is off no events are recorded, so plates fall back to neutral gray-white until the next state change after it is turned back on.
+- Each workstation gets a state-colored plate on top (written through refs per frame); the bottleneck also gets a red ring and a BOTTLENECK label in the scene and a "▲ Bottleneck" badge in the utilization table.
+- Bottleneck = highest working % of the measured window (warm-up excluded); ties go to the first in layout order; nothing is flagged until some station has worked. It is re-read ~5×/s and on state changes, so it moves during the run.
+- "Longest uninterrupted active periods" (the alternative in the AC) is not used: working % is simple and already measured.
