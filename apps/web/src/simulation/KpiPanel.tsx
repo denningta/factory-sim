@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { computeKpis, type KpiRow } from './kpis';
+import { computeKpis, formatLeadTime, type KpiRow } from './kpis';
 import type { RunSession } from './runSession';
 
 const num = (v: number) => v.toFixed(1);
 const whole = (v: number) => v.toFixed(0);
-const minutes = (s: number | null) => (s === null ? '–' : (s / 60).toFixed(1));
 
 /** Wireframe 3, live KPIs: per product and total, from the engine's warm-up-free stats. */
 export function KpiPanel({
@@ -22,7 +21,8 @@ export function KpiPanel({
   // The final read on 'done' (subscribe) keeps the end-of-run values exact.
   useEffect(() => {
     setKpis(read());
-    const id = setInterval(() => setKpis(read()), 200);
+    // Only while playing: paused and finished runs are covered by the subscribe below.
+    const id = setInterval(() => session.playing && setKpis(read()), 200);
     const unsub = session.subscribe(() => setKpis(read()));
     return () => {
       clearInterval(id);
@@ -41,7 +41,7 @@ export function KpiPanel({
       <td style={cell}>{num(r.throughputPerHour)}</td>
       <td style={cell}>{whole(r.throughputPerShift)}</td>
       <td style={cell}>{num(r.averageWip)}</td>
-      <td style={cell}>{minutes(r.leadTime)}</td>
+      <td style={cell}>{formatLeadTime(r.leadTime)}</td>
     </tr>
   );
   return (
@@ -78,7 +78,7 @@ export function KpiPanel({
               shift
             </th>
             <th style={cell}>units</th>
-            <th style={cell}>min</th>
+            <th />
           </tr>
         </thead>
         <tbody>

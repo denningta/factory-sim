@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEditorStore } from '../layout/editorStore';
 import type { RunSession } from './runSession';
@@ -129,26 +129,51 @@ describe('AN-1: live KPI panel', () => {
     expect(screen.getByRole('row', { name: new RegExp(name) })).toBeTruthy();
   });
 
-  it('updates while the run plays and keeps final values at the end', async () => {
+  const cells = (row: HTMLElement) =>
+    within(row)
+      .getAllByRole('cell')
+      .map((c) => c.textContent);
+  const total = () => screen.getByRole('row', { name: /Total/ });
+  const playAt1000 = async () => {
+    await userEvent.selectOptions(screen.getByLabelText('Speed'), '1000');
+    await userEvent.click(button('Play'));
+  };
+
+  it('updates while the run plays: the Total row changes before the run is finished', async () => {
     render(<SimulateScreen />);
-    const total = () => screen.getByRole('row', { name: /Total/ }).textContent ?? '';
-    const before = total();
+    const before = total().textContent;
+    await playAt1000();
+    await waitFor(() => expect(total().textContent).not.toBe(before), { timeout: 5000 });
+    expect(clock()).not.toContain('(finished)');
     await userEvent.click(button('Run to end'));
-    await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 5000 });
-    await waitFor(() => expect(total()).not.toBe(before));
-    const final = total();
-    expect(final).toMatch(/\d/);
+    await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 8000 });
+    const final = total().textContent;
+    expect(final).toMatch(/[1-9]/);
     await new Promise((r) => setTimeout(r, 400));
-    expect(total()).toBe(final);
+    expect(total().textContent).toBe(final);
   });
 
-  it('excludes the warm-up: nothing is counted before it ends', async () => {
+  it('excludes the warm-up: the whole row is zero during it, but not without a warm-up', async () => {
+    const upTo = async (min: number) => {
+      await playAt1000();
+      await waitFor(() => expect(Number(clock().split(':')[1])).toBeGreaterThanOrEqual(min), {
+        timeout: 5000,
+      });
+      await userEvent.click(button('Pause'));
+    };
+    const field = screen.getByLabelText.bind(screen);
     render(<SimulateScreen />);
-    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
-    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '1');
+    await userEvent.clear(field('Warm-up (hr)'));
+    await userEvent.type(field('Warm-up (hr)'), '2');
     await userEvent.click(button('Apply'));
-    for (let i = 0; i < 6; i++) await userEvent.click(button('Step'));
-    const total = screen.getByRole('row', { name: /Total/ });
-    expect(total.textContent).toMatch(/^Total\s*0\.0/);
+    await upTo(1);
+    expect(cells(total())).toEqual(['0.0', '0', '0.0', '–']);
+    cleanup();
+
+    render(<SimulateScreen />);
+    await upTo(1);
+    const [perHour, , wip] = cells(total());
+    expect(Number(perHour)).toBeGreaterThan(0);
+    expect(Number(wip)).toBeGreaterThan(0);
   });
 });

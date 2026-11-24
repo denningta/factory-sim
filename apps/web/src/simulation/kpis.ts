@@ -44,3 +44,9 @@ export function computeKpis(
     total: row('total', 'Total', stats.total, shiftLength),
   };
 }
+
+/** Display only: seconds below a minute, minutes above; the engine keeps seconds. */
+export function formatLeadTime(seconds: number | null): string {
+  if (seconds === null) return '–';
+  return seconds < 60 ? `${seconds.toFixed(1)} s` : `${(seconds / 60).toFixed(1)} min`;
+}

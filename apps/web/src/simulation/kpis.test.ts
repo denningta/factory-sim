@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { RunStats } from '@factory-sim/sim-engine';
-import { computeKpis } from './kpis';
+import { projectSchema } from '@factory-sim/schema';
+import { computeKpis, formatLeadTime } from './kpis';
 import { createRunSession } from './runSession';
-import { currentProject } from './currentProject';
-import { useEditorStore } from '../layout/editorStore';
+import modelJson from '../../../../docs/reference-model/model.json';
 
 const flow = (completed: number, wip: number, lead: number) => ({
   released: completed,
@@ -43,29 +43,47 @@ describe('AN-1: KPI figures', () => {
   });
 });
 
-describe('AN-1: Little’s Law on a real run', () => {
-  it('WIP ≈ throughput × lead time within 5% (warm-up excluded)', () => {
-    useEditorStore.setState(useEditorStore.getInitialState(), true);
-    const s = useEditorStore.getState;
-    const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
-    const ws = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
-    const sink = s().placeEquipment('base-sink', { x: 12, y: 0 })!;
-    s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: ws.id, portId: 'in' });
-    s().connect({ equipmentId: ws.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
-    const p = s().addProduct();
-    s().addRoutingStep(p.id, ws.id);
-    s().setCycleTime(p.id, ws.id, 5);
-    s().setReleaseInterval(4);
-    const t = s().addTechnician();
-    s().setTechnicianStation(t.id, ws.id, true);
-    const r = createRunSession(currentProject(), { seed: 1, warmUp: 3600, runLength: 8 * 3600 });
-    if (!r.ok) throw new Error('model should compile');
+describe('AN-1: Little’s Law on the reference model', () => {
+  // docs/reference-model: 2 products (A, B) over 5 stations with buffers and a technician,
+  // so WIP and lead time vary and queues form.
+  it('WIP ≈ throughput × lead time within 5% for each product and in total, with real WIP', () => {
+    const project = projectSchema.parse(modelJson);
+    const r = createRunSession(project, { seed: 1, warmUp: 3600, runLength: 8 * 3600 });
+    if (!r.ok) throw new Error(JSON.stringify(r.issues));
     r.session.runToEnd();
     for (let i = 0; i < 100000 && !r.session.done; i++) r.session.frame(1000);
-    const k = computeKpis(r.session.stats(), s().products, 28800);
-    const lead = k.total.leadTime!;
-    expect(lead).toBeGreaterThan(0);
-    const expected = (k.total.throughputPerHour / 3600) * lead;
-    expect(Math.abs(k.total.averageWip - expected) / k.total.averageWip).toBeLessThan(0.05);
+    const k = computeKpis(r.session.stats(), project.products, 28800);
+    expect(k.products.length).toBe(2);
+    for (const row of [...k.products, k.total]) {
+      expect(row.averageWip, `${row.name} WIP`).toBeGreaterThan(1);
+      expect(row.leadTime, `${row.name} lead time`).not.toBeNull();
+      const expected = (row.throughputPerHour / 3600) * row.leadTime!;
+      expect(Math.abs(row.averageWip - expected) / row.averageWip, row.name).toBeLessThan(0.05);
+    }
+  });
+});
+
+describe('AN-1: warm-up is excluded from the stats window', () => {
+  it('the measured window starts at warmUp and counts nothing before it', () => {
+    const project = projectSchema.parse(modelJson);
+    const r = createRunSession(project, { seed: 1, warmUp: 7200, runLength: 3600 });
+    if (!r.ok) throw new Error('model should compile');
+    r.session.play();
+    while (r.session.now < 3600) r.session.frame(60);
+    const during = r.session.stats();
+    expect(during.window.from).toBe(7200);
+    expect(computeKpis(during, project.products, 28800).total).toMatchObject({
+      throughputPerHour: 0,
+      averageWip: 0,
+      leadTime: null,
+    });
+  });
+});
+
+describe('AN-1: lead time display', () => {
+  it('shows seconds below a minute, minutes above, and a dash for none', () => {
+    expect(formatLeadTime(5)).toBe('5.0 s');
+    expect(formatLeadTime(90)).toBe('1.5 min');
+    expect(formatLeadTime(null)).toBe('–');
   });
 });
