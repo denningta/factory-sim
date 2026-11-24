@@ -6,9 +6,12 @@ import { api } from '../api/client';
 export function SignIn({
   needsSetup,
   onSignedIn,
+  compact = false,
 }: {
   needsSetup: boolean;
   onSignedIn: (u: User) => void;
+  /** Inside a dialog: no page margins or big heading, and the email field takes focus. */
+  compact?: boolean;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,17 +32,20 @@ export function SignIn({
       }}
       style={{
         maxWidth: 360,
-        margin: '80px auto',
+        margin: compact ? 0 : '80px auto',
         font: '14px sans-serif',
         display: 'grid',
         gap: 8,
       }}
     >
-      <h1>{needsSetup ? 'Create the admin account' : 'Sign in'}</h1>
+      <h1 style={compact ? { fontSize: 16, margin: 0 } : undefined}>
+        {needsSetup ? 'Create the admin account' : 'Sign in'}
+      </h1>
       <label>
         Email{' '}
         <input
           type="email"
+          autoFocus={compact}
           required
           autoComplete="username"
           value={email}

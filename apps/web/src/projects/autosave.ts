@@ -1,10 +1,13 @@
 import { ApiRequestError } from '../api/client';
 
-export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error' | 'conflict' | 'stopped';
+export type SaveStatus =
+  'saved' | 'unsaved' | 'saving' | 'error' | 'conflict' | 'stopped' | 'signin';
 
 export interface Autosaver {
   markDirty: () => void;
   flush: () => Promise<void>;
+  /** Retries the held save after the user signs in again. */
+  resume: () => void;
   dispose: () => void;
 }
 
@@ -22,6 +25,7 @@ export function createAutosaver(opts: {
   let dirty = false;
   let saving: Promise<void> | undefined;
   let stopped = false;
+  let awaitingSignIn = false;
 
   // When the oldest unsaved change was made; bounds the debounce so continuous editing still saves.
   let firstDirtyAt = 0;
@@ -39,6 +43,7 @@ export function createAutosaver(opts: {
     if (!dirty) return;
     dirty = false;
     firstDirtyAt = 0;
+    awaitingSignIn = false;
     opts.onStatus('saving');
     saving = opts
       .save()
@@ -51,7 +56,15 @@ export function createAutosaver(opts: {
           opts.onStatus('conflict', err);
           return;
         }
-        // Network trouble and server faults may pass; anything else (stale app, expired session,
+        // An expired session is recoverable: keep the edits and wait for resume() after sign-in.
+        if (err instanceof ApiRequestError && err.code === 'unauthorized') {
+          dirty = true;
+          firstDirtyAt ||= Date.now();
+          awaitingSignIn = true;
+          opts.onStatus('signin', err);
+          return;
+        }
+        // Network trouble and server faults may pass; anything else (stale app,
         // deleted project, too large) would fail the same way every time, so tell the user.
         if (err instanceof ApiRequestError && err.code !== 'internal') {
           stopped = true;
@@ -64,7 +77,7 @@ export function createAutosaver(opts: {
       })
       .finally(() => {
         saving = undefined;
-        if (dirty && !stopped) schedule();
+        if (dirty && !stopped && !awaitingSignIn) schedule();
       });
     return saving;
   };
@@ -74,10 +87,15 @@ export function createAutosaver(opts: {
       if (stopped) return;
       dirty = true;
       if (!firstDirtyAt) firstDirtyAt = Date.now();
+      if (awaitingSignIn) return; // stays in 'signin'; the dialog is still up
       opts.onStatus('unsaved');
       if (!saving) schedule();
     },
     flush: run,
+    resume: () => {
+      if (stopped || !dirty) return;
+      void run();
+    },
     dispose: () => {
       stopped = true;
       clearTimeout(timer);
