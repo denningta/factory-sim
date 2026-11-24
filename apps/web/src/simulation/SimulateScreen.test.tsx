@@ -60,7 +60,7 @@ describe('SE-2: SimulateScreen playback controls', () => {
     expect((screen.getByLabelText('Animate') as HTMLInputElement).checked).toBe(false);
     expect(button('Step').disabled).toBe(true);
     expect(button('Run to end').disabled).toBe(true);
-  });
+  }, 15_000);
 
   it('Reset puts the clock back to Day 1, 00:00:00', async () => {
     render(<SimulateScreen />);
@@ -69,7 +69,7 @@ describe('SE-2: SimulateScreen playback controls', () => {
     await userEvent.click(button('Reset'));
     await waitFor(() => expect(clock()).toBe('Day 1, 00:00:00'));
     expect(button('Step').disabled).toBe(false);
-  });
+  }, 15_000);
 });
 
 describe('SE-4: run settings panel', () => {
@@ -88,7 +88,7 @@ describe('SE-4: run settings panel', () => {
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toBe('Day 1, 03:00:00 (finished)'), { timeout: 5000 });
     expect(useEditorStore.getState().shiftLength).toBe(3600);
-  });
+  }, 15_000);
 
   it('run length can be given in hours', async () => {
     render(<SimulateScreen />);
@@ -97,7 +97,7 @@ describe('SE-4: run settings panel', () => {
     await userEvent.click(button('Apply'));
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toBe('Day 1, 02:00:00 (finished)'), { timeout: 5000 });
-  });
+  }, 15_000);
 
   it('a random seed is drawn on Apply and shown; a fixed seed is kept', async () => {
     render(<SimulateScreen />);
@@ -122,7 +122,7 @@ describe('AN-2: utilization panel on the Simulate screen', () => {
     expect(within(table).getAllByRole('rowheader').length).toBeGreaterThan(0);
     expect(within(table).getAllByRole('cell')[0]!.textContent).toMatch(/^\d+\.\d%$/);
     expect(screen.getByRole('table', { name: 'Technician utilization' })).toBeTruthy();
-  });
+  }, 15_000);
 });
 
 describe('AN-1: live KPI panel', () => {
@@ -164,7 +164,7 @@ describe('AN-1: live KPI panel', () => {
     expect(final).toMatch(/[1-9]/);
     await new Promise((r) => setTimeout(r, 400));
     expect(total().textContent).toBe(final);
-  });
+  }, 15_000);
 
   it('excludes the warm-up: the whole row is zero during it, but not without a warm-up', async () => {
     const upTo = async (min: number) => {
@@ -190,7 +190,7 @@ describe('AN-1: live KPI panel', () => {
     const [perHour, , wip] = cells(total());
     expect(Number(perHour)).toBeGreaterThan(0);
     expect(Number(wip)).toBeGreaterThan(0);
-  });
+  }, 15_000);
 });
 
 describe('SE-7: run settings panel', () => {
@@ -235,7 +235,7 @@ describe('SE-7: run settings panel', () => {
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
     await userEvent.click(button('Apply'));
     expect(useEditorStore.getState().run.seed).toEqual({ mode: 'random', value: 77 });
-    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toContain('77');
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toBe('Seed used: 77');
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
     expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('77');
   });

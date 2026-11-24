@@ -6,7 +6,7 @@ function draw(seed: number, n = 5): number[] {
   return Array.from({ length: n }, () => rng.next());
 }
 
-describe('createRng (sfc32 seeded via splitmix32)', () => {
+describe('createRng', () => {
   it('is reproducible: same seed gives the same sequence', () => {
     expect(draw(42, 100)).toEqual(draw(42, 100));
     expect(draw(42)).not.toEqual(draw(43));
@@ -35,24 +35,28 @@ describe('createRng (sfc32 seeded via splitmix32)', () => {
     const rng = createRng(7);
     let sum = 0;
     const n = 100_000;
+    let bad = 0; // asserted once after the loop: expect() per draw is slow enough to flake under load
     for (let i = 0; i < n; i++) {
       const u = rng.next();
-      expect(u >= 0 && u < 1).toBe(true);
+      if (!(u >= 0 && u < 1)) bad++;
       sum += u;
     }
+    expect(bad).toBe(0);
     expect(sum / n).toBeCloseTo(0.5, 2);
   });
 
   it('uniform(min, max) and integer(min, max) stay in range', () => {
     const rng = createRng(3);
     const seen = new Set<number>();
+    let bad = 0;
     for (let i = 0; i < 10_000; i++) {
       const u = rng.uniform(-2, 3);
-      expect(u >= -2 && u < 3).toBe(true);
+      if (!(u >= -2 && u < 3)) bad++;
       const k = rng.integer(5, 9);
-      expect(Number.isInteger(k) && k >= 5 && k < 9).toBe(true);
+      if (!(Number.isInteger(k) && k >= 5 && k < 9)) bad++;
       seen.add(k);
     }
+    expect(bad).toBe(0);
     expect([...seen].sort()).toEqual([5, 6, 7, 8]);
     expect(() => rng.uniform(1, 1)).not.toThrow();
     expect(() => rng.uniform(2, 1)).toThrow();
@@ -65,11 +69,13 @@ describe('createRng (sfc32 seeded via splitmix32)', () => {
     const min = 2 ** 53; // spacing 2 here, so min + u·2 rounds to max for u > 0.5
     const max = min + 2;
     let atMax = 0;
+    let bad = 0;
     for (let i = 0; i < 1000; i++) {
       const x = rng.uniform(min, max);
-      expect(x >= min && x < max).toBe(true);
+      if (!(x >= min && x < max)) bad++;
       if (x === min + 1) atMax++; // nextDown(max) at this magnitude
     }
+    expect(bad).toBe(0);
     expect(atMax).toBeGreaterThan(0); // the clamp actually ran
   });
 
@@ -77,12 +83,14 @@ describe('createRng (sfc32 seeded via splitmix32)', () => {
     const rng = createRng(11);
     let sum = 0;
     const n = 200_000;
+    let bad = 0;
     for (let i = 0; i < n; i++) {
       const x = rng.exponential(2.5);
-      expect(x >= 0 && Number.isFinite(x)).toBe(true);
+      if (!(x >= 0 && Number.isFinite(x))) bad++;
       sum += x;
     }
-    expect(sum / n).toBeCloseTo(2.5, 1);
+    expect(bad).toBe(0);
+    expect(Math.abs(sum / n - 2.5)).toBeLessThan(0.05); // ~9 standard errors at n = 200k
     expect(() => rng.exponential(0)).toThrow();
     expect(() => rng.exponential(-1)).toThrow();
     expect(() => rng.exponential(Infinity)).toThrow();
