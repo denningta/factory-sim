@@ -748,15 +748,30 @@ export function createEditorStore() {
       },
       selectedIds: [],
       userTypes: [],
-      setUserTypes: () => {
-        throw new Error('EQ-3: not implemented');
-      },
-      syncInstancesToType: () => {
-        throw new Error('EQ-3: not implemented');
+      setUserTypes: (userTypes) => set({ userTypes }),
+      syncInstancesToType: (type) => {
+        const { equipment } = get();
+        if (!equipment.some((e) => e.typeId === type.id)) return 0;
+        record();
+        let count = 0;
+        set({
+          equipment: equipment.map((e) => {
+            if (e.typeId !== type.id) return e;
+            count++;
+            // Settings come from the type; identity, name and placement stay the instance's.
+            return instantiate(type, {
+              id: e.id,
+              name: e.name,
+              position: e.position,
+              rotation: e.rotation,
+            });
+          }),
+        });
+        return count;
       },
       placeEquipment: (typeId, point) => {
-        const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
-        const { floor, snapEnabled, equipment } = get();
+        const { floor, snapEnabled, equipment, userTypes } = get();
+        const type = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === typeId);
         if (!type) return null;
         const p = snapToGrid(point, floor.gridSpacing, snapEnabled);
         if (p.x < 0 || p.y < 0 || p.x > floor.width || p.y > floor.length) return null;

@@ -15,14 +15,21 @@ interface Props {
   onDelete?: (type: EquipmentType) => void;
 }
 
-/** Built-ins are code constants until the library table arrives with EQ-3. */
-export function LibraryPanel({ unit, selectedId, onSelect }: Props) {
+/** Built-ins are code constants; my own types (EQ-3) follow them and can be edited or deleted. */
+export function LibraryPanel({
+  unit,
+  selectedId,
+  onSelect,
+  userTypes = [],
+  onEdit,
+  onDelete,
+}: Props) {
   const d = (m: number) => formatNumber(toDisplay(m, unit));
   return (
     <section aria-label="Equipment library">
       <h2>Library</h2>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-        {BASE_EQUIPMENT_TYPES.map((t) => (
+        {[...BASE_EQUIPMENT_TYPES, ...userTypes].map((t) => (
           <li key={t.id} aria-label={t.name}>
             <button
               type="button"
@@ -51,6 +58,16 @@ export function LibraryPanel({ unit, selectedId, onSelect }: Props) {
                 {unit}
               </small>
             </button>
+            {userTypes.includes(t) && (
+              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                <button type="button" onClick={() => onEdit?.(t)} aria-label={`Edit ${t.name}`}>
+                  Edit
+                </button>
+                <button type="button" onClick={() => onDelete?.(t)} aria-label={`Delete ${t.name}`}>
+                  Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>

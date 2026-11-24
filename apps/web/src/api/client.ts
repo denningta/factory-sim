@@ -1,5 +1,7 @@
 import {
   apiErrorSchema,
+  equipmentTypeListResponseSchema,
+  userEquipmentTypeSchema,
   projectDetailSchema,
   projectListResponseSchema,
   projectSummarySchema,
@@ -11,6 +13,7 @@ import {
   type ProjectSummary,
   type UpdateProjectRequest,
   type User,
+  type UserEquipmentType,
 } from '@factory-sim/schema';
 
 /** Anything with a zod-style `parse`; keeps zod itself out of the web app's dependencies. */
@@ -81,4 +84,12 @@ export const api = {
     request('PATCH', `/api/projects/${id}`, projectSummarySchema, req),
   deleteProject: async (id: string): Promise<void> =>
     request('DELETE', `/api/projects/${id}`, null),
+  listEquipmentTypes: async (): Promise<UserEquipmentType[]> =>
+    (await request('GET', '/api/equipment-types', equipmentTypeListResponseSchema)).types,
+  createEquipmentType: async (type: UserEquipmentType): Promise<UserEquipmentType> =>
+    request('POST', '/api/equipment-types', userEquipmentTypeSchema, type),
+  updateEquipmentType: async (type: UserEquipmentType): Promise<UserEquipmentType> =>
+    request('PUT', `/api/equipment-types/${type.id}`, userEquipmentTypeSchema, type),
+  deleteEquipmentType: async (id: string): Promise<void> =>
+    request('DELETE', `/api/equipment-types/${id}`, null),
 };
