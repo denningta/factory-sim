@@ -12,6 +12,7 @@ export function Field({
   extraError,
   onBlur,
   placeholder,
+  describedBy,
   beginEdit,
   endEdit,
 }: {
@@ -22,6 +23,8 @@ export function Field({
   extraError?: string | null;
   onBlur?: () => void;
   placeholder?: string;
+  /** Id of a hint element elsewhere that describes this field. */
+  describedBy?: string;
   /** One focus-to-blur (or Enter) session is one undo step, however many keystrokes. */
   beginEdit: () => number;
   endEdit: (token: number) => void;
@@ -46,7 +49,9 @@ export function Field({
         value={draft ?? value}
         placeholder={placeholder}
         aria-invalid={shown ? 'true' : undefined}
-        aria-describedby={shown ? errorId : undefined}
+        aria-describedby={
+          [shown ? errorId : null, describedBy].filter(Boolean).join(' ') || undefined
+        }
         onFocus={begin}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return;

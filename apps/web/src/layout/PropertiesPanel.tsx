@@ -190,6 +190,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
   const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
+  // WS-4: techs assigned to the first selected station.
+  const assigned = first ? technicians.filter((t) => t.stationIds.includes(first.id)).length : 0;
   if (!first && selectedConnectionId) return <ConnectionProperties useStore={useStore} />;
   if (!first) {
     return (
@@ -276,8 +278,6 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
             .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
             .map(([key, v]) => {
               const isSpeed = key === 'speed';
-              // WS-4: a manual station only runs as many units in parallel as it has techs.
-              const assigned = technicians.filter((t) => t.stationIds.includes(first.id)).length;
               const techLimited =
                 key === 'capacity' &&
                 first.behavior === 'workstation' &&
@@ -287,6 +287,7 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
                 <Fragment key={`${key}-${first.id}`}>
                   <Field
                     beginEdit={beginEdit}
+                    describedBy={techLimited ? 'tech-limit-hint' : undefined}
                     endEdit={endEdit}
                     label={
                       isSpeed
@@ -310,7 +311,7 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
                     onBlur={() => setLinked(null)}
                   />
                   {techLimited && (
-                    <p style={{ color: '#92400e', margin: 0 }}>
+                    <p id="tech-limit-hint" style={{ color: '#b45309', margin: 0 }}>
                       {`Parallel units limited by assigned techs (${assigned})`}
                     </p>
                   )}

@@ -56,4 +56,26 @@ describe('WS-4 techs-limit hint', () => {
     await user.click(screen.getByRole('checkbox', { name: /tech 1/i }));
     expect(screen.queryByText(HINT)).toBeNull();
   });
+
+  it('AC2: no hint when techs > capacity', async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('checkbox', { name: /tech 1/i }));
+    await setCapacity('3');
+    await screen.findByText(HINT);
+    act(() => {
+      store.getState().addTechnician();
+      store.getState().setTechnicianStation('tech-2', stationId, true);
+      store.getState().addTechnician();
+      store.getState().setTechnicianStation('tech-3', stationId, true);
+      store.getState().addTechnician();
+      store.getState().setTechnicianStation('tech-4', stationId, true);
+    });
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('describes the Capacity field with the hint', async () => {
+    await setCapacity('3');
+    const hint = await screen.findByText(HINT);
+    expect(screen.getByLabelText(/^capacity/i).getAttribute('aria-describedby')).toContain(hint.id);
+  });
 });
