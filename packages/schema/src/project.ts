@@ -8,19 +8,20 @@ import {
 } from './equipment';
 
 /**
- * Project document, schema version 3 (ADR-0006, ADR-0009, ADR-0010).
+ * Project document, schema version 5 (ADR-0006, ADR-0009, ADR-0010).
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * v3: equipment has `ports`; connections join an output port to an input port and carry a
  *     `capacity` (FL-1, FL-2).
  * v4: duration distributions (WS-2), routing step names, calendar, demand and release rule
  *     (PR-4), technicians and workstation labor (TE-1), connection transfer time (FL-4).
+ * v5: saved run settings (SE-4): warm-up, run length and seed.
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
@@ -115,6 +116,27 @@ export const releaseSchema = z.strictObject({
   ]),
 });
 
+/** The engine's PRNG takes a 32-bit seed (rng.ts reduces larger values modulo 2^32). */
+export const MAX_SEED = 2 ** 32 - 1;
+
+/**
+ * Run settings (SE-4), saved with the project. `warmUp` is in seconds and excluded from
+ * statistics. Run length is seconds, or shifts of `calendar.shiftLength`, so a shift-based
+ * run follows a later shift-length change. With `random`, a new seed is drawn per run and
+ * `value` keeps the last fixed seed for when the user switches back.
+ */
+export const runSettingsSchema = z.strictObject({
+  warmUp: z.number().nonnegative(),
+  length: z.discriminatedUnion('unit', [
+    z.strictObject({ unit: z.literal('seconds'), value: seconds }),
+    z.strictObject({ unit: z.literal('shifts'), value: z.number().positive() }),
+  ]),
+  seed: z.strictObject({
+    mode: z.enum(['fixed', 'random']),
+    value: z.number().int().min(0).max(MAX_SEED),
+  }),
+});
+
 /** A technician (TE-1) assigned to one or more workstations. */
 export const technicianSchema = z.strictObject({
   id,
@@ -135,6 +157,7 @@ const projectShape = z.strictObject({
   demand: demandSchema,
   release: releaseSchema,
   technicians: z.array(technicianSchema),
+  run: runSettingsSchema,
 });
 
 type ProjectShape = z.infer<typeof projectShape>;
@@ -271,6 +294,7 @@ export type Calendar = Project['calendar'];
 export type Demand = Project['demand'];
 export type Release = Project['release'];
 export type Technician = Project['technicians'][number];
+export type RunSettings = Project['run'];
 export type Transfer = Connection['transfer'];
 export type CycleTime = Project['cycleTimes'][number];
 
@@ -287,5 +311,6 @@ export function createProject(): Project {
     demand: { basis: 'mix', items: [] },
     release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
     technicians: [],
+    run: { warmUp: 0, length: { unit: 'shifts', value: 1 }, seed: { mode: 'fixed', value: 1 } },
   };
 }
