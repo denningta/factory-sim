@@ -481,41 +481,41 @@ describe('SE-2 AC3: run to end with no animation finishes a one-week 20-station 
   }, 60_000);
 });
 
-  /** Two stations 12 m apart (centers), one tech at 2 m/s assigned to both. */
-  const twoStations = () => {
-    const store = createEditorStore();
-    const s = store.getState;
-    const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
-    const a = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
-    const b = s().placeEquipment('base-workstation', { x: 18, y: 0 })!;
-    const sink = s().placeEquipment('base-sink', { x: 24, y: 0 })!;
-    s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: a.id, portId: 'in' });
-    s().connect({ equipmentId: a.id, portId: 'out' }, { equipmentId: b.id, portId: 'in' });
-    s().connect({ equipmentId: b.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
-    const p = s().addProduct();
-    s().addRoutingStep(p.id, a.id);
-    s().addRoutingStep(p.id, b.id);
-    s().setCycleTime(p.id, a.id, 5);
-    s().setCycleTime(p.id, b.id, 5);
-    s().setReleaseInterval(20);
-    const tech = s().addTechnician();
-    s().setTechnicianStation(tech.id, a.id, true);
-    s().setTechnicianStation(tech.id, b.id, true);
-    s().updateTechnician(tech.id, { name: 'Ana', walkSpeed: 2 });
-    const st = s();
-    const project: Project = {
-      ...createProject(),
-      floor: st.floor,
-      equipment: st.equipment,
-      connections: st.connections,
-      products: st.products,
-      cycleTimes: st.cycleTimes,
-      technicians: st.technicians,
-      demand: st.demand,
-      release: st.release,
-    };
-    return { project, a, b, tech: st.technicians[0]! };
+/** Two stations 12 m apart (centers), one tech at 2 m/s assigned to both. */
+const twoStations = () => {
+  const store = createEditorStore();
+  const s = store.getState;
+  const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
+  const a = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
+  const b = s().placeEquipment('base-workstation', { x: 18, y: 0 })!;
+  const sink = s().placeEquipment('base-sink', { x: 24, y: 0 })!;
+  s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: a.id, portId: 'in' });
+  s().connect({ equipmentId: a.id, portId: 'out' }, { equipmentId: b.id, portId: 'in' });
+  s().connect({ equipmentId: b.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
+  const p = s().addProduct();
+  s().addRoutingStep(p.id, a.id);
+  s().addRoutingStep(p.id, b.id);
+  s().setCycleTime(p.id, a.id, 5);
+  s().setCycleTime(p.id, b.id, 5);
+  s().setReleaseInterval(20);
+  const tech = s().addTechnician();
+  s().setTechnicianStation(tech.id, a.id, true);
+  s().setTechnicianStation(tech.id, b.id, true);
+  s().updateTechnician(tech.id, { name: 'Ana', walkSpeed: 2 });
+  const st = s();
+  const project: Project = {
+    ...createProject(),
+    floor: st.floor,
+    equipment: st.equipment,
+    connections: st.connections,
+    products: st.products,
+    cycleTimes: st.cycleTimes,
+    technicians: st.technicians,
+    demand: st.demand,
+    release: st.release,
   };
+  return { project, a, b, tech: st.technicians[0]! };
+};
 describe('TE-2: techs walk between their stations', () => {
   const events = (project: Project, until: number) => {
     const run = newRun(project);
