@@ -181,6 +181,12 @@ describe('SE-6 AC3: pre-run checks report ModelIssues linked to the object', () 
     expect(issues(s2)).toEqual([{ code: 'no_path', objectId: 'A-S1-again', severity: 'error' }]);
   });
 
+  it('a product with no routing', () => {
+    const p = lineProject(one());
+    p.products.push({ ...p.products[0]!, id: 'B', name: 'B', routing: [] });
+    expect(issues(p)).toEqual([{ code: 'no_routing', objectId: 'B', severity: 'error' }]);
+  });
+
   it('a manual station without a technician', () => {
     const p = lineProject({ ...one(), techs: false });
     expect(issues(p)).toEqual([

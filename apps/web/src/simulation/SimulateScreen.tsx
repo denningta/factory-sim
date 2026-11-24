@@ -34,7 +34,7 @@ const clock = (t: number) => {
 };
 
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
-export function SimulateScreen() {
+export function SimulateScreen(_props: { onNavigate?: (screen: 'layout' | 'products') => void }) {
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
   // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
   const [applied, setApplied] = useState(() =>
