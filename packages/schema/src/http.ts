@@ -171,7 +171,7 @@ export const updateProjectRequestSchema = z
  * (ADR-0011), and usable in all of that user's projects. The built-ins (`BASE_EQUIPMENT_TYPES`)
  * are not stored or served; the web app lists them first.
  *
- * The client generates `id` as a UUID, so it never collides with built-in ids and placed
+ * The client generates `id` as a lowercase UUID (what Postgres `uuid` returns, so ids round-trip), so it never collides with built-in ids and placed
  * instances can point at it (`typeId`) before the POST returns. POST with an existing id
  * answers 409 `conflict`; PUT needs `id` to equal `:id` (else 400 `validation`) and answers
  * 404 for a type the user doesn't own. PUT replaces the whole type; placed instances are
@@ -179,8 +179,8 @@ export const updateProjectRequestSchema = z
  * DELETE leaves instances alone too; their `typeId` then matches nothing.
  */
 export const userEquipmentTypeSchema = equipmentTypeSchema.refine(
-  (t) => z.uuid().safeParse(t.id).success,
-  { message: 'User-defined types need a UUID id', path: ['id'] },
+  (t) => z.uuid().safeParse(t.id).success && t.id === t.id.toLowerCase(),
+  { message: 'User-defined types need a lowercase UUID id', path: ['id'] },
 );
 
 /** Sorted by name (case-insensitive). */

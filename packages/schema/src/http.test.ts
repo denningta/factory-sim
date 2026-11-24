@@ -144,6 +144,12 @@ describe('HTTP contract: equipment library (EQ-3)', () => {
     expect(r.error?.issues[0]?.path).toEqual(['id']);
   });
 
+  it('requires lowercase so ids round-trip through Postgres uuid', () => {
+    expect(userEquipmentTypeSchema.safeParse({ ...cnc, id: uuid.toUpperCase() }).success).toBe(
+      false,
+    );
+  });
+
   it('validates params against the base behavior', () => {
     const bad = { ...cnc, params: { capacity: 10 } };
     expect(userEquipmentTypeSchema.safeParse(bad).success).toBe(false);
