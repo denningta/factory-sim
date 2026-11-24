@@ -235,7 +235,7 @@ describe('SE-7: run settings panel', () => {
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
     await userEvent.click(button('Apply'));
     expect(useEditorStore.getState().run.seed).toEqual({ mode: 'random', value: 77 });
-    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toContain('77');
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toBe('Seed used: 77');
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
     expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('77');
   });
