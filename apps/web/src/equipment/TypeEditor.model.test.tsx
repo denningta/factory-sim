@@ -52,7 +52,7 @@ describe('UI-7 AC6: the type editor offers a model picker', () => {
     render(
       <TypeEditor
         unit="m"
-        initial={{ ...ws, id: 'u1', model: undefined }}
+        initial={{ ...ws, id: crypto.randomUUID(), model: undefined }}
         onSave={onSave}
         onCancel={() => {}}
       />,

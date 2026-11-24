@@ -134,8 +134,13 @@ describe('UI-7 AC3: fixed parts keep their real size', () => {
         const q = b[i]!;
         expect(q.fixed).toBe(true);
         if (p.shape === 'box' && q.shape === 'box') {
-          expect(q.size[0]).toBeCloseTo(p.size[0], 9);
-          expect(q.size[2]).toBeCloseTo(p.size[2], 9);
+          // Each side keeps its real size, unless it spans the footprint (a rail runs the
+          // belt's full length), and at least one side is real.
+          const keeps = (i: 0 | 2) => Math.abs(q.size[i] - p.size[i]) < 1e-9;
+          const spans = (i: 0 | 2) => Math.abs(q.size[i] - (i === 0 ? s1.width : s1.length)) < 1e-9;
+          expect(keeps(0) || spans(0)).toBe(true);
+          expect(keeps(2) || spans(2)).toBe(true);
+          expect(keeps(0) || keeps(2)).toBe(true);
         } else if (p.shape === 'cylinder' && q.shape === 'cylinder') {
           expect(q.radiusTop).toBeCloseTo(p.radiusTop, 9);
           expect(q.radiusBottom).toBeCloseTo(p.radiusBottom, 9);

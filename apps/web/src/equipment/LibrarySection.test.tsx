@@ -5,6 +5,9 @@ import { createProject, defaultPorts, type EquipmentType } from '@factory-sim/sc
 import { LibrarySection, type LibraryApi } from './LibrarySection';
 import { useEditorStore } from '../layout/editorStore';
 
+// The 3D preview needs WebGL and ResizeObserver, which jsdom lacks.
+vi.mock('./EquipmentModel', () => ({ ModelPreview: () => <div /> }));
+
 afterEach(cleanup);
 
 const cnc: EquipmentType = {

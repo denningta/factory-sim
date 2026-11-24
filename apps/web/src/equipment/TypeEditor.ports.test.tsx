@@ -6,6 +6,9 @@ import { TypeEditor } from './TypeEditor';
 import { useEditorStore } from '../layout/editorStore';
 import { portWorldPosition } from '../layout/ports';
 
+// The 3D preview needs WebGL and ResizeObserver, which jsdom lacks.
+vi.mock('./EquipmentModel', () => ({ ModelPreview: () => <div /> }));
+
 afterEach(cleanup);
 
 async function saveNew(pick?: () => Promise<void>) {

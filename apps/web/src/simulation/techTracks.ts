@@ -41,8 +41,9 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
       .filter((info) => info.homeId !== undefined)
       .map((info) => [info.id, { info, baseId: info.homeId, walks: [], cursor: 0 }]),
   );
+  // Techs stand at the station's operator anchor (UI-7), and walk between those spots.
   const center = (id: string | undefined): Pt =>
-    (id !== undefined && geometry.equipment.get(id)?.center) || { x: 0, z: 0 };
+    (id !== undefined && geometry.equipment.get(id)?.operator) || { x: 0, z: 0 };
 
   const walkOf = (ev: Extract<LineEvent, { type: 'techMoved' }>) => ({
     t: ev.t,
