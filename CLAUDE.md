@@ -2,7 +2,7 @@
 
 Self-hosted web app for manufacturing engineers to lay out a to-scale, mixed-model production line in 3D, configure cycle times, buffers and technicians, run a discrete-event simulation and find the bottleneck. MVP = a 5-station, 2-product line: define → lay out → staff → simulate → analyze.
 
-This repo is built by a team of Claude Code agents (lead, builders, reviewer) coordinated in herdr. The product owner (a human) is the only one who merges. Runbook: `docs/agent-team.md`.
+This repo is built by a team of Claude Code agents (lead, builders, reviewer) coordinated in herdr. The product owner (a human) sets priorities and makes product decisions; the lead merges reviewer-approved PRs under the merge rule in `.claude/agents/lead.md`. Runbook: `docs/agent-team.md`.
 
 ## Read first
 
@@ -74,7 +74,7 @@ A hook runs prettier and the owning package's type check after every Edit/Write.
 - **Builders**: one story per worktree, branch `story/<ID>`. Change only what the story needs. If the story requires a change to `packages/schema`, the **public API** of `packages/sim-engine`, `docs/adr/`, CI or `.claude/`, **stop and report to the lead**. Don't work around it.
 - **Lead**: owns ADRs, packages/schema, the sim-engine API, the backlog/issues and dispatch. Doesn't implement feature stories (except PL-3 and API definitions).
 - **Reviewer**: read-only. Runs tests, comments on PRs, never edits or merges.
-- **Nobody** pushes to `main`, force-pushes, merges PRs, or edits acceptance criteria. The product owner merges.
+- **Nobody** pushes to `main`, force-pushes, or edits acceptance criteria. Only the lead merges PRs (squash, enforced by `scripts/hooks/guard-merge.sh`); the product owner merges what the merge rule reserves for them.
 - If acceptance criteria are ambiguous, write the question in the PR/issue and pick the simplest reading that satisfies them; don't invent scope.
 
 ## Git and PRs
@@ -86,4 +86,4 @@ A hook runs prettier and the owning package's type check after every Edit/Write.
 
 ## Definition of Done (summary; full list in docs/definition-of-done.md)
 
-Acceptance criteria verified by automated tests · lint/typecheck/tests green in CI · works in the Docker Compose build · reviewer approved · no new critical bugs · docs updated if behavior changed · product owner merged.
+Acceptance criteria verified by automated tests · lint/typecheck/tests green in CI · works in the Docker Compose build · reviewer approved · no new critical bugs · docs updated if behavior changed · merged (by the lead, or the product owner where reserved).
