@@ -246,6 +246,17 @@ describe('SE-3 AC3: animation can be turned off for speed', () => {
     expect(pb.tracks.at(pb.run.now)).toHaveLength(inLine);
   });
 
+  it('AN-4 AC1: Animate off -> on mid-run, every station shows its current state immediately', () => {
+    const { project, geometry: g, colors: c } = realLine();
+    const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
+    pb.animate = false;
+    pb.advance(1 / 60);
+    pb.animate = true;
+    const expected = pb.run.stationStates();
+    expect(Object.keys(expected).length).toBeGreaterThan(0);
+    expect(Object.fromEntries(pb.stationStates.current())).toEqual(expected);
+  });
+
   it('events appear again after turning animation back on', () => {
     const { project, geometry: g, colors: c } = realLine();
     const pb = createPlayback(newRun(project), g, c, { sliceMs: 0 });
