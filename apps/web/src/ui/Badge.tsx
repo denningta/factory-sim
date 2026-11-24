@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-// Stub until implemented.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- stub signature, replaced by the real component
-export function Badge(_props: any): ReactNode {
-  throw new Error('not implemented');
+import styles from './Badge.module.css';
+
+export type BadgeTone = 'neutral' | 'accent' | 'danger' | 'warning';
+
+export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
+  return <span className={`${styles.badge} ${styles[tone]}`}>{children}</span>;
 }

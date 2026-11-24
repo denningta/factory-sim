@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { User } from '@factory-sim/schema';
 import { api } from '../api/client';
+import { Button, Field } from '../ui';
+import styles from './auth.module.css';
 
 /** Sign-in, or first-admin setup while the instance has no users (PL-6 routes). */
 export function SignIn({
@@ -30,45 +32,37 @@ export function SignIn({
         e.preventDefault();
         void submit();
       }}
-      style={{
-        maxWidth: 360,
-        margin: compact ? 0 : '80px auto',
-        font: '14px sans-serif',
-        display: 'grid',
-        gap: 8,
-      }}
+      className={compact ? styles.formCompact : styles.form}
     >
-      <h1 style={compact ? { fontSize: 16, margin: 0 } : undefined}>
+      <h1 className={compact ? styles.titleCompact : styles.title}>
         {needsSetup ? 'Create the admin account' : 'Sign in'}
       </h1>
-      <label>
-        Email{' '}
-        <input
-          type="email"
-          autoFocus={compact}
-          required
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </label>
-      <label>
-        Password{' '}
-        <input
-          type="password"
-          required
-          autoComplete={needsSetup ? 'new-password' : 'current-password'}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </label>
-      {needsSetup && <small>Use at least 12 characters.</small>}
+      <Field
+        label="Email"
+        type="email"
+        autoFocus={compact}
+        required
+        autoComplete="username"
+        value={email}
+        onChange={setEmail}
+      />
+      <Field
+        label="Password"
+        type="password"
+        required
+        autoComplete={needsSetup ? 'new-password' : 'current-password'}
+        hint={needsSetup ? 'Use at least 12 characters.' : undefined}
+        value={password}
+        onChange={setPassword}
+      />
       {error && (
-        <p role="alert" style={{ color: '#b91c1c' }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-      <button type="submit">{needsSetup ? 'Create account' : 'Sign in'}</button>
+      <Button type="submit" variant="primary">
+        {needsSetup ? 'Create account' : 'Sign in'}
+      </Button>
     </form>
   );
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RunSession } from './runSession';
+import { Legend } from '../ui/Legend';
+import { tokens } from '../ui/tokens';
 import { findBottleneck } from './stationStatus';
 import {
   sortRows,
@@ -11,13 +13,13 @@ import {
 
 type Named = { id: string; name: string };
 
-// Wireframe 4 colors: working green, starved yellow, blocked red, idle gray, walking purple.
+// Bar fills are the state tints (ADR-0016); idle is the waiting gray.
 const COLORS: Record<string, string> = {
-  working: '#86d9a0',
-  starved: '#f6d860',
-  blocked: '#ee8c8c',
-  walking: '#c9a6ec',
-  idle: '#cfd4dc',
+  working: tokens.state.working.tint,
+  starved: tokens.state.starved.tint,
+  blocked: tokens.state.blocked.tint,
+  walking: tokens.state.walking.tint,
+  idle: tokens.state.waiting.tint,
 };
 const LABELS: Record<string, string> = {
   working: 'Working',
@@ -27,7 +29,7 @@ const LABELS: Record<string, string> = {
   idle: 'Idle',
 };
 
-const TRACK = '#eef0f3';
+const TRACK = tokens.color.bg;
 const pct = (v: number) => `${v.toFixed(1)}%`;
 const cell = { padding: '2px 3px', textAlign: 'right' as const };
 
@@ -127,7 +129,10 @@ function UtilTable<K extends string>({
   );
   return (
     <>
-      <Legend label={`${label} legend`} keys={keys} />
+      <Legend
+        label={`${label} legend`}
+        items={keys.map((k) => ({ key: k, label: LABELS[k]!, color: COLORS[k]! }))}
+      />
       <table
         aria-label={label}
         style={{
@@ -159,22 +164,6 @@ function UtilTable<K extends string>({
   );
 }
 
-function Legend({ label, keys }: { label: string; keys: string[] }) {
-  return (
-    <ul
-      aria-label={label}
-      style={{ display: 'flex', gap: 10, listStyle: 'none', margin: '0 0 4px', padding: 0 }}
-    >
-      {keys.map((k) => (
-        <li key={k} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span style={{ width: 10, height: 10, background: COLORS[k] }} aria-hidden />
-          {LABELS[k]}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function Row<K extends string>({
   row,
   keys,
@@ -203,7 +192,9 @@ function Row<K extends string>({
         <td colSpan={keys.length + 1} style={{ padding: '0 3px 6px' }}>
           {bottleneck && (
             // In the bar row so the name cell stays just the name (sorting, labels).
-            <span style={{ color: '#b91c1c', fontWeight: 600, fontSize: 11 }}>▲ Bottleneck</span>
+            <span style={{ color: tokens.color.danger, fontWeight: 600, fontSize: 11 }}>
+              ▲ Bottleneck
+            </span>
           )}
           <div
             role="img"

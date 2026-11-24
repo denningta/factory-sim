@@ -1,17 +1,11 @@
 import { useMemo, useRef } from 'react';
 import type { Product } from '@factory-sim/schema';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
+import { Button } from '../ui';
 import { reachableFromSources } from './reachability';
+import styles from './products.module.css';
 
 type Store = typeof defaultStore;
-
-const iconButton = {
-  border: 'none',
-  background: 'none',
-  cursor: 'pointer',
-  color: '#6b7280',
-  padding: '2px 6px',
-} as const;
 
 /** Wireframe 2, "Routing — <product>": the product's ordered operations (PR-2). */
 export function RoutingEditor({
@@ -37,24 +31,19 @@ export function RoutingEditor({
   const steps = product.routing;
 
   return (
-    <section aria-labelledby="routing-heading" style={{ display: 'grid', gap: 8, maxWidth: 720 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h2 id="routing-heading" style={{ fontSize: 18, margin: 0 }}>
+    <section aria-labelledby="routing-heading" className={styles.routing}>
+      <div className={styles.routingHead}>
+        <h2 id="routing-heading" className={styles.h2}>
           Routing — {product.name}
         </h2>
-        {steps.length > 1 && (
-          <span style={{ color: '#6b7280', fontSize: 12 }}>Drag to reorder</span>
-        )}
+        {steps.length > 1 && <span className={styles.hint}>Drag to reorder</span>}
       </div>
       {stations.length === 0 && (
-        <p style={{ color: '#b45309', margin: 0 }}>
+        <p className={styles.warning}>
           Place a workstation on the Layout first; each step runs at a workstation.
         </p>
       )}
-      <ol
-        aria-label="Routing steps"
-        style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}
-      >
+      <ol aria-label="Routing steps" className={styles.steps}>
         {steps.map((step, i) => {
           const n = i + 1;
           const unreachable = !reachable.has(step.stationId);
@@ -74,41 +63,22 @@ export function RoutingEditor({
                 dragging.current = null;
               }}
               onDragEnd={() => (dragging.current = null)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
-                background: 'white',
-                border: `1px solid ${unreachable ? '#f59e0b' : '#e5e7eb'}`,
-                borderRadius: 8,
-              }}
+              className={unreachable ? styles.stepWarn : styles.step}
             >
-              <span aria-hidden style={{ cursor: 'grab', color: '#9ca3af' }}>
+              <span aria-hidden className={styles.grip}>
                 ⋮⋮
               </span>
-              <span
-                aria-hidden
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  background: '#f3f4f6',
-                  display: 'inline-grid',
-                  placeItems: 'center',
-                  fontSize: 12,
-                }}
-              >
+              <span aria-hidden className={styles.stepNumber}>
                 {n}
               </span>
-              <span aria-hidden style={{ color: '#6b7280' }}>
+              <span aria-hidden className={styles.muted}>
                 →
               </span>
               <select
                 aria-label={`Station for step ${n}`}
                 value={step.stationId}
                 onChange={(e) => setRoutingStepStation(product.id, step.id, e.target.value)}
-                style={{ minWidth: 180, padding: 4 }}
+                className={styles.stationSelect}
               >
                 {stations.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -117,31 +87,34 @@ export function RoutingEditor({
                 ))}
               </select>
               {unreachable && (
-                <span style={{ color: '#b45309', fontSize: 12 }}>
+                <span className={styles.warningSmall}>
                   ⚠ Not reachable from a source: connect this station on the Layout
                 </span>
               )}
-              <span style={{ marginLeft: 'auto', display: 'flex' }}>
+              <span className={styles.stepActions}>
                 <button
+                  type="button"
                   aria-label={`Move step ${n} up`}
                   disabled={i === 0}
                   onClick={() => moveRoutingStep(product.id, step.id, i - 1)}
-                  style={iconButton}
+                  className={styles.iconButton}
                 >
                   ↑
                 </button>
                 <button
+                  type="button"
                   aria-label={`Move step ${n} down`}
                   disabled={i === steps.length - 1}
                   onClick={() => moveRoutingStep(product.id, step.id, i + 1)}
-                  style={iconButton}
+                  className={styles.iconButton}
                 >
                   ↓
                 </button>
                 <button
+                  type="button"
                   aria-label={`Remove step ${n}`}
                   onClick={() => removeRoutingStep(product.id, step.id)}
-                  style={iconButton}
+                  className={styles.iconButton}
                 >
                   ×
                 </button>
@@ -151,13 +124,12 @@ export function RoutingEditor({
         })}
       </ol>
       <div>
-        <button
+        <Button
           disabled={stations.length === 0}
           onClick={() => addRoutingStep(product.id, stations[0]!.id)}
-          style={{ padding: '6px 12px' }}
         >
           + Add step
-        </button>
+        </Button>
       </div>
     </section>
   );

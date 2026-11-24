@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { parseCycleTimeTable, stationsOf } from './cycleTimes';
+import { Button } from '../ui';
 import { DurationEditor } from './DurationEditor';
+import styles from './products.module.css';
 
 type Store = typeof defaultStore;
-
-const cellStyle = { padding: '6px 10px', borderBottom: '1px solid #e5e7eb' } as const;
 
 /** Wireframe 2, "Cycle times": product × station grid, editable only where a routing uses the station (PR-3). */
 export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store }) {
@@ -33,35 +33,29 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
   };
 
   return (
-    <section
-      aria-labelledby="cycle-times-heading"
-      style={{ display: 'grid', gap: 8, marginTop: 32 }}
-    >
-      <h2 id="cycle-times-heading" style={{ fontSize: 18, margin: 0 }}>
+    <section aria-labelledby="cycle-times-heading" className={styles.cycleTimes}>
+      <h2 id="cycle-times-heading" className={styles.h2}>
         Cycle times
       </h2>
       {stations.length === 0 ? (
-        <p style={{ color: '#6b7280', margin: 0 }}>
+        <p className={styles.muted}>
           Add routing steps to a product, then enter its cycle time at each station here.
         </p>
       ) : (
         <>
-          <p style={{ color: '#6b7280', margin: 0 }}>
+          <p className={styles.muted}>
             Seconds, or mm:ss. Pick a distribution to model variability; samples below 0 are cut
             off. Highlighted cells still need a time.
           </p>
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              aria-label="Cycle times"
-              style={{ borderCollapse: 'collapse', background: 'white', font: '14px sans-serif' }}
-            >
+          <div className={styles.tableScroll}>
+            <table aria-label="Cycle times" className={styles.grid}>
               <thead>
                 <tr>
-                  <th scope="col" style={{ ...cellStyle, textAlign: 'left' }}>
+                  <th scope="col" className={styles.cellLeft}>
                     Product
                   </th>
                   {stations.map((s) => (
-                    <th key={s.id} scope="col" style={{ ...cellStyle, textAlign: 'right' }}>
+                    <th key={s.id} scope="col" className={styles.cellRight}>
                       {s.name}
                     </th>
                   ))}
@@ -72,12 +66,12 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                   const own = new Set(stationsOf(p));
                   return (
                     <tr key={p.id}>
-                      <th scope="row" style={{ ...cellStyle, textAlign: 'left', fontWeight: 600 }}>
-                        {p.name} <span style={{ color: '#6b7280' }}>[{p.partNumber}]</span>
+                      <th scope="row" className={styles.rowHead}>
+                        {p.name} <span className={styles.muted}>[{p.partNumber}]</span>
                       </th>
                       {stations.map((s) =>
                         own.has(s.id) ? (
-                          <td key={s.id} style={{ ...cellStyle, textAlign: 'right' }}>
+                          <td key={s.id} className={styles.cellRight}>
                             <DurationEditor
                               name={`${p.name} at ${s.name}`}
                               fixedLabel={`Cycle time, ${p.name} at ${s.name}`}
@@ -92,12 +86,7 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                           <td
                             key={s.id}
                             aria-label={`${p.name} does not use ${s.name}`}
-                            style={{
-                              ...cellStyle,
-                              textAlign: 'center',
-                              color: '#9ca3af',
-                              background: '#f3f4f6',
-                            }}
+                            className={styles.cellNotRouted}
                           >
                             not routed
                           </td>
@@ -109,26 +98,26 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
               </tbody>
             </table>
           </div>
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ cursor: 'pointer' }}>Import from CSV or Excel</summary>
-            <div style={{ display: 'grid', gap: 8, padding: '8px 0', maxWidth: 560 }}>
-              <p style={{ color: '#6b7280', margin: 0 }}>
+          <details className={styles.import}>
+            <summary className={styles.summary}>Import from CSV or Excel</summary>
+            <div className={styles.importBody}>
+              <p className={styles.muted}>
                 First row: station names. First column: exact part numbers (case-sensitive). Copy
                 the cells from Excel and paste, or choose a CSV file.
               </p>
-              <label style={{ display: 'grid', gap: 4 }}>
+              <label className={styles.selectField}>
                 Paste cycle times
                 <textarea
                   rows={5}
                   value={pasted}
                   onChange={(e) => setPasted(e.target.value)}
-                  style={{ font: '13px monospace' }}
+                  className={styles.paste}
                 />
               </label>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <button disabled={pasted.trim() === ''} onClick={() => runImport(pasted)}>
+              <div className={styles.importActions}>
+                <Button disabled={pasted.trim() === ''} onClick={() => runImport(pasted)}>
                   Import
-                </button>
+                </Button>
                 <input
                   type="file"
                   accept=".csv,.tsv,.txt,text/csv,text/plain"
@@ -144,14 +133,14 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
           </details>
         </>
       )}
-      <div role="status" style={{ fontSize: 13 }}>
+      <div role="status" className={styles.report}>
         {report && (
           <>
-            <p style={{ margin: 0 }}>
+            <p className={styles.reportText}>
               Imported {report.imported} cycle time{report.imported === 1 ? '' : 's'}.
               {report.errors.length > 0 && ` Skipped ${report.errors.length}:`}
             </p>
-            <ul style={{ color: '#b45309', margin: '4px 0 0', paddingLeft: 18 }}>
+            <ul className={styles.reportErrors}>
               {report.errors.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}

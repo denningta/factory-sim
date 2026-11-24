@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
 import { SignIn } from '../auth/SignIn';
+import { Button } from '../ui';
 import { Editor } from '../Editor';
 import { SimulateScreen } from '../simulation/SimulateScreen';
 import { ProductsPanel } from '../products/ProductsPanel';
@@ -9,6 +10,7 @@ import { useEditorStore } from '../layout/editorStore';
 import { useUndoShortcuts } from '../layout/shortcuts';
 import { createAutosaver, type SaveStatus } from './autosave';
 import { documentForSave } from './document';
+import styles from './projects.module.css';
 
 const AUTOSAVE_MS = 2000; // well inside the 5 s requirement, leaves room for the request
 
@@ -126,47 +128,42 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   if (loadError)
     return (
       <p role="alert">
-        {loadError} <button onClick={onClose}>Back</button>
+        {loadError} <Button onClick={onClose}>Back</Button>
       </p>
     );
-  if (!ready) return <p style={{ font: '14px sans-serif', padding: 16 }}>Opening…</p>;
+  if (!ready) return <p className={styles.opening}>Opening…</p>;
   return (
-    <div style={{ height: '100%' }}>
+    <div className={styles.root}>
       {/* One inert container (header + editor) keeps focus and clicks inside the dialog. */}
-      <div
-        inert={status === 'signin'}
-        style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', height: '100%' }}
-      >
-        <header style={{ display: 'flex', gap: 12, padding: '6px 12px', font: '14px sans-serif' }}>
-          <button onClick={onClose}>← Projects</button>
+      <div inert={status === 'signin'} className={styles.frame}>
+        <header className={styles.header}>
+          <Button onClick={onClose}>← Projects</Button>
           <strong>{name}</strong>
-          <nav aria-label="Screens" style={{ display: 'flex', gap: 4 }}>
+          <nav aria-label="Screens" className={styles.nav}>
             {(['layout', 'products', 'simulate'] as const).map((t) => (
-              <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
+              <Button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
                 {t === 'layout' ? 'Layout' : t === 'products' ? 'Products' : 'Simulate'}
-              </button>
+              </Button>
             ))}
           </nav>
           <span
             role="status"
-            style={{
-              marginLeft: 'auto',
-              color:
-                status === 'conflict' || status === 'error' || status === 'stopped'
-                  ? '#b91c1c'
-                  : '#6b7280',
-            }}
+            className={
+              status === 'conflict' || status === 'error' || status === 'stopped'
+                ? styles.statusBad
+                : styles.status
+            }
           >
             {status === 'stopped'
               ? `Not saved: ${stop?.message ?? 'saving stopped'}`
               : LABEL[status]}
           </span>
           {(status === 'conflict' || status === 'stopped') && (
-            <button onClick={() => location.reload()}>Reload</button>
+            <Button onClick={() => location.reload()}>Reload</Button>
           )}
         </header>
         {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
-        <div inert={locked} style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}>
+        <div inert={locked} className={locked ? styles.bodyLocked : styles.body}>
           {tab === 'layout' ? (
             <Editor readOnly={locked} />
           ) : tab === 'products' ? (
@@ -181,17 +178,10 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           role="dialog"
           aria-modal="true"
           aria-label="Session expired"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 10,
-            background: 'rgba(0,0,0,0.4)',
-            display: 'grid',
-            placeItems: 'start center',
-          }}
+          className={styles.overlay}
         >
-          <div style={{ background: '#fff', padding: 16, margin: 40, borderRadius: 6 }}>
-            <p style={{ font: '14px sans-serif', margin: '0 0 8px' }}>
+          <div className={styles.dialog}>
+            <p className={styles.dialogText}>
               Your session expired. Sign in to save your changes; nothing has been lost.
             </p>
             <SignIn compact needsSetup={false} onSignedIn={() => saverRef.current?.resume()} />

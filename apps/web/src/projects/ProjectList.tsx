@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ProjectDetail, ProjectSummary } from '@factory-sim/schema';
+import { Button, EmptyState, Field } from '../ui';
+import styles from './projects.module.css';
 
 export interface ProjectsApi {
   listProjects: () => Promise<ProjectSummary[]>;
@@ -62,12 +64,12 @@ export function ProjectList({
     });
 
   return (
-    <section style={{ maxWidth: 640, margin: '0 auto', padding: 24, font: '14px sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Projects</h1>
-        <span>
-          {onAccount && <button onClick={onAccount}>Account</button>}{' '}
-          {onSignOut && <button onClick={onSignOut}>Sign out</button>}
+    <section className={styles.page}>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.title}>Projects</h1>
+        <span className={styles.actions}>
+          {onAccount && <Button onClick={onAccount}>Account</Button>}
+          {onSignOut && <Button onClick={onSignOut}>Sign out</Button>}
         </span>
       </header>
       <form
@@ -75,32 +77,30 @@ export function ProjectList({
           e.preventDefault();
           void create();
         }}
+        className={styles.create}
       >
-        <label>
-          New project name{' '}
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} />
-        </label>{' '}
-        <button type="submit">Create</button>
+        <Field label="New project name" value={newName} onChange={setNewName} maxLength={200} />
+        <Button type="submit" variant="primary">
+          Create
+        </Button>
       </form>
       {error && (
-        <p role="alert" style={{ color: '#b91c1c' }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
       {projects === null ? (
         <p>Loading…</p>
       ) : projects.length === 0 ? (
-        <p>No projects yet. Create one above.</p>
+        <EmptyState title="No projects yet">Create one above.</EmptyState>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className={styles.list}>
           {projects.map((p) => (
-            <li
-              key={p.id}
-              style={{ display: 'flex', gap: 8, padding: '8px 0', alignItems: 'center' }}
-            >
+            <li key={p.id} className={styles.row}>
               {renaming?.id === p.id ? (
                 <input
                   aria-label="Project name"
+                  className={styles.nameInput}
                   autoFocus
                   value={renaming.name}
                   maxLength={200}
@@ -112,29 +112,37 @@ export function ProjectList({
                   onBlur={() => setRenaming(null)}
                 />
               ) : (
-                <strong style={{ flex: 1 }}>{p.name}</strong>
+                <strong className={styles.name}>{p.name}</strong>
               )}
-              <span style={{ color: '#6b7280' }}>{new Date(p.updatedAt).toLocaleString()}</span>
-              <button aria-label={`Open ${p.name}`} onClick={() => onOpen(p.id)}>
+              <span className={styles.when}>{new Date(p.updatedAt).toLocaleString()}</span>
+              <Button aria-label={`Open ${p.name}`} onClick={() => onOpen(p.id)}>
                 Open
-              </button>
-              <button
+              </Button>
+              <Button
                 aria-label={`Rename ${p.name}`}
                 onClick={() => setRenaming({ id: p.id, name: p.name })}
               >
                 Rename
-              </button>
+              </Button>
               {deleting === p.id ? (
                 <>
-                  <button aria-label={`Confirm delete ${p.name}`} onClick={() => void remove(p.id)}>
+                  <Button
+                    variant="danger"
+                    aria-label={`Confirm delete ${p.name}`}
+                    onClick={() => void remove(p.id)}
+                  >
                     Confirm delete
-                  </button>
-                  <button onClick={() => setDeleting(null)}>Cancel</button>
+                  </Button>
+                  <Button onClick={() => setDeleting(null)}>Cancel</Button>
                 </>
               ) : (
-                <button aria-label={`Delete ${p.name}`} onClick={() => setDeleting(p.id)}>
+                <Button
+                  variant="danger"
+                  aria-label={`Delete ${p.name}`}
+                  onClick={() => setDeleting(p.id)}
+                >
                   Delete
-                </button>
+                </Button>
               )}
             </li>
           ))}

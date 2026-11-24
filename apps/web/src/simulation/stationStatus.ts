@@ -1,15 +1,16 @@
 import type { LineEvent, StationState } from '@factory-sim/sim-engine';
+import { tokens } from '../ui/tokens';
 
-/** Wireframe 4 colors: working green, starved yellow, blocked red, idle gray. */
+/** Station-state fills (tints) from the design tokens: working green, starved yellow, blocked red, idle gray. */
 export const STATE_COLORS: Record<StationState, string> = {
-  working: '#86d9a0',
-  starved: '#f6d860',
-  blocked: '#ee8c8c',
-  idle: '#cfd4dc',
+  working: tokens.state.working.tint,
+  starved: tokens.state.starved.tint,
+  blocked: tokens.state.blocked.tint,
+  idle: tokens.state.waiting.tint,
 };
 
 /** Neutral until the engine has reported a state for the station. */
-export const NO_STATE_COLOR = '#e5e7eb';
+export const NO_STATE_COLOR = tokens.color.border;
 
 export const plateColor = (state: StationState | undefined): string =>
   state ? STATE_COLORS[state] : NO_STATE_COLOR;

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { User } from '@factory-sim/schema';
+import { Button, Field } from '../ui';
+import styles from './auth.module.css';
 
 export interface UserAdminApi {
   listUsers: () => Promise<User[]>;
@@ -40,21 +42,27 @@ export function UserAdmin({ api, currentUserId }: { api: UserAdminApi; currentUs
   };
 
   return (
-    <section style={{ display: 'grid', gap: 8 }}>
-      <h2>Users</h2>
+    <section className={styles.form}>
+      <h2 className={styles.subtitle}>Users</h2>
       {error && (
-        <p role="alert" style={{ color: '#b91c1c' }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-      {notice && <p role="status">{notice}</p>}
-      <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
+      {notice && (
+        <p role="status" className={styles.notice}>
+          {notice}
+        </p>
+      )}
+      <ul className={styles.list}>
         {users?.map((u) => (
-          <li key={u.id}>
-            {u.email} ({u.role}
-            {u.disabled ? ', disabled' : ''}){' '}
+          <li key={u.id} className={styles.row}>
+            <span className={styles.grow}>
+              {u.email} ({u.role}
+              {u.disabled ? ', disabled' : ''})
+            </span>
             {u.id !== currentUserId && resetting !== u.id && (
-              <button onClick={() => startReset(u.id)}>Reset password for {u.email}</button>
+              <Button onClick={() => startReset(u.id)}>Reset password for {u.email}</Button>
             )}
             {resetting === u.id && (
               <form
@@ -62,22 +70,20 @@ export function UserAdmin({ api, currentUserId }: { api: UserAdminApi; currentUs
                   e.preventDefault();
                   void submit(u);
                 }}
-                style={{ display: 'inline' }}
+                className={styles.inlineForm}
               >
-                <label>
-                  New password for {u.email}{' '}
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </label>{' '}
-                <button type="submit">Set password</button>{' '}
-                <button type="button" onClick={() => startReset(null)}>
-                  Cancel
-                </button>
+                <Field
+                  label={`New password for ${u.email}`}
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={setPassword}
+                />
+                <Button type="submit" variant="primary">
+                  Set password
+                </Button>
+                <Button onClick={() => startReset(null)}>Cancel</Button>
               </form>
             )}
           </li>

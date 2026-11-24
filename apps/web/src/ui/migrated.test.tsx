@@ -13,10 +13,12 @@ afterEach(cleanup);
 beforeEach(() => localStorage.clear());
 
 /** Computed geometry only: bar widths and product colour swatches (ADR-0016). */
-const ALLOWED = new Set(['width', 'height', 'background', 'background-color']);
+// The `background` shorthand expands to longhands, hence the prefix test.
+const allowed = (prop: string) =>
+  prop === 'width' || prop === 'height' || prop.startsWith('background');
 function inlineStyleViolations(container: HTMLElement): string[] {
   return [...container.querySelectorAll<HTMLElement>('[style]')].flatMap((el) =>
-    [...el.style].filter((p) => !ALLOWED.has(p)).map((p) => `${el.tagName.toLowerCase()} ${p}`),
+    [...el.style].filter((p) => !allowed(p)).map((p) => `${el.tagName.toLowerCase()} ${p}`),
   );
 }
 
