@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { findIssues } from './overlaps';
 import { formatNumber, fromDisplay, toDisplay } from './units';
@@ -18,6 +18,11 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
   const clearance = useStore((s) => s.clearance);
   const setClearance = useStore((s) => s.setClearance);
   const unit = useStore((s) => s.unit);
+  const beginEdit = useStore((s) => s.beginEdit);
+  const endEdit = useStore((s) => s.endEdit);
+  // One focus-to-blur typing session is one undo step, not one per keystroke.
+  const session = useRef(0);
+  useEffect(() => () => endEdit(session.current), [endEdit]);
   // Typed text is kept while editing so "0." or "" aren't reformatted under the cursor.
   const [draft, setDraft] = useState<string | null>(null);
   const issues = useMemo(() => findIssues(equipment, clearance).count, [equipment, clearance]);
@@ -62,6 +67,9 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
           style={{ width: 64 }}
           value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
           placeholder="off"
+          onFocus={() => {
+            session.current = beginEdit();
+          }}
           onChange={(e) => {
             const text = e.target.value;
             setDraft(text);
@@ -69,7 +77,10 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
             // Blank or invalid means off; the store ignores non-positive values too.
             setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
           }}
-          onBlur={() => setDraft(null)}
+          onBlur={() => {
+            endEdit(session.current);
+            setDraft(null);
+          }}
         />
       </label>
       <span
