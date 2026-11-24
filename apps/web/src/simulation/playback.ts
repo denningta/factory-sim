@@ -5,7 +5,7 @@ import { createPartTracks, type LineGeometry, type PartTracks } from './partTrac
 export interface Playback {
   readonly run: Run;
   readonly tracks: PartTracks;
-  /** Tech walks. Kept when animation is toggled: each walk starts from its own station. */
+  /** Tech walks. Cleared and re-seeded from `run.techs()` when animation is turned back on, as parts are from `run.wip()`. */
   readonly techs: TechTracks;
   speed: number;
   /** Animation off: no events are recorded and the run goes as fast as time slices allow. */
@@ -58,7 +58,10 @@ export function createPlayback(
       run.setEventsEnabled(on);
       tracks.clear();
       // Events weren't recorded while off, so ask the engine which parts are in the line.
-      if (on) tracks.seed(run.wip());
+      if (on) {
+        tracks.seed(run.wip());
+        techs.seed(run.techs());
+      }
     },
     advance(wallSeconds) {
       if (animate) {
