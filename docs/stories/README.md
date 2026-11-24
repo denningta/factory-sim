@@ -73,3 +73,6 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [AN-1](AN-1.md) | Analytics & KPIs  | 5   | Must     | SE-4       |
 | [AN-2](AN-2.md) | Analytics & KPIs  | 5   | Must     | SE-4, TE-2 |
 | [AN-3](AN-3.md) | Analytics & KPIs  | 3   | Must     | AN-2, SE-3 |
+| [SE-7](SE-7.md) | Simulation engine | 2   | Must     | SE-4       |
+| [SE-8](SE-8.md) | Simulation engine | 2   | Should   | SE-2       |
+| [TE-3](TE-3.md) | Technicians       | 3   | Should   | TE-2       |
