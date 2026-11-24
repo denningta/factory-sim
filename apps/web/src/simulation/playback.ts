@@ -40,8 +40,8 @@ export function createPlayback(
   const nowMs = options.nowMs ?? (() => performance.now());
   const tracks = createPartTracks(geometry, colors);
   const techs = createTechTracks(geometry, options.techs ?? []);
-  // Replaced when animation is toggled: events aren't recorded while off, so old states are stale.
-  let stationStates = createStationStates();
+  // Cleared when animation is toggled: events aren't recorded while off, so old states are stale.
+  const stationStates = createStationStates();
   let animate = true;
   const ingest = () => {
     const events = run.drainEvents();
@@ -54,9 +54,7 @@ export function createPlayback(
     run,
     tracks,
     techs,
-    get stationStates() {
-      return stationStates;
-    },
+    stationStates,
     speed: 1,
     get animate() {
       return animate;
@@ -66,11 +64,12 @@ export function createPlayback(
       animate = on;
       run.setEventsEnabled(on);
       tracks.clear();
-      stationStates = createStationStates();
+      stationStates.seed({});
       // Events weren't recorded while off, so ask the engine which parts are in the line.
       if (on) {
         tracks.seed(run.wip());
         techs.seed(run.techs());
+        stationStates.seed(run.stationStates());
       }
     },
     advance(wallSeconds) {

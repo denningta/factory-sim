@@ -89,3 +89,16 @@ describe('plateColor', () => {
     expect(plateColor(undefined)).not.toBe(STATE_COLORS.idle);
   });
 });
+
+describe('AN-4 AC2: Run to end -> Reset -> Animate on shows the t = 0 states', () => {
+  it('seeds station states from the engine after reset', () => {
+    const r = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!r.ok) throw new Error('compile');
+    const at0 = new Map(r.session.stationStates());
+    expect(at0.size).toBeGreaterThan(0);
+    r.session.runToEnd();
+    r.session.reset();
+    r.session.setAnimate(true);
+    expect(r.session.stationStates()).toEqual(at0);
+  });
+});
