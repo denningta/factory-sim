@@ -84,8 +84,16 @@ function ColorInput({
 
 /** Wireframe 2: "End items" (PR-1) on the left, the selected product's routing (PR-2) beside it. */
 export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store }) {
-  const { products, addProduct, updateProduct, deleteProduct, beginEdit, endEdit } = useStore();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const {
+    products,
+    selectedProductId: selectedId,
+    selectProduct: setSelectedId,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    beginEdit,
+    endEdit,
+  } = useStore();
   const selected = products.find((p) => p.id === selectedId) ?? products[0];
   const { cycleTimes, equipment, technicians } = useStore();
   const issues = preRunIssues({ products, cycleTimes, equipment, technicians });
