@@ -92,3 +92,29 @@ describe('TypeEditor ports', () => {
     expect(portWorldPosition(inst, p).x).toBeCloseTo(inst.position.x - 0.5 * inst.footprint.width);
   });
 });
+
+describe('TypeEditor ports: untouched rows', () => {
+  it('keeps the original u/v of a port the user did not edit', async () => {
+    const initial = userEquipmentTypeSchema.parse({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'CNC',
+      behavior: 'workstation',
+      params: { capacity: 1, batchSize: 1, labor: { mode: 'manual' } },
+      footprint: { width: 1, length: 1 },
+      height: 1,
+      color: '#112233',
+      ports: [
+        { id: 'in', kind: 'input', u: 0.12345, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
+    });
+    const onSave = vi.fn();
+    render(<TypeEditor unit="m" initial={initial} onSave={onSave} onCancel={() => {}} />);
+    await userEvent.selectOptions(screen.getByLabelText(/output.*side/i), 'right');
+    await userEvent.click(screen.getByRole('button', { name: /save type/i }));
+    expect(onSave.mock.calls[0]![0].ports).toEqual([
+      { id: 'in', kind: 'input', u: 0.12345, v: -0.5 },
+      { id: 'out', kind: 'output', u: 0.5, v: 0 },
+    ]);
+  });
+});
