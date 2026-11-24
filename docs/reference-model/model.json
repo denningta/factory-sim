@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "floor": {
     "width": 20,
     "length": 40,
@@ -786,5 +786,8 @@
       "mode": "fixed",
       "value": 1
     }
+  },
+  "layout": {
+    "minClearance": null
   }
 }

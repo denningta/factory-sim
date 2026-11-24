@@ -8,20 +8,21 @@ import {
 } from './equipment';
 
 /**
- * Project document, schema version 5 (ADR-0006, ADR-0009, ADR-0010).
+ * Project document, schema version 6 (ADR-0006, ADR-0009, ADR-0010).
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * v3: equipment has `ports`; connections join an output port to an input port and carry a
  *     `capacity` (FL-1, FL-2).
  * v4: duration distributions (WS-2), routing step names, calendar, demand and release rule
  *     (PR-4), technicians and workstation labor (TE-1), connection transfer time (FL-4).
  * v5: saved run settings (SE-4): warm-up, run length and seed.
+ * v6: layout checks (LE-5): optional minimum clearance between equipment.
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
@@ -116,6 +117,14 @@ export const releaseSchema = z.strictObject({
   ]),
 });
 
+/**
+ * Layout checks (LE-5). `minClearance` in meters: equipment closer than this is flagged;
+ * `null` turns the clearance check off (overlaps are always flagged).
+ */
+export const layoutSettingsSchema = z.strictObject({
+  minClearance: z.number().positive().nullable(),
+});
+
 /** The engine's PRNG takes a 32-bit seed (rng.ts reduces larger values modulo 2^32). */
 export const MAX_SEED = 2 ** 32 - 1;
 
@@ -158,6 +167,7 @@ const projectShape = z.strictObject({
   release: releaseSchema,
   technicians: z.array(technicianSchema),
   run: runSettingsSchema,
+  layout: layoutSettingsSchema,
 });
 
 type ProjectShape = z.infer<typeof projectShape>;
@@ -295,6 +305,7 @@ export type Demand = Project['demand'];
 export type Release = Project['release'];
 export type Technician = Project['technicians'][number];
 export type RunSettings = Project['run'];
+export type LayoutSettings = Project['layout'];
 export type Transfer = Connection['transfer'];
 export type CycleTime = Project['cycleTimes'][number];
 
@@ -312,5 +323,6 @@ export function createProject(): Project {
     release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
     technicians: [],
     run: { warmUp: 0, length: { unit: 'shifts', value: 1 }, seed: { mode: 'fixed', value: 1 } },
+    layout: { minClearance: null },
   };
 }

@@ -127,6 +127,8 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
     ...doc,
     schemaVersion: 5,
   }),
+  // v5 → v6: layout checks; clearance off, as in LE-5's session default.
+  5: (doc) => ({ layout: { minClearance: null }, ...doc, schemaVersion: 6 }),
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({
