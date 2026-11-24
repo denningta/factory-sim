@@ -169,6 +169,8 @@ describe('AN-1: live KPI panel', () => {
     await upTo(1);
     expect(cells(total())).toEqual(['0.0', '0', '0.0', '–']);
     cleanup();
+    // The warm-up is saved with the project (SE-7), so clear it for the no-warm-up run.
+    useEditorStore.setState({ run: { ...useEditorStore.getState().run, warmUp: 0 } });
 
     render(<SimulateScreen />);
     await upTo(1);
@@ -180,16 +182,14 @@ describe('AN-1: live KPI panel', () => {
 
 describe('SE-7: run settings panel', () => {
   it('AC1: shows the saved run settings from the project', () => {
-    useEditorStore
-      .getState()
-      .applyRun(
-        {
-          warmUp: 3600,
-          length: { unit: 'seconds', value: 7200 },
-          seed: { mode: 'fixed', value: 42 },
-        },
-        8 * 3600,
-      );
+    useEditorStore.getState().applyRun(
+      {
+        warmUp: 3600,
+        length: { unit: 'seconds', value: 7200 },
+        seed: { mode: 'fixed', value: 42 },
+      },
+      8 * 3600,
+    );
     render(<SimulateScreen />);
     expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('1');
     expect((screen.getByLabelText('Run length') as HTMLInputElement).value).toBe('2');

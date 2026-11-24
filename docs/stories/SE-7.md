@@ -26,3 +26,4 @@ issue: 116
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-23):_ product-owner decision. Schema v5 (#117) adds `project.run`: `warmUp` seconds, `length` {unit `seconds` | `shifts`, value}, `seed` {mode, value}. Hours in the UI = seconds / 3600. Save through `documentForSave` like `shiftLength` (SE-4), and include it in the editor undo snapshot.
+- _Builder:_ the store holds `run` (schema form) and `applyRun(run, shiftLength)`, one undo step for run settings and shift length together; a no-op apply adds no step. The panel remounts (keyed on saved values) so undo/load refreshes its fields. Warm-up validation is in `validateRunSettings(settings, shiftLength)`. A random-seed run keeps `seed.value`, so switching back to Fixed restores it; the drawn seed is session-only ("Seed used").

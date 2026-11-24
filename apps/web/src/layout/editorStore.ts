@@ -455,8 +455,13 @@ export function createEditorStore() {
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
       run: createProject().run,
-      applyRun: () => {
-        throw new Error('not implemented');
+      applyRun: (run, shiftLength) => {
+        if (!(Number.isFinite(shiftLength) && shiftLength > 0)) return;
+        if (JSON.stringify(run) === JSON.stringify(get().run) && shiftLength === get().shiftLength)
+          return;
+        record();
+        set({ run, shiftLength });
+        set(intervalFor(get().demand));
       },
       setShiftLength: (seconds) => {
         if (!(Number.isFinite(seconds) && seconds > 0) || seconds === get().shiftLength) return;

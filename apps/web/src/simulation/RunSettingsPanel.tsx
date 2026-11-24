@@ -34,7 +34,7 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
     };
     const shift = Number(shiftHours) * 3600;
     const problem =
-      validateRunSettings(settings) ??
+      validateRunSettings(settings, shift) ??
       (Number.isFinite(shift) && shift > 0 ? null : 'Shift length must be more than 0');
     setError(problem);
     if (!problem) onApply(settings, shift);
