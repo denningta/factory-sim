@@ -175,6 +175,7 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
   const {
     equipment,
     selectedIds,
+    userTypes,
     unit,
     rotateSelected,
     setSelectedRotation,
@@ -219,7 +220,8 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
           <p style={{ margin: 0 }}>
             Type:{' '}
             <span data-testid="type">
-              {BASE_EQUIPMENT_TYPES.find((t) => t.id === first.typeId)?.name ?? first.typeId}
+              {[...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === first.typeId)?.name ??
+                first.typeId}
             </span>
           </p>
           <div style={{ display: 'flex', gap: 8 }}>

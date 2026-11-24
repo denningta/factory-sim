@@ -64,3 +64,45 @@ describe('LibraryPanel', () => {
     expect(data[EQUIPMENT_DRAG_TYPE]).toBe(BASE_EQUIPMENT_TYPES[1]!.id);
   });
 });
+
+describe('LibraryPanel with user types (EQ-3)', () => {
+  const mine = {
+    id: '11111111-1111-4111-8111-111111111111',
+    name: '5-axis CNC',
+    behavior: 'workstation' as const,
+    params: { capacity: 1, batchSize: 1, labor: { mode: 'manual' as const } },
+    footprint: { width: 3, length: 2.5 },
+    height: 2.4,
+    color: '#2f6f9f',
+    ports: [],
+  };
+
+  it('AC2: my types are listed after the built-ins and can be dragged onto the canvas', () => {
+    render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} userTypes={[mine]} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(6);
+    const button = within(items[5]!).getByRole('button', { name: /^5-axis CNC/ });
+    const data: Record<string, string> = {};
+    fireEvent.dragStart(button, {
+      dataTransfer: { setData: (k: string, v: string) => (data[k] = v), effectAllowed: '' },
+    });
+    expect(data[EQUIPMENT_DRAG_TYPE]).toBe(mine.id);
+  });
+
+  it('AC3: only my types offer edit and delete', async () => {
+    const onEdit = vi.fn();
+    render(
+      <LibraryPanel
+        unit="m"
+        selectedId={null}
+        onSelect={() => {}}
+        userTypes={[mine]}
+        onEdit={onEdit}
+        onDelete={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole('button', { name: /^edit/i })).toHaveLength(1);
+    await userEvent.setup().click(screen.getByRole('button', { name: /^edit/i }));
+    expect(onEdit).toHaveBeenCalledWith(mine);
+  });
+});

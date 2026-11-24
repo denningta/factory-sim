@@ -62,3 +62,19 @@ export const instanceSetup = pgTable(
   { id: boolean('id').primaryKey().default(true) },
   (t) => [check('instance_setup_singleton', sql`${t.id} = true`)],
 );
+
+/**
+ * A user's custom library types (ADR-0010). `id` is the client-generated UUID that placed
+ * instances reference as `typeId`. `document` holds the whole `UserEquipmentType`; it is
+ * `unknown` so reads and writes go through the schema, like projects.
+ */
+export const equipmentTypes = pgTable('equipment_types', {
+  id: uuid('id').primaryKey(),
+  ownerId: uuid('owner_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  document: jsonb('document').$type<unknown>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

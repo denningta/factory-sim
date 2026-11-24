@@ -2,6 +2,8 @@ import {
   apiErrorSchema,
   changePasswordRequestSchema,
   createProjectRequestSchema,
+  equipmentTypeListResponseSchema,
+  userEquipmentTypeSchema,
   createUserRequestSchema,
   loginRequestSchema,
   projectDetailSchema,
@@ -125,6 +127,31 @@ export function openApiDocument() {
         },
         delete: {
           summary: 'Delete a project',
+          parameters: idParam,
+          responses: { '204': { description: 'Deleted' }, ...errors },
+        },
+      },
+      '/api/equipment-types': {
+        get: {
+          summary: 'List my custom equipment types, sorted by name',
+          responses: { ...ok(equipmentTypeListResponseSchema), ...errors },
+        },
+        post: {
+          summary:
+            'Create a custom equipment type (client-generated UUID id); 409 if the id exists',
+          requestBody: body(userEquipmentTypeSchema),
+          responses: { ...ok(userEquipmentTypeSchema, '201'), ...errors },
+        },
+      },
+      '/api/equipment-types/{id}': {
+        put: {
+          summary: 'Replace a custom equipment type; placed instances are not touched',
+          parameters: idParam,
+          requestBody: body(userEquipmentTypeSchema),
+          responses: { ...ok(userEquipmentTypeSchema), ...errors },
+        },
+        delete: {
+          summary: 'Delete a custom equipment type; placed instances are not touched',
           parameters: idParam,
           responses: { '204': { description: 'Deleted' }, ...errors },
         },

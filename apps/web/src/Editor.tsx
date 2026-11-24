@@ -1,5 +1,6 @@
 import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
-import { LibraryPanel } from './equipment/LibraryPanel';
+import { LibrarySection } from './equipment/LibrarySection';
+import { api } from './api/client';
 import { LibraryPreview } from './equipment/EquipmentModel';
 import { FloorPanel } from './layout/FloorPanel';
 import { FloorScene } from './layout/FloorScene';
@@ -13,8 +14,8 @@ export function Editor({ readOnly = false }: { readOnly?: boolean }) {
   const unit = useEditorStore((s) => s.unit);
   const snap = useEditorStore((s) => s.snapEnabled);
   const selectedId = useEditorStore((s) => s.selectedTypeId);
-  const selectType = useEditorStore((s) => s.selectType);
-  const selected = BASE_EQUIPMENT_TYPES.find((t) => t.id === selectedId);
+  const userTypes = useEditorStore((s) => s.userTypes);
+  const selected = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === selectedId);
   useEditorShortcuts(readOnly);
   // Wireframe 1: library left, viewport centre, properties right.
   return (
@@ -27,7 +28,7 @@ export function Editor({ readOnly = false }: { readOnly?: boolean }) {
       }}
     >
       <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
-        <LibraryPanel unit={unit} selectedId={selectedId} onSelect={selectType} />
+        <LibrarySection api={api} unit={unit} />
         {selected ? (
           <LibraryPreview type={selected} />
         ) : (
