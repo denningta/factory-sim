@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-1, UI-2]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 149
 ---
 
 # UI-6: Results screen

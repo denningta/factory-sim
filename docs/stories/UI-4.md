@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-1, UI-6]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 147
 ---
 
 # UI-4: Simulate screen: floating controls and live tiles

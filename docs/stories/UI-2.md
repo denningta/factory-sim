@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-1]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 145
 ---
 
 # UI-2: App shell: workflow tabs, status and Run simulation
