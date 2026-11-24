@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
+import { SignIn } from '../auth/SignIn';
 import { Editor } from '../Editor';
 import { SimulateScreen } from '../simulation/SimulateScreen';
 import { ProductsPanel } from '../products/ProductsPanel';
@@ -26,6 +27,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   const [name, setName] = useState('');
   const [status, setStatus] = useState<SaveStatus>('saved');
   const [stop, setStop] = useState<ApiRequestError | null>(null);
+  const saverRef = useRef<ReturnType<typeof createAutosaver> | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<'layout' | 'products' | 'simulate'>('layout');
@@ -42,7 +44,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         let base: Project = p.document;
         useEditorStore.getState().loadDocument(base);
         setName(p.name);
-        saver = createAutosaver({
+        saver = saverRef.current = createAutosaver({
           delayMs: AUTOSAVE_MS,
           maxWaitMs: 4000,
           onStatus: (s, err) => {
@@ -109,7 +111,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
   }, [id]);
 
   // Closing the tab inside the debounce window would lose the last edits.
-  const unsaved = status === 'unsaved' || status === 'saving' || status === 'error';
+  const unsaved =
+    status === 'unsaved' || status === 'saving' || status === 'error' || status === 'signin';
   useEffect(() => {
     if (!unsaved) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -158,7 +161,32 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         )}
       </header>
       {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
-      <div inert={locked} style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}>
+      {status === 'signin' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Session expired"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'grid',
+            placeItems: 'start center',
+          }}
+        >
+          <div style={{ background: '#fff', padding: 16, margin: 40, borderRadius: 6 }}>
+            <p style={{ font: '14px sans-serif', margin: 0 }}>
+              Your session expired. Sign in to save your changes; nothing has been lost.
+            </p>
+            <SignIn needsSetup={false} onSignedIn={() => saverRef.current?.resume()} />
+          </div>
+        </div>
+      )}
+      <div
+        inert={locked || status === 'signin'}
+        style={{ minHeight: 0, height: '100%', opacity: locked ? 0.6 : 1 }}
+      >
         {tab === 'layout' ? (
           <Editor readOnly={locked} />
         ) : tab === 'products' ? (

@@ -24,3 +24,4 @@ issue: 71
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-24):_ from the review of #69 (issue #71). Uses the existing login route; no API change.
+- _Builder:_ an `unauthorized` save error now puts the autosaver in a `signin` status: edits stay dirty, no retry timer. The existing `SignIn` form shows in a modal dialog over the (inert) editor; on success `saver.resume()` retries the save. Editor is not unmounted, so state is kept.
