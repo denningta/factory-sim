@@ -15,13 +15,17 @@ import { TechLayer } from './TechLayer';
 import { createRunSession, type RunSessionResult } from './runSession';
 import { fromProjectRun, toProjectRun, toRunOptions, type RunSettings } from './runSettings';
 
-const SPEEDS = [1, 10, 100, 1000];
+// Same range as the session's clamp (runSession MIN_SPEED/MAX_SPEED).
+const MIN_SPEED = 1;
+const MAX_SPEED = 1000;
 
 const clock = (t: number) => {
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const sec = Math.floor(t % 60);
-  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  const total = Math.floor(t);
+  const day = Math.floor(total / 86400) + 1;
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `Day ${day}, ${pad(h)}:${pad(m)}:${pad(total % 60)}`;
 };
 
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
@@ -113,14 +117,14 @@ function Running({
           font: '14px sans-serif',
         }}
       >
-        <button onClick={() => (session.playing ? session.pause() : session.play())}>
-          {session.playing ? 'Pause' : 'Play'}
+        <button onClick={() => session.play()} disabled={session.playing}>
+          Play
+        </button>
+        <button onClick={() => session.pause()} disabled={!session.playing}>
+          Pause
         </button>
         <button onClick={() => session.step()} disabled={session.done}>
           Step
-        </button>
-        <button onClick={() => session.runToEnd()} disabled={session.done}>
-          Run to end
         </button>
         <button
           onClick={() => {
@@ -130,15 +134,20 @@ function Running({
         >
           Reset
         </button>
+        <button onClick={() => session.runToEnd()} disabled={session.done}>
+          Run to end
+        </button>
         <label>
           Speed{' '}
-          <select value={session.speed} onChange={(e) => session.setSpeed(Number(e.target.value))}>
-            {SPEEDS.map((v) => (
-              <option key={v} value={v}>
-                {v}×
-              </option>
-            ))}
-          </select>
+          <input
+            type="range"
+            min={MIN_SPEED}
+            max={MAX_SPEED}
+            step={1}
+            value={session.speed}
+            onChange={(e) => session.setSpeed(Number(e.target.value))}
+          />{' '}
+          <output>{session.speed}×</output>
         </label>
         <label>
           <input
@@ -148,9 +157,12 @@ function Running({
           />{' '}
           Animate
         </label>
-        <span role="timer" aria-label="Simulation clock">
-          {clock(now)}
-          {session.done ? ' (finished)' : ''}
+        <span>
+          Sim clock ·{' '}
+          <span role="timer" aria-label="Simulation clock">
+            {clock(now)}
+            {session.done ? ' (finished)' : ''}
+          </span>
         </span>
       </div>
       <FloorScene interactive={false}>

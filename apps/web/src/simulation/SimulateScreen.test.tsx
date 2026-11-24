@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEditorStore } from '../layout/editorStore';
 import type { RunSession } from './runSession';
@@ -46,10 +46,10 @@ const button = (name: string) => screen.getByRole('button', { name }) as HTMLBut
 describe('SE-2: SimulateScreen playback controls', () => {
   it('Step moves the clock past 0:00:00 and the button still reads Play', async () => {
     render(<SimulateScreen />);
-    expect(clock()).toMatch(/^0:00:00/);
+    expect(clock()).toMatch(/^Day 1, 00:00:00/);
     // Early events can share the same second, so take a few steps.
     for (let i = 0; i < 6; i++) await userEvent.click(button('Step'));
-    await waitFor(() => expect(clock()).not.toMatch(/^0:00:00/));
+    await waitFor(() => expect(clock()).not.toMatch(/^Day 1, 00:00:00/));
     expect(button('Play')).toBeTruthy();
   });
 
@@ -62,12 +62,12 @@ describe('SE-2: SimulateScreen playback controls', () => {
     expect(button('Run to end').disabled).toBe(true);
   });
 
-  it('Reset puts the clock back to 0:00:00', async () => {
+  it('Reset puts the clock back to Day 1, 00:00:00', async () => {
     render(<SimulateScreen />);
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 5000 });
     await userEvent.click(button('Reset'));
-    await waitFor(() => expect(clock()).toBe('0:00:00'));
+    await waitFor(() => expect(clock()).toBe('Day 1, 00:00:00'));
     expect(button('Step').disabled).toBe(false);
   });
 });
@@ -86,7 +86,7 @@ describe('SE-4: run settings panel', () => {
     await set('Run length', '2');
     await userEvent.click(button('Apply'));
     await userEvent.click(button('Run to end'));
-    await waitFor(() => expect(clock()).toBe('3:00:00 (finished)'), { timeout: 5000 });
+    await waitFor(() => expect(clock()).toBe('Day 1, 03:00:00 (finished)'), { timeout: 5000 });
     expect(useEditorStore.getState().shiftLength).toBe(3600);
   });
 
@@ -96,7 +96,7 @@ describe('SE-4: run settings panel', () => {
     await set('Run length', '2');
     await userEvent.click(button('Apply'));
     await userEvent.click(button('Run to end'));
-    await waitFor(() => expect(clock()).toBe('2:00:00 (finished)'), { timeout: 5000 });
+    await waitFor(() => expect(clock()).toBe('Day 1, 02:00:00 (finished)'), { timeout: 5000 });
   });
 
   it('a random seed is drawn on Apply and shown; a fixed seed is kept', async () => {
@@ -148,7 +148,7 @@ describe('AN-1: live KPI panel', () => {
       .map((c) => c.textContent);
   const total = () => screen.getByRole('row', { name: /Total/ });
   const playAt1000 = async () => {
-    await userEvent.selectOptions(screen.getByLabelText('Speed'), '1000');
+    fireEvent.change(screen.getByLabelText('Speed'), { target: { value: '1000' } });
     await userEvent.click(button('Play'));
   };
 
@@ -249,4 +249,42 @@ describe('SE-7: run settings panel', () => {
     expect(screen.getByText(/Seed must be a whole number/)).toBeTruthy();
     expect(useEditorStore.getState().run.seed.value).toBe(1);
   });
+});
+
+describe('SE-8: playback toolbar matches the wireframe', () => {
+  it('has separate Play and Pause buttons; Play is disabled while playing, Pause while paused', async () => {
+    render(<SimulateScreen />);
+    expect(button('Play').disabled).toBe(false);
+    expect(button('Pause').disabled).toBe(true);
+    await userEvent.click(button('Play'));
+    expect(button('Play').disabled).toBe(true);
+    expect(button('Pause').disabled).toBe(false);
+    await userEvent.click(button('Pause'));
+    expect(button('Play').disabled).toBe(false);
+    expect(button('Pause').disabled).toBe(true);
+  });
+
+  it('speed is a slider from 1× to 1000×', () => {
+    render(<SimulateScreen />);
+    const slider = screen.getByLabelText('Speed') as HTMLInputElement;
+    expect(slider.type).toBe('range');
+    expect(slider.min).toBe('1');
+    expect(slider.max).toBe('1000');
+    expect(slider.value).toBe('1');
+    fireEvent.change(slider, { target: { value: '250' } });
+    expect(slider.value).toBe('250');
+    expect(screen.getByText('250×')).toBeTruthy();
+  });
+
+  it('the clock shows Day N, hh:mm:ss and rolls over to the next day after 23:59:59', async () => {
+    render(<SimulateScreen />);
+    await userEvent.selectOptions(screen.getByLabelText('Run length unit'), 'hours');
+    await userEvent.clear(screen.getByLabelText('Run length'));
+    await userEvent.type(screen.getByLabelText('Run length'), '30');
+    await userEvent.click(button('Apply'));
+    await userEvent.click(button('Run to end'));
+    await waitFor(() => expect(clock()).toMatch(/^Day 2, 06:00:00 \(finished\)/), {
+      timeout: 8000,
+    });
+  }, 10000);
 });
