@@ -17,6 +17,8 @@ export const plateColor = (state: StationState | undefined): string =>
 export interface StationStates {
   /** Appends engine events (time order); only `stationState` events matter. */
   ingest(events: readonly LineEvent[]): void;
+  /** Replaces all states with the engine's current ones (events aren't recorded while animation is off). */
+  seed(states: Readonly<Record<string, StationState>>): void;
   /** Latest known state per station; absent until the engine has reported one. */
   current(): ReadonlyMap<string, StationState>;
 }
@@ -26,6 +28,10 @@ export function createStationStates(): StationStates {
   return {
     ingest(events) {
       for (const ev of events) if (ev.type === 'stationState') states.set(ev.stationId, ev.state);
+    },
+    seed(next) {
+      states.clear();
+      for (const [id, state] of Object.entries(next)) states.set(id, state);
     },
     current: () => states,
   };
