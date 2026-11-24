@@ -23,6 +23,10 @@ describe('SE-5 AC2: an issue maps to the object to select', () => {
   it('product ids map to the products screen', () => {
     expect(issueTarget(project, issue('A'))).toEqual({ screen: 'products', productId: 'A' });
   });
+  it('missing cycle time issues map to the products screen with the step product', () => {
+    const i = { ...issue('step-1'), code: 'missing_cycle_time' };
+    expect(issueTarget(project, i)).toEqual({ screen: 'products', productId: 'A' });
+  });
   it('issues with no object or an unknown one map to nothing', () => {
     expect(issueTarget(project, issue())).toBeUndefined();
     expect(issueTarget(project, issue('nope'))).toBeUndefined();

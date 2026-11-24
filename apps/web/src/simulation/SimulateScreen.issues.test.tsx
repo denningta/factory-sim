@@ -46,6 +46,17 @@ describe('SE-5 AC1: a product with no routing blocks the run', () => {
   });
 });
 
+describe('SE-5 AC2: product issues select the product', () => {
+  it('clicking the no-routing issue navigates to Products with that product selected', async () => {
+    const empty = useEditorStore.getState().addProduct();
+    const onNavigate = vi.fn();
+    render(<SimulateScreen onNavigate={onNavigate} />);
+    await userEvent.click(screen.getByRole('button', { name: /no routing/i }));
+    expect(onNavigate).toHaveBeenCalledWith('products');
+    expect(useEditorStore.getState().selectedProductId).toBe(empty.id);
+  });
+});
+
 describe('SE-5 AC3: a run cannot start while blocking errors remain', () => {
   it('shows no playback controls while an error remains, and does once it is fixed', async () => {
     render(<SimulateScreen />);

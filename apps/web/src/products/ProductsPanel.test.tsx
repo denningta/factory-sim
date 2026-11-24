@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createEditorStore } from '../layout/editorStore';
 import { ProductsPanel } from './ProductsPanel';
@@ -63,5 +63,19 @@ describe('ProductsPanel', () => {
     expect(store.getState().products[0]!.color).toBe('#333333');
     store.getState().undo();
     expect(store.getState().products[0]!.color).toBe(before);
+  });
+});
+
+describe('SE-5: ProductsPanel selection lives in the editor store', () => {
+  it('shows the product named by selectedProductId', async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /add product/i }));
+    await user.click(screen.getByRole('button', { name: /add product/i }));
+    const [a, b] = store.getState().products;
+    act(() => store.getState().selectProduct(a!.id));
+    expect(store.getState().selectedProductId).toBe(a!.id);
+    act(() => store.getState().selectProduct(b!.id));
+    const row = screen.getAllByRole('button', { pressed: true })[0]!;
+    expect(row.textContent).toContain(b!.name);
   });
 });
