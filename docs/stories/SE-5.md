@@ -22,4 +22,5 @@ issue: 32
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- The checks live in the engine's `compileLine` (SE-6). SE-5 adds the missing `no_routing` check (product with an empty routing) and the UI: issues on the Simulate screen are buttons; clicking selects the equipment (routing-step ids resolve to their station) and switches to the Layout screen, or the Products screen for a product issue.
+- A run can't start because `createRunSession` returns no session while `compileLine` reports errors; the playback controls only render with a session.
