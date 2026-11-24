@@ -37,11 +37,12 @@ describe('AN-3 AC2/AC3: the bottleneck is flagged in the table and follows the r
       />,
     );
     const table = screen.getByRole('table', { name: 'Station utilization' });
+    // The badge sits in the station's bar row, next to the bar labelled with its name.
     const flagged = () =>
       within(table)
-        .getAllByRole('row')
-        .filter((r) => within(r).queryByText('Bottleneck'))
-        .map((r) => within(r).getByRole('rowheader').textContent);
+        .queryAllByText(/Bottleneck/)
+        .map((b) => b.parentElement!.querySelector('[role=img]')!.getAttribute('aria-label')!)
+        .map((l) => l.split(':')[0]);
     expect(flagged()).toEqual(['Cut']);
 
     stats = mk(0.9, 0.8);
@@ -58,6 +59,6 @@ describe('AN-3 AC2/AC3: the bottleneck is flagged in the table and follows the r
     render(
       <UtilizationPanel session={session} stations={[{ id: 's1', name: 'Weld' }]} techs={[]} />,
     );
-    expect(screen.queryByText('Bottleneck')).toBeNull();
+    expect(screen.queryByText(/Bottleneck/)).toBeNull();
   });
 });

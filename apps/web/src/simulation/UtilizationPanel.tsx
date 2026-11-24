@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { RunSession } from './runSession';
+import { findBottleneck } from './stationStatus';
 import {
   sortRows,
   stationUtilization,
@@ -69,6 +70,7 @@ export function UtilizationPanel({
         rows={data.st}
         started={data.started}
         keys={['working', 'starved', 'blocked', 'idle']}
+        bottleneckId={findBottleneck(data.st)}
       />
       <UtilTable
         label="Technician utilization"
@@ -87,12 +89,15 @@ function UtilTable<K extends string>({
   rows,
   keys,
   started,
+  bottleneckId,
 }: {
   label: string;
   first: string;
   rows: UtilRow<K>[];
   keys: K[];
   started: boolean;
+  /** AN-3: the station with the highest working %, flagged in its row. */
+  bottleneckId?: string | null;
 }) {
   const [sort, setSort] = useState<SortState<K> | null>(null);
   const shown = sort ? sortRows(rows, sort) : rows;
@@ -140,7 +145,13 @@ function UtilTable<K extends string>({
         </thead>
         <tbody>
           {shown.map((r) => (
-            <Row key={r.id} row={r} keys={keys} started={started} />
+            <Row
+              key={r.id}
+              row={r}
+              keys={keys}
+              started={started}
+              bottleneck={r.id === bottleneckId}
+            />
           ))}
         </tbody>
       </table>
@@ -168,10 +179,12 @@ function Row<K extends string>({
   row,
   keys,
   started,
+  bottleneck,
 }: {
   row: UtilRow<K>;
   keys: K[];
   started: boolean;
+  bottleneck: boolean;
 }) {
   const summary = keys.map((k) => `${k} ${pct(row[k])}`).join(', ');
   return (
@@ -188,6 +201,10 @@ function Row<K extends string>({
       </tr>
       <tr role="none">
         <td colSpan={keys.length + 1} style={{ padding: '0 3px 6px' }}>
+          {bottleneck && (
+            // In the bar row so the name cell stays just the name (sorting, labels).
+            <span style={{ color: '#b91c1c', fontWeight: 600, fontSize: 11 }}>▲ Bottleneck</span>
+          )}
           <div
             role="img"
             aria-label={`${row.name}: ${summary}`}

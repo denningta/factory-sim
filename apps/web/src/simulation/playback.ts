@@ -1,4 +1,5 @@
 import type { Run } from '@factory-sim/sim-engine';
+import { createStationStates, type StationStates } from './stationStatus';
 import { createTechTracks, type TechInfo, type TechTracks } from './techTracks';
 import { createPartTracks, type LineGeometry, type PartTracks } from './partTracks';
 
@@ -7,6 +8,8 @@ export interface Playback {
   readonly tracks: PartTracks;
   /** Tech walks. Kept when animation is toggled: each walk starts from its own station. */
   readonly techs: TechTracks;
+  /** Latest state of every station, from the same events as the parts. */
+  readonly stationStates: StationStates;
   speed: number;
   /** Animation off: no events are recorded and the run goes as fast as time slices allow. */
   animate: boolean;
@@ -37,17 +40,23 @@ export function createPlayback(
   const nowMs = options.nowMs ?? (() => performance.now());
   const tracks = createPartTracks(geometry, colors);
   const techs = createTechTracks(geometry, options.techs ?? []);
+  // Replaced when animation is toggled: events aren't recorded while off, so old states are stale.
+  let stationStates = createStationStates();
   let animate = true;
   const ingest = () => {
     const events = run.drainEvents();
     tracks.ingest(events);
     techs.ingest(events);
+    stationStates.ingest(events);
   };
   ingest(); // the t = 0 events recorded when the run was created
   const pb: Playback = {
     run,
     tracks,
     techs,
+    get stationStates() {
+      return stationStates;
+    },
     speed: 1,
     get animate() {
       return animate;
@@ -57,6 +66,7 @@ export function createPlayback(
       animate = on;
       run.setEventsEnabled(on);
       tracks.clear();
+      stationStates = createStationStates();
       // Events weren't recorded while off, so ask the engine which parts are in the line.
       if (on) tracks.seed(run.wip());
     },

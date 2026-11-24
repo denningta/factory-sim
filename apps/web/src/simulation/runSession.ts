@@ -141,9 +141,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       return speed;
     },
     stats: () => pb.run.stats(),
-    stationStates: () => {
-      throw new Error('not implemented');
-    },
+    stationStates: () => pb.stationStates.current(),
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {

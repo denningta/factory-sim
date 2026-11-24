@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
+import type { Equipment } from '@factory-sim/schema';
 import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
@@ -6,6 +7,7 @@ import { currentProject } from './currentProject';
 import { KpiPanel } from './KpiPanel';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
+import { StationLayer } from './StationLayer';
 import { UtilizationPanel } from './UtilizationPanel';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
@@ -56,7 +58,7 @@ export function SimulateScreen({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
       {result.ok ? (
-        <Running session={result.session} />
+        <Running session={result.session} stations={stations} />
       ) : (
         <Issues issues={result.issues} onNavigate={onNavigate} />
       )}
@@ -80,7 +82,13 @@ export function SimulateScreen({
   );
 }
 
-function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>['session'] }) {
+function Running({
+  session,
+  stations,
+}: {
+  session: Extract<RunSessionResult, { ok: true }>['session'];
+  stations: readonly Equipment[];
+}) {
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [now, setNow] = useState(0);
   useEffect(() => session.subscribe(rerender), [session]);
@@ -144,6 +152,7 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
         </span>
       </div>
       <FloorScene interactive={false}>
+        <StationLayer session={session} stations={stations} />
         <PartLayer session={session} />
         <TechLayer session={session} />
       </FloorScene>

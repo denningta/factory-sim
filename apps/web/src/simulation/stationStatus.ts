@@ -16,7 +16,13 @@ export interface StationStates {
 }
 
 export function createStationStates(): StationStates {
-  throw new Error('not implemented');
+  const states = new Map<string, StationState>();
+  return {
+    ingest(events) {
+      for (const ev of events) if (ev.type === 'stationState') states.set(ev.stationId, ev.state);
+    },
+    current: () => states,
+  };
 }
 
 /**
@@ -24,6 +30,13 @@ export function createStationStates(): StationStates {
  * (layout order); null while nobody has worked yet, so nothing is flagged during warm-up.
  */
 export function findBottleneck(rows: readonly { id: string; working: number }[]): string | null {
-  void rows;
-  throw new Error('not implemented');
+  let best: string | null = null;
+  let max = 0;
+  for (const r of rows) {
+    if (r.working > max) {
+      max = r.working;
+      best = r.id;
+    }
+  }
+  return best;
 }
