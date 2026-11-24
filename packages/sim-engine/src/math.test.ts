@@ -17,6 +17,8 @@ describe('log (exact-operation port of fdlibm __ieee754_log)', () => {
       1,
       2,
       0.5,
+      1.4,
+      2.8,
       10,
       1e-300,
       1e300,
