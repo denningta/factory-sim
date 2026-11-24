@@ -32,7 +32,15 @@ function GridLines() {
  * Text as a sprite with a canvas texture, sized in world meters so labels scale with the
  * floor. drei's Html mounts a React root per label, which misbehaves under React 19.
  */
-function TextLabel({ text, position, height }: { text: string; position: Vec3; height: number }) {
+export function TextLabel({
+  text,
+  position,
+  height,
+}: {
+  text: string;
+  position: Vec3;
+  height: number;
+}) {
   const { texture, aspect } = useMemo(() => {
     const canvas = document.createElement('canvas');
     const px = 48;

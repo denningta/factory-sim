@@ -5,6 +5,7 @@ import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
 import { PartLayer } from './PartLayer';
 import { RunSettingsPanel } from './RunSettingsPanel';
+import { TechLayer } from './TechLayer';
 import { createRunSession, type RunSessionResult } from './runSession';
 import { DEFAULT_RUN_SETTINGS, toRunOptions, type RunSettings } from './runSettings';
 
@@ -126,6 +127,7 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
       </div>
       <FloorScene interactive={false}>
         <PartLayer session={session} />
+        <TechLayer session={session} />
       </FloorScene>
     </div>
   );
