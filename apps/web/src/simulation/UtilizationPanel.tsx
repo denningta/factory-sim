@@ -26,6 +26,7 @@ const LABELS: Record<string, string> = {
   idle: 'Idle',
 };
 
+const TRACK = '#eef0f3';
 const pct = (v: number) => `${v.toFixed(1)}%`;
 const cell = { padding: '2px 3px', textAlign: 'right' as const };
 
@@ -41,7 +42,12 @@ export function UtilizationPanel({
 }) {
   const read = () => {
     const s = session.stats();
-    return { st: stationUtilization(s, stations), te: techUtilization(s, techs) };
+    return {
+      st: stationUtilization(s, stations),
+      te: techUtilization(s, techs),
+      // During warm-up the window is empty and every fraction is 0: show empty bars, not idle.
+      started: s.window.to > s.window.from,
+    };
   };
   const [data, setData] = useState(read);
   // Same cadence as the KPI panel: text figures, a few times a second and on state changes.
@@ -61,12 +67,14 @@ export function UtilizationPanel({
         label="Station utilization"
         first="Station"
         rows={data.st}
+        started={data.started}
         keys={['working', 'starved', 'blocked', 'idle']}
       />
       <UtilTable
         label="Technician utilization"
         first="Technician"
         rows={data.te}
+        started={data.started}
         keys={['working', 'walking', 'idle']}
       />
     </section>
@@ -78,11 +86,13 @@ function UtilTable<K extends string>({
   first,
   rows,
   keys,
+  started,
 }: {
   label: string;
   first: string;
   rows: UtilRow<K>[];
   keys: K[];
+  started: boolean;
 }) {
   const [sort, setSort] = useState<SortState<K> | null>(null);
   const shown = sort ? sortRows(rows, sort) : rows;
@@ -111,26 +121,58 @@ function UtilTable<K extends string>({
     </th>
   );
   return (
-    <table
-      aria-label={label}
-      style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 12, tableLayout: 'fixed' }}
-    >
-      <thead>
-        <tr>
-          {head('name', first, 'left')}
-          {keys.map((k) => head(k, LABELS[k]!, 'right'))}
-        </tr>
-      </thead>
-      <tbody>
-        {shown.map((r) => (
-          <Row key={r.id} row={r} keys={keys} />
-        ))}
-      </tbody>
-    </table>
+    <>
+      <Legend label={`${label} legend`} keys={keys} />
+      <table
+        aria-label={label}
+        style={{
+          borderCollapse: 'collapse',
+          width: '100%',
+          marginBottom: 12,
+          tableLayout: 'fixed',
+        }}
+      >
+        <thead>
+          <tr>
+            {head('name', first, 'left')}
+            {keys.map((k) => head(k, LABELS[k]!, 'right'))}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r) => (
+            <Row key={r.id} row={r} keys={keys} started={started} />
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 
-function Row<K extends string>({ row, keys }: { row: UtilRow<K>; keys: K[] }) {
+function Legend({ label, keys }: { label: string; keys: string[] }) {
+  return (
+    <ul
+      aria-label={label}
+      style={{ display: 'flex', gap: 10, listStyle: 'none', margin: '0 0 4px', padding: 0 }}
+    >
+      {keys.map((k) => (
+        <li key={k} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <span style={{ width: 10, height: 10, background: COLORS[k] }} aria-hidden />
+          {LABELS[k]}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Row<K extends string>({
+  row,
+  keys,
+  started,
+}: {
+  row: UtilRow<K>;
+  keys: K[];
+  started: boolean;
+}) {
   const summary = keys.map((k) => `${k} ${pct(row[k])}`).join(', ');
   return (
     <>
@@ -149,7 +191,7 @@ function Row<K extends string>({ row, keys }: { row: UtilRow<K>; keys: K[] }) {
           <div
             role="img"
             aria-label={`${row.name}: ${summary}`}
-            style={{ display: 'flex', height: 10, background: COLORS.idle }}
+            style={{ display: 'flex', height: 10, background: started ? COLORS.idle : TRACK }}
           >
             {keys.map((k) => (
               <span

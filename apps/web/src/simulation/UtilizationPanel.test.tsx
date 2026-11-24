@@ -93,3 +93,30 @@ describe('AN-2 AC3: sortable table and stacked bars', () => {
     expect(screen.getByRole('img', { name: /Tech 1/ }).children).toHaveLength(3);
   });
 });
+
+describe('AN-2 polish', () => {
+  it('shows a colour legend above each table', () => {
+    renderPanel();
+    const li = (n: string) =>
+      within(screen.getByRole('list', { name: n }))
+        .getAllByRole('listitem')
+        .map((x) => x.textContent);
+    expect(li('Station utilization legend')).toEqual(['Working', 'Starved', 'Blocked', 'Idle']);
+    expect(li('Technician utilization legend')).toEqual(['Working', 'Walking', 'Idle']);
+  });
+
+  it('does not paint bars as idle during warm-up (empty window)', () => {
+    const empty: RunStats = {
+      ...stats,
+      window: { from: 3600, to: 3600 },
+      stations: { s1: { working: 0, starved: 0, blocked: 0, idle: 0 } },
+    };
+    const warm = { ...session, stats: () => empty } as unknown as RunSession;
+    render(<UtilizationPanel session={warm} stations={[{ id: 's1', name: 'Weld' }]} techs={[]} />);
+    const idle = getComputedStyle(screen.getByRole('img', { name: /Weld/ })).backgroundColor;
+    cleanup();
+    renderPanel();
+    const running = getComputedStyle(screen.getByRole('img', { name: /Weld/ })).backgroundColor;
+    expect(idle).not.toBe(running);
+  });
+});
