@@ -47,9 +47,12 @@ export function resolveModel(
 }
 
 /** Builds the equipment's resolved model at its own size and params. */
-export function buildModel(
-  e: Pick<Equipment, 'behavior' | 'model' | 'footprint' | 'height' | 'params'>,
-) {
+/** What building a model needs: a type, an instance, or a draft in the type editor. */
+export type ModelSource = Pick<Equipment, 'behavior' | 'model' | 'footprint' | 'height'> & {
+  params: object;
+};
+
+export function buildModel(e: ModelSource) {
   const model = resolveModel(e);
   const size = { width: e.footprint.width, length: e.footprint.length, height: e.height };
   return { model, ...model.build(size, e.params as Readonly<Record<string, unknown>>) };

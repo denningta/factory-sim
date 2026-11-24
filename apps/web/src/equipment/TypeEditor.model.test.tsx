@@ -67,3 +67,41 @@ describe('UI-7 AC6: the type editor offers a model picker', () => {
     expect(onSave.mock.calls[1]![0].model).toBeUndefined();
   });
 });
+
+describe('UI-7 AC6 (review N3): the picker shows the model that is actually drawn', () => {
+  const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+  it.each([
+    ['unknown', 'removed-in-v9'],
+    ['unsuited to the behavior', 'buffer-rack'],
+  ])('a stored id that is %s shows as the behavior default', async (_why, id) => {
+    const onSave = vi.fn();
+    render(
+      <TypeEditor
+        unit="m"
+        initial={{ ...ws, id: crypto.randomUUID(), model: id }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+    expect(picker().value).toBe('');
+    expect(screen.getByTestId('model-preview').dataset.model).toBe(
+      resolveModel({ behavior: 'workstation' }).id,
+    );
+    // The picker's state is the default too, so saving stores what is drawn, not the stale id.
+    await userEvent.click(screen.getByRole('button', { name: /save type/i }));
+    expect(onSave.mock.calls[0]![0].model).toBeUndefined();
+  });
+
+  it('a stored id that suits the behavior stays selected', () => {
+    const id = modelsFor('workstation')[0]!.id;
+    render(
+      <TypeEditor
+        unit="m"
+        initial={{ ...ws, id: crypto.randomUUID(), model: id }}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(picker().value).toBe(id);
+  });
+});

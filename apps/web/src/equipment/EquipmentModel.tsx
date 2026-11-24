@@ -6,7 +6,7 @@ import type { EquipmentType } from '@factory-sim/schema';
 import { unitGeometryArgs } from '../layout/equipmentGroups';
 import { writePartMatrix } from './models/instances';
 import { roleColor, roleMaterial } from './models/materials';
-import { buildModel } from './models/registry';
+import { buildModel, type ModelSource } from './models/registry';
 import type { ModelPart } from './models/types';
 
 /** The unit geometry a part's instanced mesh is built on (sized per instance by its matrix). */
@@ -16,10 +16,7 @@ export function UnitGeometry({ part }: { part: ModelPart }) {
 }
 
 /** What the preview needs of a type: enough to resolve and build its model. */
-export type PreviewType = Pick<
-  EquipmentType,
-  'behavior' | 'params' | 'footprint' | 'height' | 'color' | 'model'
->;
+export type PreviewType = ModelSource & Pick<EquipmentType, 'color'>;
 
 /** One part drawn the way the floor draws it: a one-slot instanced mesh, shared role material. */
 function PreviewPart({ part, color }: { part: ModelPart; color: string }) {

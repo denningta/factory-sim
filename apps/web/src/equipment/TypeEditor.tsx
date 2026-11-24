@@ -17,7 +17,7 @@ import {
   type DisplayUnit,
 } from '../layout/units';
 import { PORT_SIDES, portAt, portOffset, portSide, type PortSide } from './portSides';
-import { ModelPreview } from './EquipmentModel';
+import { ModelPreview, type PreviewType } from './EquipmentModel';
 import { defaultModelFor, modelsFor } from './models/registry';
 
 interface Props {
@@ -76,7 +76,12 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
   const [height, setHeight] = useState(len(seed.height));
   const [color, setColor] = useState(seed.color);
   // '' = the behavior's default model; otherwise a registry id that suits the behavior.
-  const [model, setModel] = useState(initial?.model ?? '');
+  // A stored id that resolveModel would ignore (unknown, or unsuited to the behavior) shows as
+  // the default, since that is what is drawn; saving then drops it.
+  const [model, setModel] = useState(() => {
+    const stored = initial?.model;
+    return stored && modelsFor(seed.behavior).some((m) => m.id === stored) ? stored : '';
+  });
   const p = seed.params as Record<string, unknown>;
   const [capacity, setCapacity] = useState(String(p.capacity ?? 1));
   const [batchSize, setBatchSize] = useState(String(p.batchSize ?? 1));
@@ -157,7 +162,7 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       height: m(height, seed.height),
       color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : seed.color,
       ...(model ? { model } : {}),
-    } as Parameters<typeof ModelPreview>[0]['type'];
+    } satisfies PreviewType;
   }
 
   const field = (label: string, value: string, set: (v: string) => void) => (
