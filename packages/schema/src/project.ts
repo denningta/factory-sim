@@ -8,7 +8,7 @@ import {
 } from './equipment';
 
 /**
- * Project document, schema version 6 (ADR-0006, ADR-0009, ADR-0010).
+ * Project document, schema version 7 (ADR-0006, ADR-0009, ADR-0010).
  * v2: equipment instances carry their own `color` and behavior `params` (EQ-1/EQ-3).
  * v3: equipment has `ports`; connections join an output port to an input port and carry a
  *     `capacity` (FL-1, FL-2).
@@ -16,13 +16,14 @@ import {
  *     (PR-4), technicians and workstation labor (TE-1), connection transfer time (FL-4).
  * v5: saved run settings (SE-4): warm-up, run length and seed.
  * v6: layout checks (LE-5): optional minimum clearance between equipment.
+ * v7: equipment may name its 3D `model` (ADR-0015); optional, so v6 documents are valid as is.
  * All lengths are meters, all times seconds, angles radians. Display units are a UI
  * concern and are never stored here.
  *
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();

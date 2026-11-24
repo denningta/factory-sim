@@ -26,6 +26,7 @@ This repo is built by a team of Claude Code agents (lead, builders, reviewer) co
 | Rendering | Engine emits timestamped state events; renderer interpolates on its own clock                  | 0008 |
 | Domain    | Product → Routing (ordered steps → station); cycle time keyed by (product, station)            | 0009 |
 | Equipment | Types are data: 5 base behaviors (workstation, buffer, conveyor, source, sink) + params        | 0010 |
+| Models    | Optional `model` id per type picks the 3D model from the web registry, else behavior default   | 0015 |
 | Auth      | Email/password, argon2id, httpOnly session cookies in Postgres                                 | 0011 |
 | Tests     | Vitest unit, Playwright e2e, reference model in CI, engine coverage ≥ 90%                      | 0012 |
 | Deploy    | docker-compose.yml: app + postgres, named volume, healthcheck, .env                            | 0013 |

@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-One file per decision. ADRs 0001–0013 accepted 2026-11-21; 0014 accepted 2026-11-22. Agents: read these before changing architecture; propose changes via the lead, never edit an Accepted ADR in a story branch.
+One file per decision. ADRs 0001–0013 accepted 2026-11-21; 0014 accepted 2026-11-22; 0015 accepted 2026-11-23. Agents: read these before changing architecture; propose changes via the lead, never edit an Accepted ADR in a story branch.
 
 | ADR  | Title                                      | Status   |
 | ---- | ------------------------------------------ | -------- |
@@ -18,3 +18,4 @@ One file per decision. ADRs 0001–0013 accepted 2026-11-21; 0014 accepted 2026-
 | 0012 | Testing strategy                           | Accepted |
 | 0013 | Deploy with Docker Compose                 | Accepted |
 | 0014 | 3D rendering: instancing, LOD, tracks      | Accepted |
+| 0015 | Equipment names its 3D model (`model` key) | Accepted |
