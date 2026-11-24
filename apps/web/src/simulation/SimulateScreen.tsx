@@ -3,6 +3,7 @@ import { createProject, type Project } from '@factory-sim/schema';
 import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
+import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
@@ -34,7 +35,12 @@ const clock = (t: number) => {
 };
 
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
-export function SimulateScreen(_props: { onNavigate?: (screen: 'layout' | 'products') => void }) {
+export function SimulateScreen({
+  onNavigate,
+}: {
+  /** Switches the editor screen when a clicked issue points at an object on another one. */
+  onNavigate?: (screen: 'layout' | 'products') => void;
+}) {
   const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
   // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
   const [applied, setApplied] = useState(() =>
@@ -52,7 +58,11 @@ export function SimulateScreen(_props: { onNavigate?: (screen: 'layout' | 'produ
   };
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 240px', height: '100%' }}>
-      {result.ok ? <Running session={result.session} /> : <Issues issues={result.issues} />}
+      {result.ok ? (
+        <Running session={result.session} />
+      ) : (
+        <Issues issues={result.issues} onNavigate={onNavigate} />
+      )}
       <RunSettingsPanel
         initial={settings}
         shiftLength={shiftLength}
@@ -134,13 +144,37 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
   );
 }
 
-function Issues({ issues }: { issues: ModelIssue[] }) {
+function Issues({
+  issues,
+  onNavigate,
+}: {
+  issues: ModelIssue[];
+  onNavigate?: (screen: 'layout' | 'products') => void;
+}) {
+  const select = (issue: ModelIssue) => {
+    const target = issueTarget(currentProject(), issue);
+    if (!target) return;
+    if (target.screen === 'layout')
+      useEditorStore.getState().selectEquipment(target.equipmentId, false);
+    onNavigate?.(target.screen);
+  };
   return (
     <div role="alert" style={{ padding: 16, font: '14px sans-serif' }}>
       <p>The line can't run yet:</p>
       <ul>
         {issues.map((i, k) => (
-          <li key={k}>{i.message}</li>
+          <li key={k}>
+            {i.objectId ? (
+              <button
+                onClick={() => select(i)}
+                style={{ all: 'unset', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                {i.message}
+              </button>
+            ) : (
+              i.message
+            )}
+          </li>
         ))}
       </ul>
     </div>

@@ -9,8 +9,16 @@ export type IssueTarget =
  * or a product (→ the products screen).
  */
 export function issueTarget(
-  _project: Pick<Project, 'equipment' | 'products'>,
-  _issue: ModelIssue,
+  project: Pick<Project, 'equipment' | 'products'>,
+  issue: ModelIssue,
 ): IssueTarget | undefined {
-  throw new Error('not implemented');
+  const id = issue.objectId;
+  if (id === undefined) return undefined;
+  if (project.equipment.some((e) => e.id === id)) return { screen: 'layout', equipmentId: id };
+  if (project.products.some((p) => p.id === id)) return { screen: 'products', productId: id };
+  for (const p of project.products) {
+    const step = p.routing.find((s) => s.id === id);
+    if (step) return { screen: 'layout', equipmentId: step.stationId };
+  }
+  return undefined;
 }

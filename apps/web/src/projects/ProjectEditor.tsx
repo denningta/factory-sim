@@ -157,7 +157,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         ) : tab === 'products' ? (
           <ProductsPanel />
         ) : (
-          <SimulateScreen />
+          <SimulateScreen onNavigate={setTab} />
         )}
       </div>
     </div>
