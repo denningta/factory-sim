@@ -423,3 +423,45 @@ describe('schema v4 (Sprint 4 contract)', () => {
     expect(loadProject(v3)).toEqual({ ok: true, project: current });
   });
 });
+
+describe('schema v5: saved run settings (SE-4 follow-up)', () => {
+  it('accepts hours-as-seconds or shifts, and fixed or random seeds', () => {
+    const p = sampleProject();
+    p.run = {
+      warmUp: 3600,
+      length: { unit: 'seconds', value: 86400 },
+      seed: { mode: 'random', value: 7 },
+    };
+    expect(validateProject(p).ok).toBe(true);
+    p.run = {
+      warmUp: 0,
+      length: { unit: 'shifts', value: 3 },
+      seed: { mode: 'fixed', value: 2 ** 32 - 1 },
+    };
+    expect(validateProject(p).ok).toBe(true);
+  });
+
+  it('rejects a negative warm-up, a zero length and out-of-range seeds', () => {
+    const p = sampleProject();
+    p.run = { ...p.run, warmUp: -1 };
+    expectInvalid(p, 'run.warmUp');
+    const q = sampleProject();
+    q.run = { ...q.run, length: { unit: 'shifts', value: 0 } };
+    expectInvalid(q, 'run.length.value');
+    const r = sampleProject();
+    r.run = { ...r.run, seed: { mode: 'fixed', value: 2 ** 32 } };
+    expectInvalid(r, 'run.seed.value');
+    r.run = { ...r.run, seed: { mode: 'fixed', value: 1.5 } };
+    expectInvalid(r, 'run.seed.value');
+  });
+
+  it('upgrades a v4 document with the SE-4 session defaults', () => {
+    const current = sampleProject();
+    const { run: _run, ...rest } = current;
+    const v4 = JSON.parse(JSON.stringify({ ...rest, schemaVersion: 4 }));
+    expect(loadProject(v4)).toEqual({
+      ok: true,
+      project: { ...current, run: createProject().run },
+    });
+  });
+});
