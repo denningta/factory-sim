@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { LineEvent } from '@factory-sim/sim-engine';
-import { createStationStates, findBottleneck, plateColor, STATE_COLORS } from './stationStatus';
+import { tokens } from '../ui/tokens';
+import {
+  createStationStates,
+  findBottleneck,
+  NO_STATE_COLOR,
+  plateColor,
+  STATE_COLORS,
+} from './stationStatus';
 import { createRunSession } from './runSession';
 import { realLine } from './testLine';
 
@@ -8,13 +15,14 @@ const ev = (t: number, stationId: string, state: 'working' | 'starved' | 'blocke
   ({ t, type: 'stationState', stationId, state }) as LineEvent;
 
 describe('AN-3 AC1: live colors: working green, starved yellow, blocked red, idle gray', () => {
-  it('uses the wireframe colors', () => {
+  it('takes the colors from the design tokens (UI-1)', () => {
     expect(STATE_COLORS).toEqual({
-      working: '#86d9a0',
-      starved: '#f6d860',
-      blocked: '#ee8c8c',
-      idle: '#cfd4dc',
+      working: tokens.state.working.tint,
+      starved: tokens.state.starved.tint,
+      blocked: tokens.state.blocked.tint,
+      idle: tokens.state.waiting.tint,
     });
+    expect(NO_STATE_COLOR).toBe(tokens.color.border);
   });
 
   it('tracks the latest state of each station from the engine events', () => {
@@ -85,7 +93,7 @@ describe('plateColor', () => {
   it('maps each state to its color and unknown to neutral', () => {
     expect(plateColor('working')).toBe(STATE_COLORS.working);
     expect(plateColor('blocked')).toBe(STATE_COLORS.blocked);
-    expect(plateColor(undefined)).toBe('#e5e7eb');
+    expect(plateColor(undefined)).toBe(NO_STATE_COLOR);
     expect(plateColor(undefined)).not.toBe(STATE_COLORS.idle);
   });
 });
