@@ -25,3 +25,4 @@ issue: 108
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-23):_ from the review of #106. Toolbar lives in `apps/web/src/simulation/SimulateScreen.tsx`; keep `SimulateScreen.test.tsx` passing.
+- _Builder:_ "Day N" is 1-indexed (a run starts at `Day 1, 00:00:00`). The slider is linear 1–1000 step 1 with a live `N×` readout; Play is disabled while playing and Pause while paused. Existing SE-2/SE-4 tests updated only for the new clock format and the slider.
