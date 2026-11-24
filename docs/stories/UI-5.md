@@ -4,7 +4,7 @@ epic: UI polish
 points: 5
 priority: Must
 sprint: 8
-depends_on: [UI-7, AN-4]
+depends_on: [UI-7, AN-4, UI-9]
 builder_model: sonnet
 owner: builder
 issue: 148
@@ -17,11 +17,11 @@ issue: 148
 ## Acceptance criteria
 
 - [ ] Each workstation has a **stack light** at its model's `statusLight` anchor (UI-7); the lit segment glows in the strong state colour and changes in the frame its `stationState` event is applied. It replaces the coloured plate on top of the machine
-- [ ] A **label** above each station shows its name and `● <State> · N waiting`, where N is the number of parts queued at its input. Labels update a few times a second, not every frame, and are at least 12 px tall at Zoom to fit for the reference line (screenshot as evidence) (product owner, 2026-11-24)
+- [ ] A **callout card** with a leader line above each station, as in the control-room reference, shows its name, `● <State>`, `N waiting` (parts queued at its input) and working %. Cards update a few times a second, not every frame, their text is at least 12 px tall at Zoom to fit for the reference line, and they don't overlap each other for the reference line (product owner, 2026-11-24)
 - [ ] A **footprint outline** on the floor in the state colour shows state in the 2D top-down view
-- [ ] **Connections** leaving a blocked station draw in the blocked colour until it unblocks
+- [ ] **Connections** draw as glowing lines in the accent colour; while the run plays, a flow pattern moves along them in the flow direction. A connection leaving a blocked station draws in the blocked colour, without flow, until it unblocks (product owner, 2026-11-24)
 - [ ] A **legend** in a corner of the viewport: Working · Starved · Blocked · Waiting for tech · Tech walking, plus product colours
-- [ ] The **bottleneck** gets a "Bottleneck" badge on its label and an accent-coloured outline (not red, which means blocked); the black ring is removed
+- [ ] The **bottleneck** glows in the accent colour (an emissive halo, as the highlighted unit in the reference) and gets a "Bottleneck" badge on its callout; not red, which means blocked. The black ring is removed (product owner, 2026-11-24)
 - [ ] The engine's `idle` state is shown as **"Waiting for tech"** in every label, legend and table (product owner, 2026-11-23); the engine API is unchanged
 - [ ] Per-frame colour writes go through refs, not React state. Test: a `stationState` event changes the light's material colour without re-rendering `StationLayer`
 - [ ] Screenshots in `docs/screenshots/UI-5/`: 3D mid-run, 2D top-down, bottleneck flagged
@@ -34,3 +34,4 @@ _Added by the lead or builder during the story: design decisions, open questions
 - _Lead:_ prototype reference: `statusLight()` in [`docs/wireframes/prototype/models.js`](../wireframes/prototype/models.js), the per-frame light/label update in [`world-status-excerpt.js`](../wireframes/prototype/world-status-excerpt.js), and `.label3d` in `prototype.css`. Labels use the existing `TextLabel` sprite (`layout/FloorScene.tsx`); drei `Html` misbehaves under React 19.
 - _Lead:_ all colours come from UI-1's tokens. The accent outline for the bottleneck settles AN-3's "dark ring" choice. Change "idle" to "Waiting for tech" in `docs/wireframes/README.md`.
 - _Lead:_ not run at the same time as UI-4: both change `simulation/`.
+- _Lead (2026-11-24):_ **redesign toward the control-room look** (product owner, 2026-11-24): see [`docs/wireframes/reference/`](../wireframes/reference/README.md). Load the `frontend-design` skill (and `dataviz` for charts, tiles, legends, bars) and add a Design section to the PR (builder role). Colours come from the active theme (UI-9).

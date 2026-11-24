@@ -89,17 +89,26 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [SC-2](SC-2.md) | Scenarios & projects | 2   | Should   | SC-1       |
 | [AN-4](AN-4.md) | Analytics & KPIs     | 2   | Should   | AN-3       |
 
-## Sprint 8: Make it obvious: UI polish, station status in 3D, extensible models (36 pts)
+## Sprint 8: Make it obvious: UI polish, dark control-room theme, station status in 3D, extensible models (35 pts)
 
-| ID              | Epic      | Pts | Priority | Depends on |
-| --------------- | --------- | --- | -------- | ---------- |
-| [UI-1](UI-1.md) | UI polish | 5   | Must     | —          |
-| [UI-7](UI-7.md) | UI polish | 5   | Must     | EQ-5       |
-| [UI-2](UI-2.md) | UI polish | 3   | Must     | UI-1       |
-| [UI-6](UI-6.md) | UI polish | 5   | Must     | UI-1, UI-2 |
-| [UI-5](UI-5.md) | UI polish | 5   | Must     | UI-7, AN-4 |
-| [UI-3](UI-3.md) | UI polish | 5   | Must     | UI-1       |
-| [UI-4](UI-4.md) | UI polish | 3   | Must     | UI-1, UI-6 |
-| [UI-8](UI-8.md) | UI polish | 5   | Should   | UI-7       |
+| ID              | Epic      | Pts | Priority | Depends on       |
+| --------------- | --------- | --- | -------- | ---------------- |
+| [UI-1](UI-1.md) | UI polish | 5   | Must     | —                |
+| [UI-7](UI-7.md) | UI polish | 5   | Must     | EQ-5             |
+| [UI-9](UI-9.md) | UI polish | 4   | Must     | UI-1             |
+| [UI-2](UI-2.md) | UI polish | 3   | Must     | UI-1, UI-9       |
+| [UI-6](UI-6.md) | UI polish | 5   | Must     | UI-1, UI-2, UI-9 |
+| [UI-5](UI-5.md) | UI polish | 5   | Must     | UI-7, AN-4, UI-9 |
+| [UI-3](UI-3.md) | UI polish | 5   | Must     | UI-1, UI-9       |
+| [UI-4](UI-4.md) | UI polish | 3   | Must     | UI-1, UI-6       |
 
-Order (lead, 2026-11-24): UI-1 ∥ UI-7 → UI-2 ∥ UI-5 → UI-6 ∥ UI-3 → UI-4 ∥ UI-8. UI-3 waits for UI-7 (both change `layout/`), and UI-4 and UI-5 don't run together (both change `simulation/`). Styling approach: ADR-0016. Prototype reference files: [`docs/wireframes/prototype/`](../wireframes/prototype/README.md). Decided in planning (product owner, 2026-11-23): per-type 3D models via the optional `model` key (ADR-0015, merged in #138); the engine's `idle` is shown as "Waiting for tech"; utilization moves from Simulate to Results.
+Order (lead, 2026-11-24): UI-1 ∥ UI-7 → UI-9 → UI-2 ∥ UI-5 → UI-6 ∥ UI-3 → UI-4. UI-3 waits for UI-7 (both change `layout/`), and UI-4 and UI-5 don't run together (both change `simulation/`). Styling approach: ADR-0016 (dark by default, light toggle). Visual target (product owner, 2026-11-24): [`docs/wireframes/reference/`](../wireframes/reference/README.md); UI stories load the `frontend-design` skill (and `dataviz` for charts). Prototype reference files: [`docs/wireframes/prototype/`](../wireframes/prototype/README.md). Decided in planning (product owner, 2026-11-23): per-type 3D models via the optional `model` key (ADR-0015, merged in #138); the engine's `idle` is shown as "Waiting for tech"; utilization moves from Simulate to Results.
+
+## Sprint 9: Control-room scene and trends (10 pts)
+
+| ID                | Epic      | Pts | Priority | Depends on |
+| ----------------- | --------- | --- | -------- | ---------- |
+| [UI-8](UI-8.md)   | UI polish | 5   | Should   | UI-7, UI-9 |
+| [UI-10](UI-10.md) | UI polish | 5   | Must     | UI-6, UI-9 |
+
+Moved or added on 2026-11-24 (product owner): UI-8 moves from sprint 8; UI-10 adds trend charts with uPlot.
