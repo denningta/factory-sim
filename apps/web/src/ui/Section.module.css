@@ -1,0 +1,31 @@
+.section {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+.heading {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.toggle {
+  all: unset;
+  cursor: pointer;
+}
+.toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+.description {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+.body {
+  display: grid;
+  gap: var(--space-2);
+}
+.body[hidden] {
+  display: none;
+}

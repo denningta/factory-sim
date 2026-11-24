@@ -1,9 +1,11 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
+import { Button, Field, Section } from '../ui';
 import { preRunIssues } from './preRunIssues';
 import { CycleTimeGrid } from './CycleTimeGrid';
 import { DemandPanel } from './DemandPanel';
 import { RoutingEditor } from './RoutingEditor';
+import styles from './products.module.css';
 
 type Store = typeof defaultStore;
 
@@ -26,34 +28,24 @@ function TextField({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const errorId = useId();
   const session = useRef(0);
   useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {label}
-      <input
-        type="text"
-        value={draft ?? value}
-        aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? errorId : undefined}
-        onFocus={() => (session.current = beginEdit())}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          setError(commit(e.target.value));
-        }}
-        onBlur={() => {
-          endEdit(session.current);
-          setDraft(null);
-          setError(null);
-        }}
-      />
-      {error && (
-        <span id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
-          {error}
-        </span>
-      )}
-    </label>
+    <Field
+      label={label}
+      value={draft ?? value}
+      error={error}
+      onFocus={() => (session.current = beginEdit())}
+      onChange={(text) => {
+        setDraft(text);
+        setError(commit(text));
+      }}
+      onBlur={() => {
+        endEdit(session.current);
+        setDraft(null);
+        setError(null);
+      }}
+    />
   );
 }
 
@@ -103,63 +95,38 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '280px minmax(0, 1fr) 280px',
-        minHeight: '100%',
-        font: '14px sans-serif',
-      }}
-    >
-      <section style={{ padding: 16, borderRight: '1px solid #e5e7eb' }}>
-        <h2 style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', margin: 0 }}>
-          End items
-        </h2>
-        <p style={{ color: '#6b7280', marginTop: 2 }}>Products built on this line</p>
+    <div className={styles.screen}>
+      <Section
+        className={styles.sidebar}
+        heading="End items"
+        description="Products built on this line"
+      >
         {issues.map((i) => (
-          <p key={i.code} style={{ color: '#b45309' }}>
+          <p key={i.code} className={styles.warning}>
             {i.message}
           </p>
         ))}
-        <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
+        <ul className={styles.productList}>
           {products.map((p) => (
             <li key={p.id}>
               <button
+                type="button"
                 onClick={() => setSelectedId(p.id)}
                 aria-pressed={p.id === selected?.id}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: 8,
-                  border: p.id === selected?.id ? '2px solid #2563eb' : '1px solid #d1d5db',
-                  borderRadius: 6,
-                  background: 'white',
-                }}
+                className={styles.product}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    display: 'inline-block',
-                    width: 10,
-                    height: 10,
-                    borderRadius: 5,
-                    background: p.color,
-                    marginRight: 8,
-                  }}
-                />
-                <strong>{p.name}</strong> <span style={{ color: '#6b7280' }}>[{p.partNumber}]</span>
+                {/* eslint-disable-next-line no-restricted-syntax -- the swatch is the product's user-chosen colour, data not styling */}
+                <span aria-hidden className={styles.swatch} style={{ background: p.color }} />
+                <strong>{p.name}</strong> <span className={styles.muted}>[{p.partNumber}]</span>
               </button>
             </li>
           ))}
         </ul>
-        <button
-          onClick={() => setSelectedId(addProduct().id)}
-          style={{ width: '100%', padding: 8, marginBottom: 16 }}
-        >
+        <Button className={styles.wide} onClick={() => setSelectedId(addProduct().id)}>
           + Add product
-        </button>
+        </Button>
         {selected && (
-          <div key={selected.id} style={{ display: 'grid', gap: 8 }}>
+          <div key={selected.id} className={styles.fields}>
             <TextField
               label="Part number"
               value={selected.partNumber}
@@ -174,7 +141,7 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
               beginEdit={beginEdit}
               endEdit={endEdit}
             />
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label className={styles.colorField}>
               Color
               <ColorInput
                 value={selected.color}
@@ -183,17 +150,17 @@ export function ProductsPanel({ useStore = defaultStore }: { useStore?: Store })
                 commit={(c) => updateProduct(selected.id, { color: c })}
               />
             </label>
-            <button onClick={() => deleteProduct(selected.id)} style={{ color: '#b91c1c' }}>
+            <Button variant="danger" onClick={() => deleteProduct(selected.id)}>
               Delete product
-            </button>
+            </Button>
           </div>
         )}
-      </section>
-      <div style={{ padding: 24, background: '#f9fafb' }}>
+      </Section>
+      <div className={styles.main}>
         {selected && <RoutingEditor product={selected} useStore={useStore} />}
         <CycleTimeGrid useStore={useStore} />
       </div>
-      <div style={{ borderLeft: '1px solid #e5e7eb' }}>
+      <div className={styles.demand}>
         <DemandPanel useStore={useStore} />
       </div>
     </div>

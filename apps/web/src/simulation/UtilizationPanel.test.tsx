@@ -3,6 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RunStats } from '@factory-sim/sim-engine';
 import type { RunSession } from './runSession';
+import { tokens } from '../ui/tokens';
 import { UtilizationPanel } from './UtilizationPanel';
 
 afterEach(cleanup);
@@ -103,6 +104,29 @@ describe('AN-2 polish', () => {
         .map((x) => x.textContent);
     expect(li('Station utilization legend')).toEqual(['Working', 'Starved', 'Blocked', 'Idle']);
     expect(li('Technician utilization legend')).toEqual(['Working', 'Walking', 'Idle']);
+  });
+
+  it('UI-1 AC5: bar segments and legend swatches use the token tints', () => {
+    renderPanel();
+    const bar = screen.getByRole('img', { name: /^Weld:/ });
+    const colors = [...bar.children].map((c) => (c as HTMLElement).style.backgroundColor);
+    const hex = (c: string) => {
+      const d = document.createElement('div');
+      d.style.backgroundColor = c;
+      return d.style.backgroundColor;
+    };
+    expect(colors).toEqual(
+      [
+        tokens.state.working.tint,
+        tokens.state.starved.tint,
+        tokens.state.blocked.tint,
+        tokens.state.waiting.tint,
+      ].map(hex),
+    );
+    const swatch = within(
+      screen.getByRole('list', { name: 'Technician utilization legend' }),
+    ).getAllByRole('listitem')[1]!.firstElementChild as HTMLElement;
+    expect(swatch.style.backgroundColor).toBe(hex(tokens.state.walking.tint));
   });
 
   it('does not paint bars as idle during warm-up (empty window)', () => {

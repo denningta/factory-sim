@@ -1,0 +1,27 @@
+.button {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+.button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.danger {
+  color: var(--color-danger);
+}
+.danger:hover:not(:disabled) {
+  border-color: var(--color-danger);
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

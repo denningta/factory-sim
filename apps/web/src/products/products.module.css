@@ -1,0 +1,296 @@
+/* Products & routings screen (wireframe 2). Every value comes from the tokens (ADR-0016). */
+.screen {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  min-height: 100%;
+}
+.sidebar {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+.main {
+  padding: var(--space-5);
+}
+.demand {
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+.demandSection {
+  padding: var(--space-4);
+}
+
+.muted,
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+}
+.hint {
+  font-size: var(--font-size-sm);
+}
+.warning,
+.warningSmall {
+  margin: 0;
+  color: var(--color-warning);
+}
+.warningSmall {
+  font-size: var(--font-size-sm);
+}
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+.h2 {
+  font-size: var(--font-size-lg);
+}
+
+/* End items */
+.productList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.product {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  cursor: pointer;
+}
+.product[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  outline: 1px solid var(--color-accent);
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  margin-right: var(--space-2);
+}
+.wide {
+  width: 100%;
+}
+.fields {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.colorField,
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+.selectField select,
+.selectField textarea {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+}
+.selectField textarea {
+  font-family: var(--font-mono);
+}
+.paste {
+  resize: vertical;
+}
+
+/* Sequence chips (text colour on a product-coloured fill) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.chip {
+  color: var(--color-accent-ink);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-weight: 600;
+}
+
+/* Routing */
+.routing {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 720px;
+}
+.routingHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.step,
+.stepWarn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.stepWarn {
+  border-color: var(--color-warning);
+}
+.grip {
+  cursor: grab;
+  color: var(--color-muted);
+}
+.stepNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--color-surface-2);
+  font-size: var(--font-size-sm);
+}
+.stationSelect {
+  min-width: 180px;
+  font: inherit;
+  padding: var(--space-1);
+}
+.stepActions {
+  margin-left: auto;
+  display: flex;
+}
+.iconButton {
+  font: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 2px var(--space-2);
+}
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Cycle times */
+.cycleTimes {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.grid {
+  border-collapse: collapse;
+  background: var(--color-surface);
+}
+.cellLeft,
+.cellRight,
+.rowHead,
+.cellNotRouted {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.cellLeft,
+.rowHead {
+  text-align: left;
+}
+.rowHead {
+  font-weight: 600;
+}
+.cellRight {
+  text-align: right;
+}
+.cellNotRouted {
+  text-align: center;
+  color: var(--color-muted);
+  background: var(--color-surface-2);
+}
+.import {
+  margin-top: var(--space-2);
+}
+.summary {
+  cursor: pointer;
+}
+.importBody {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  max-width: 560px;
+}
+.importActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.report {
+  font-size: var(--font-size-sm);
+}
+.reportText {
+  margin: 0;
+}
+.reportErrors {
+  color: var(--color-warning);
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+
+/* Duration cell */
+.durationCell {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: end;
+}
+.timeInput,
+.paramInput {
+  padding: var(--space-1);
+  text-align: right;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.timeInput {
+  width: 72px;
+}
+.paramInput {
+  width: 56px;
+}
+.timeInput[data-state='missing'],
+.paramInput[data-state='missing'] {
+  border-color: var(--color-warning);
+}
+.timeInput[data-state='error'],
+.paramInput[data-state='error'] {
+  border-color: var(--color-danger);
+}
+.kindSelect {
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+.paramRow {
+  display: flex;
+  gap: var(--space-1);
+}
+.paramLabels {
+  color: var(--color-muted);
+  font-size: var(--font-size-xs);
+}
+.histogram {
+  background: var(--color-surface-2);
+}

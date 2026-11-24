@@ -1,0 +1,23 @@
+/* Page-level defaults; every value comes from the tokens (ADR-0016). */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: 1.4;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}

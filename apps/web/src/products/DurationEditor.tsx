@@ -1,7 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Duration, DurationKind } from '@factory-sim/schema';
 import { parseDuration } from './cycleTimes';
+import { tokens } from '../ui/tokens';
 import { previewHistogram } from './distributions';
+import styles from './products.module.css';
 
 const INVALID = 'Enter seconds or mm:ss, greater than 0';
 
@@ -56,15 +58,11 @@ function TimeCell({
           }
           endEdit(session.current);
         }}
-        style={{
-          width: 72,
-          padding: 4,
-          textAlign: 'right',
-          borderColor: error ? '#b91c1c' : missing ? '#f59e0b' : undefined,
-        }}
+        className={styles.timeInput}
+        data-state={error ? 'error' : missing ? 'missing' : undefined}
       />
       {error && (
-        <div id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
+        <div id={errorId} role="alert" className={styles.error}>
           {error}
         </div>
       )}
@@ -114,15 +112,22 @@ function Histogram({ label, time }: { label: string; time: Duration }) {
       aria-label={label}
       width={h.bins.length * w}
       height={46}
-      style={{ background: '#f9fafb' }}
+      className={styles.histogram}
     >
       {h.bins.map((b, i) => {
         const height = (b.count / peak) * 32;
         return (
-          <rect key={i} x={i * w} y={32 - height} width={w - 1} height={height} fill="#3b82f6" />
+          <rect
+            key={i}
+            x={i * w}
+            y={32 - height}
+            width={w - 1}
+            height={height}
+            fill={tokens.color.accent}
+          />
         );
       })}
-      <text x={0} y={44} fontSize={10} fill="#6b7280">
+      <text x={0} y={44} fontSize={10} fill={tokens.color.muted}>
         {fmt(h.bins[0]!.from)}–{fmt(h.bins[h.bins.length - 1]!.to)} s
       </text>
     </svg>
@@ -189,7 +194,7 @@ export function DurationEditor({
   };
 
   return (
-    <div style={{ display: 'grid', gap: 4, justifyItems: 'end' }}>
+    <div className={styles.durationCell}>
       <select
         aria-label={`Distribution, ${name}`}
         value={kind}
@@ -198,7 +203,7 @@ export function DurationEditor({
           setText({});
           setError(null);
         }}
-        style={{ fontSize: 12 }}
+        className={styles.kindSelect}
       >
         {KINDS.map((k) => (
           <option key={k.kind} value={k.kind}>
@@ -215,7 +220,7 @@ export function DurationEditor({
           endEdit={endEdit}
         />
       ) : (
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className={styles.paramRow}>
           {params.map((p) => {
             const bad =
               text[p.key] !== undefined &&
@@ -239,24 +244,20 @@ export function DurationEditor({
                   commitParams(text);
                   endEdit(session.current);
                 }}
-                style={{
-                  width: 56,
-                  padding: 4,
-                  textAlign: 'right',
-                  borderColor: bad || error ? '#b91c1c' : incomplete ? '#f59e0b' : undefined,
-                }}
+                className={styles.paramInput}
+                data-state={bad || error ? 'error' : incomplete ? 'missing' : undefined}
               />
             );
           })}
         </div>
       )}
       {params.length > 0 && (
-        <span aria-hidden="true" style={{ color: '#6b7280', fontSize: 11 }}>
+        <span aria-hidden="true" className={styles.paramLabels}>
           {params.map((p) => p.label.toLowerCase()).join(' · ')}
         </span>
       )}
       {error && (
-        <div id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
+        <div id={errorId} role="alert" className={styles.error}>
           {error}
         </div>
       )}

@@ -108,6 +108,22 @@ export default tseslint.config(
     },
   },
   {
+    // ADR-0016: migrated directories style through tokens and CSS Modules. Computed geometry (bar
+    // widths, product colour swatches) may keep `style` with a disable comment saying why. Each
+    // sprint 8 screen story adds its directory here.
+    files: ['apps/web/src/{ui,auth,projects,products}/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name=/^[a-z]/] > JSXAttribute[name.name='style']",
+          message:
+            'No inline style on DOM elements here: use the design tokens and a CSS Module (ADR-0016).',
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/api/**'],
     rules: {
       'no-restricted-imports': [
