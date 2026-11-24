@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BASE_EQUIPMENT_TYPES, defaultPorts, type EquipmentType } from '@factory-sim/schema';
+import {
+  BASE_EQUIPMENT_TYPES,
+  createProject,
+  defaultPorts,
+  instantiate,
+  projectSchema,
+  type EquipmentType,
+} from '@factory-sim/schema';
 import { createEditorStore } from './editorStore';
 
 const cnc: EquipmentType = {
@@ -56,7 +63,7 @@ describe('user equipment types in the editor store (EQ-3)', () => {
       color: '#ff0000',
       footprint: { width: 4, length: 3 },
     };
-    expect(store.getState().syncInstancesToType(edited)).toBe(1);
+    expect(store.getState().syncInstancesToType(edited)).toEqual({ ok: true, count: 1 });
     const [synced, untouched] = store.getState().equipment;
     expect(synced).toMatchObject({
       id: a.id,
@@ -74,5 +81,86 @@ describe('user equipment types in the editor store (EQ-3)', () => {
     store.getState().syncInstancesToType({ ...cnc, height: 4 });
     store.getState().undo();
     expect(store.getState().equipment[0]!.height).toBe(2.4);
+  });
+
+  it('AC3: keeps the instance’s own labor when the type stays a workstation', () => {
+    const placed = store.getState().placeEquipment(cnc.id, { x: 5, y: 5 })!;
+    const labor = {
+      mode: 'automatic',
+      loadTime: { kind: 'fixed', value: 5 },
+      unloadTime: { kind: 'fixed', value: 5 },
+    };
+    store.getState().updateEquipment(placed.id, { labor } as never);
+    store.getState().syncInstancesToType({ ...cnc, height: 4 });
+    expect(store.getState().equipment[0]).toMatchObject({ height: 4, params: { labor } });
+  });
+
+  describe('AC3: accepting the offer never produces a project that cannot save', () => {
+    function loadLine() {
+      const a = instantiate(cnc, { id: 'eq-1', position: { x: 5, y: 5 } });
+      const b = instantiate(BASE_EQUIPMENT_TYPES[0]!, { id: 'eq-2', position: { x: 9, y: 5 } });
+      store.getState().loadDocument({
+        ...createProject(),
+        equipment: [a, b],
+        connections: [
+          {
+            id: 'c-1',
+            from: { equipmentId: 'eq-1', portId: 'out' },
+            to: { equipmentId: 'eq-2', portId: 'in' },
+            capacity: 0,
+            transfer: { kind: 'instant' },
+          },
+        ],
+        products: [
+          {
+            id: 'p-1',
+            partNumber: 'A',
+            name: 'A',
+            color: '#112233',
+            routing: [{ id: 's-1', stationId: 'eq-1' }],
+          },
+        ],
+        cycleTimes: [{ productId: 'p-1', stationId: 'eq-1', time: { kind: 'fixed', value: 10 } }],
+      } as never);
+      store.getState().setUserTypes([cnc]);
+    }
+    const asBehavior = (behavior: 'source' | 'sink'): EquipmentType =>
+      ({ ...cnc, behavior, params: {}, ports: defaultPorts(behavior) }) as EquipmentType;
+    const current = () => {
+      const s = store.getState();
+      return projectSchema.safeParse({
+        ...createProject(),
+        floor: s.floor,
+        equipment: s.equipment,
+        products: s.products,
+        connections: s.connections,
+        cycleTimes: s.cycleTimes,
+        technicians: s.technicians,
+        demand: s.demand,
+        release: s.release,
+      });
+    };
+
+    it.each(['source', 'sink'] as const)(
+      'refuses a change to %s and leaves everything as is',
+      (b) => {
+        loadLine();
+        const before = store.getState().equipment;
+        const r = store.getState().syncInstancesToType(asBehavior(b));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
+        expect(store.getState().equipment).toBe(before);
+        expect(current().success).toBe(true);
+        store.getState().undo();
+        expect(store.getState().equipment).toBe(before); // no stray undo step was recorded
+      },
+    );
+
+    it('still updates when the new behavior keeps every reference valid', () => {
+      loadLine();
+      const r = store.getState().syncInstancesToType({ ...cnc, height: 4 });
+      expect(r).toEqual({ ok: true, count: 1 });
+      expect(current().success).toBe(true);
+    });
   });
 });

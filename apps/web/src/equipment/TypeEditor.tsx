@@ -120,7 +120,13 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       {field('Name', name, setName)}
       <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         Base behavior
-        <select value={behavior} onChange={(e) => setBehavior(e.target.value as EquipmentBehavior)}>
+        {/* A saved type's instances may be connected, routed or staffed; changing behavior would
+            break those. Make a new type instead. */}
+        <select
+          value={behavior}
+          disabled={initial !== undefined}
+          onChange={(e) => setBehavior(e.target.value as EquipmentBehavior)}
+        >
           {EQUIPMENT_BEHAVIORS.map((b) => (
             <option key={b} value={b}>
               {BEHAVIOR_LABEL[b]}

@@ -29,6 +29,7 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
   const [form, setForm] = useState<'new' | EquipmentType | null>(null);
   const [offer, setOffer] = useState<EquipmentType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [offerError, setOfferError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +54,7 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
       setForm(null);
       const used = useEditorStore.getState().equipment.some((e) => e.typeId === saved.id);
       setOffer(editing && used ? saved : null);
+      setOfferError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save the type');
     }
@@ -108,8 +110,11 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
           <button
             type="button"
             onClick={() => {
-              useEditorStore.getState().syncInstancesToType(offer);
-              setOffer(null);
+              const r = useEditorStore.getState().syncInstancesToType(offer);
+              if (r.ok) {
+                setOffer(null);
+                setOfferError(null);
+              } else setOfferError(r.error);
             }}
           >
             Update instances
@@ -117,6 +122,11 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
           <button type="button" onClick={() => setOffer(null)}>
             Keep their settings
           </button>
+          {offerError && (
+            <p role="alert" style={{ color: '#b91c1c', margin: '4px 0 0' }}>
+              {offerError}
+            </p>
+          )}
         </div>
       )}
       {error && (

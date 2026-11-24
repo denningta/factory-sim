@@ -200,8 +200,14 @@ export interface EditorState extends Prefs {
   /** My library types (EQ-3); session state loaded from the API, not part of the project. */
   userTypes: EquipmentType[];
   setUserTypes: (types: EquipmentType[]) => void;
-  /** Copies the type's settings onto its placed instances (one undo step); returns how many. */
-  syncInstancesToType: (type: EquipmentType) => number;
+  /**
+   * Copies the type's settings onto its placed instances (one undo step). Refuses, changing
+   * nothing, when the result would not be a valid project (e.g. the behavior changed under a
+   * routed or connected instance).
+   */
+  syncInstancesToType: (
+    type: EquipmentType,
+  ) => { ok: true; count: number } | { ok: false; error: string };
   selectEquipment: (id: string, additive: boolean) => void;
   /** Selects equipment whose center lies in the rectangle (meters, any corner order). */
   selectInRect: (a: Point, b: Point, additive: boolean) => void;
@@ -765,24 +771,46 @@ export function createEditorStore() {
       userTypes: [],
       setUserTypes: (userTypes) => set({ userTypes }),
       syncInstancesToType: (type) => {
-        const { equipment } = get();
-        if (!equipment.some((e) => e.typeId === type.id)) return 0;
-        record();
+        const state = get();
+        const { equipment } = state;
+        if (!equipment.some((e) => e.typeId === type.id)) return { ok: true, count: 0 };
         let count = 0;
-        set({
-          equipment: equipment.map((e) => {
-            if (e.typeId !== type.id) return e;
-            count++;
-            // Settings come from the type; identity, name and placement stay the instance's.
-            return instantiate(type, {
-              id: e.id,
-              name: e.name,
-              position: e.position,
-              rotation: e.rotation,
-            });
-          }),
+        const next = equipment.map((e) => {
+          if (e.typeId !== type.id) return e;
+          count++;
+          // Settings come from the type; identity, name, placement and (for workstations that
+          // stay workstations) the instance's own labor stay as they are.
+          const synced = instantiate(type, {
+            id: e.id,
+            name: e.name,
+            position: e.position,
+            rotation: e.rotation,
+          });
+          return synced.behavior === 'workstation' && e.behavior === 'workstation'
+            ? { ...synced, params: { ...synced.params, labor: e.params.labor } }
+            : synced;
         });
-        return count;
+        // Routings, cycle times, technicians and connections point at equipment, so the
+        // project schema decides whether the new settings still fit.
+        const parsed = projectSchema.safeParse({
+          ...createProject(),
+          floor: state.floor,
+          equipment: next,
+          products: state.products,
+          connections: state.connections,
+          cycleTimes: state.cycleTimes,
+          technicians: state.technicians,
+          demand: state.demand,
+          release: state.release,
+        });
+        if (!parsed.success)
+          return {
+            ok: false,
+            error: `Cannot update instances: ${parsed.error.issues[0]!.message}. Remove its connections, routing steps and technician assignments first.`,
+          };
+        record();
+        set({ equipment: next });
+        return { ok: true, count };
       },
       placeEquipment: (typeId, point) => {
         const { floor, snapEnabled, equipment, userTypes } = get();

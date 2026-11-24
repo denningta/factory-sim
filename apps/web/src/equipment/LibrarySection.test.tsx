@@ -131,4 +131,19 @@ describe('LibrarySection', () => {
     expect(api.deleteEquipmentType).toHaveBeenCalledWith(cnc.id);
     expect(useEditorStore.getState().equipment).toHaveLength(1);
   });
+
+  it('AC3: if the update would break the project, the offer says why and nothing changes', async () => {
+    useEditorStore.getState().setUserTypes([cnc]);
+    useEditorStore.getState().placeEquipment(cnc.id, { x: 5, y: 5 });
+    render(<LibrarySection api={fakeApi([cnc])} unit="m" />);
+    const item = await screen.findByRole('listitem', { name: '5-axis CNC' });
+    await userEvent.click(within(item).getByRole('button', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('button', { name: /save type/i }));
+    useEditorStore.setState({
+      syncInstancesToType: () => ({ ok: false, error: 'Product A is routed through it' }),
+    });
+    await userEvent.click(await screen.findByRole('button', { name: /update instances/i }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/routed through it/);
+    expect(screen.getByRole('button', { name: /update instances/i })).toBeTruthy();
+  });
 });

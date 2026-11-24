@@ -90,4 +90,22 @@ describe('TypeEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: /save type/i }));
     expect(onSave.mock.calls[0]![0]).toMatchObject({ id: initial.id, name: 'CNC mk2' });
   });
+
+  it('AC3: the behavior of a saved type is locked, since placed instances depend on it', () => {
+    const initial = userEquipmentTypeSchema.parse({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'CNC',
+      behavior: 'buffer',
+      params: { capacity: 4 },
+      footprint: { width: 1, length: 1 },
+      height: 1,
+      color: '#112233',
+      ports: [
+        { id: 'in', kind: 'input', u: 0, v: -0.5 },
+        { id: 'out', kind: 'output', u: 0, v: 0.5 },
+      ],
+    });
+    render(<TypeEditor unit="m" initial={initial} onSave={() => {}} onCancel={() => {}} />);
+    expect((screen.getByLabelText(/base behavior/i) as HTMLSelectElement).disabled).toBe(true);
+  });
 });
