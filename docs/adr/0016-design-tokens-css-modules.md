@@ -1,7 +1,7 @@
 # ADR-0016: Design tokens in TypeScript, styling with CSS Modules
 
 - **Status:** Accepted (product owner, 2026-11-24)
-- **Date:** 2026-11-24
+- **Date:** 2026-11-24 (amended 2026-11-24: themes and charts, product owner)
 - **Amends:** ADR-0002 (adds the styling approach to the frontend stack)
 
 ## Context
@@ -10,15 +10,17 @@ Sprint 8 (UI polish) restyles every screen. Today the web app styles components 
 
 ## Decision
 
-1. **One token module**, `apps/web/src/ui/tokens.ts`: surfaces, text, border, accent, danger, spacing, radius, type scale, and the station and tech state colours (each with a strong value and a tint). It is plain TypeScript data, one object per theme (only light ships now).
+1. **One token module**, `apps/web/src/ui/tokens.ts`: surfaces, text, border, accent, danger, spacing, radius, type scale, and the station and tech state colours (each with a strong value and a tint). It is plain TypeScript data, one object per theme: **dark (the default) and light**, with the same keys. The user switches theme with a toggle; the choice is remembered per browser. The dark theme follows the control-room reference (`docs/wireframes/reference/`).
 2. **CSS custom properties from the tokens.** At startup the app writes the tokens to `:root` as `--…` variables. CSS reads the variables; three.js materials and tests import `tokens.ts` directly. Neither copies a value by hand.
-3. **CSS Modules** (built into Vite) for component styles. No CSS-in-JS runtime, utility framework or other new dependency.
+3. **CSS Modules** (built into Vite) for component styles. No CSS-in-JS runtime or utility framework.
 4. **Base components** in `apps/web/src/ui/` (Button, Field, Section, Tabs, StatTile, Legend, Badge, EmptyState). Screens compose them.
 5. **No inline `style` on DOM elements** in migrated directories, enforced by ESLint core `no-restricted-syntax` (no plugin). Computed geometry (bar widths, product colour swatches) stays inline with a disable comment that says why. Each sprint 8 screen story adds its directory to the rule.
 
+6. **Charts use uPlot** (product owner, 2026-11-24): a small canvas charting library, mounted in a ref, with colours from the active theme. It is the only charting dependency.
+
 ## Consequences
 
-- Positive: one source for every colour in the DOM and the 3D scene. jsdom tests can assert token values. Restyling a screen doesn't touch logic. A dark theme later is a second token object.
+- Positive: one source for every colour in the DOM and the 3D scene. jsdom tests can assert token values. Restyling a screen doesn't touch logic. Both themes are token objects; three.js and charts follow the active one.
 - Negative: a migration across all screens, spread over UI-1 to UI-6. Until a directory is migrated, inline styles and tokens coexist. CSS Modules add class names to tests that query by class, so tests should keep querying by role and label.
 
 ## Alternatives considered

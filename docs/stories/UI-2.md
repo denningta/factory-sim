@@ -4,7 +4,7 @@ epic: UI polish
 points: 3
 priority: Must
 sprint: 8
-depends_on: [UI-1]
+depends_on: [UI-1, UI-9]
 builder_model: sonnet
 owner: builder
 issue: 145
@@ -28,3 +28,4 @@ issue: 145
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-24):_ shell lives in `apps/web/src/projects/ProjectEditor.tsx` (header + tab state) and `App.tsx` (hash routing). Keep the hash format backward compatible: `#/p/<id>` opens Layout.
+- _Lead (2026-11-24):_ **redesign toward the control-room look** (product owner, 2026-11-24): see [`docs/wireframes/reference/`](../wireframes/reference/README.md). Load the `frontend-design` skill (and `dataviz` for charts, tiles, legends, bars) and add a Design section to the PR (builder role). Colours come from the active theme (UI-9).

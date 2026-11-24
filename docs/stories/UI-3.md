@@ -4,7 +4,7 @@ epic: UI polish
 points: 5
 priority: Must
 sprint: 8
-depends_on: [UI-1]
+depends_on: [UI-1, UI-9]
 builder_model: sonnet
 owner: builder
 issue: 146
@@ -31,3 +31,4 @@ _Added by the lead or builder during the story: design decisions, open questions
 - _Lead (2026-11-24):_ files: `Editor.tsx`, `layout/PropertiesPanel.tsx`, `layout/FloorPanel.tsx`, `layout/ViewToolbar.tsx`, `equipment/LibrarySection.tsx`, `technicians/TechniciansPanel.tsx`. Prototype reference: the inspector's `<details>` sections ([`docs/wireframes/prototype/inspector.js`](../wireframes/prototype/inspector.js), styles under `#inspector` in `prototype.css`).
 - _Lead:_ dispatched after UI-7: both change `layout/` (`EquipmentLayer.tsx`, `equipmentGroups.ts`).
 - _Lead:_ the **model** field in General is read-only here (the type's model, ADR-0015); choosing a model belongs to the type editor (UI-7).
+- _Lead (2026-11-24):_ **redesign toward the control-room look** (product owner, 2026-11-24): see [`docs/wireframes/reference/`](../wireframes/reference/README.md). Load the `frontend-design` skill (and `dataviz` for charts, tiles, legends, bars) and add a Design section to the PR (builder role). Colours come from the active theme (UI-9).
