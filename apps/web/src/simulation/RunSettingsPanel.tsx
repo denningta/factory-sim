@@ -95,13 +95,7 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
       </label>
       <label style={box}>
         Seed
-        <input
-          type="number"
-          step="1"
-          value={seed}
-          disabled={seedMode === 'random'}
-          onChange={(e) => setSeed(e.target.value)}
-        />
+        <input type="number" step="1" value={seed} onChange={(e) => setSeed(e.target.value)} />
       </label>
       <button onClick={apply}>Apply</button>
       {error && <p style={{ margin: 0, color: '#b91c1c', font: '12px sans-serif' }}>{error}</p>}

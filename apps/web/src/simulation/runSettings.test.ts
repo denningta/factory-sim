@@ -30,13 +30,19 @@ describe('SE-4: run settings', () => {
   });
 
   it('rejects negative warm-up, non-positive run length and non-integer seeds', () => {
-    expect(validateRunSettings(settings())).toBeNull();
-    expect(validateRunSettings(settings({ warmUpHours: -1 }))).not.toBeNull();
-    expect(validateRunSettings(settings({ runLength: 0 }))).not.toBeNull();
-    expect(validateRunSettings(settings({ seed: 1.5 }))).not.toBeNull();
-    expect(validateRunSettings(settings({ seed: -1 }))).not.toBeNull();
-    expect(validateRunSettings(settings({ seed: 2 ** 32 }))).not.toBeNull();
-    expect(validateRunSettings(settings({ seed: 2 ** 32 - 1 }))).toBeNull();
+    expect(validateRunSettings(settings(), 28800)).toBeNull();
+    expect(validateRunSettings(settings({ warmUpHours: -1 }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ runLength: 0 }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: 1.5 }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: -1 }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: 2 ** 32 }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: 2 ** 32 - 1 }), 28800)).toBeNull();
+  });
+
+  it('SE-7: an invalid seed is rejected in random mode too, since it is saved', () => {
+    for (const seed of [1.5, -1, 1e10, NaN])
+      expect(validateRunSettings(settings({ seedMode: 'random', seed }), 28800)).not.toBeNull();
+    expect(validateRunSettings(settings({ seedMode: 'random', seed: 5 }), 28800)).toBeNull();
   });
 });
 

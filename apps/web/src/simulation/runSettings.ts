@@ -22,12 +22,13 @@ export const DEFAULT_RUN_SETTINGS: RunSettings = {
 };
 
 /** Why the settings can't run, or null. */
-export function validateRunSettings(s: RunSettings, shiftLength = 28800): string | null {
+export function validateRunSettings(s: RunSettings, shiftLength: number): string | null {
   if (!(Number.isFinite(s.warmUpHours) && s.warmUpHours >= 0)) return 'Warm-up must be 0 or more';
   if (!(Number.isFinite(s.runLength) && s.runLength > 0)) return 'Run length must be more than 0';
   const runSeconds = s.runLength * (s.runUnit === 'shifts' ? shiftLength : 3600);
   if (s.warmUpHours * 3600 >= runSeconds) return 'Warm-up must be shorter than the run length';
-  if (s.seedMode === 'fixed' && !(Number.isInteger(s.seed) && s.seed >= 0 && s.seed <= MAX_SEED))
+  // Checked in random mode too: the value is saved and the schema rejects an invalid one.
+  if (!(Number.isInteger(s.seed) && s.seed >= 0 && s.seed <= MAX_SEED))
     return `Seed must be a whole number from 0 to ${MAX_SEED}`;
   return null;
 }
