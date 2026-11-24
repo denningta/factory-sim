@@ -28,5 +28,6 @@ issue:
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- _Lead (2026-11-24):_ files: `Editor.tsx`, `layout/PropertiesPanel.tsx`, `layout/FloorPanel.tsx`, `layout/ViewToolbar.tsx`, `equipment/LibrarySection.tsx`, `technicians/TechniciansPanel.tsx`. Prototype reference: the inspector's `<details>` sections (`src/ui/inspector.js`).
+- _Lead (2026-11-24):_ files: `Editor.tsx`, `layout/PropertiesPanel.tsx`, `layout/FloorPanel.tsx`, `layout/ViewToolbar.tsx`, `equipment/LibrarySection.tsx`, `technicians/TechniciansPanel.tsx`. Prototype reference: the inspector's `<details>` sections ([`docs/wireframes/prototype/inspector.js`](../wireframes/prototype/inspector.js), styles under `#inspector` in `prototype.css`).
+- _Lead:_ dispatched after UI-7: both change `layout/` (`EquipmentLayer.tsx`, `equipmentGroups.ts`).
 - _Lead:_ the **model** field in General is read-only here (the type's model, ADR-0015); choosing a model belongs to the type editor (UI-7).

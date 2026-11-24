@@ -27,4 +27,4 @@ issue:
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- _Lead (2026-11-24):_ files: `simulation/SimulateScreen.tsx`, `KpiPanel.tsx`, `BottleneckTile.tsx`, `RunSettingsPanel.tsx`. Prototype reference: `.hud` in `index.html`. Depends on UI-6 because the utilization tables move there.
+- _Lead (2026-11-24):_ files: `simulation/SimulateScreen.tsx`, `KpiPanel.tsx`, `BottleneckTile.tsx`, `RunSettingsPanel.tsx`. Prototype reference: `.hud` in [`docs/wireframes/prototype/prototype.css`](../wireframes/prototype/prototype.css) and [`layout.html`](../wireframes/prototype/layout.html). Depends on UI-6 because the utilization tables move there. Not run at the same time as UI-5: both change `simulation/`.

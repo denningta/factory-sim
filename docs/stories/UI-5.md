@@ -17,7 +17,7 @@ issue:
 ## Acceptance criteria
 
 - [ ] Each workstation has a **stack light** at its model's `statusLight` anchor (UI-7); the lit segment glows in the strong state colour and changes in the frame its `stationState` event is applied. It replaces the coloured plate on top of the machine
-- [ ] A **label** above each station shows its name and `● <State> · N waiting`, where N is the number of parts queued at its input. Labels update a few times a second, not every frame, and stay legible at Zoom to fit for the 5-station reference line
+- [ ] A **label** above each station shows its name and `● <State> · N waiting`, where N is the number of parts queued at its input. Labels update a few times a second, not every frame, and are at least 12 px tall at Zoom to fit for the reference line (screenshot as evidence) (product owner, 2026-11-24)
 - [ ] A **footprint outline** on the floor in the state colour shows state in the 2D top-down view
 - [ ] **Connections** leaving a blocked station draw in the blocked colour until it unblocks
 - [ ] A **legend** in a corner of the viewport: Working · Starved · Blocked · Waiting for tech · Tech walking, plus product colours
@@ -31,5 +31,6 @@ issue:
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-24):_ no engine change needed. Queue counts come from the poses already built in `simulation/partTracks.ts` (`state: 'queued'` per equipment) or `Run.wip()` (last event `partEntered`). "Connection blocked" is derived from the upstream station's state. AN-4's `Run.stationStates()` seeds the lights when animation is turned back on.
-- _Lead:_ prototype reference: `statusLight()` in `src/render/models.js` and `.label3d` in `index.html`. Labels use the existing `TextLabel` sprite (`layout/FloorScene.tsx`); drei `Html` misbehaves under React 19.
-- _Lead:_ all colours come from UI-1's tokens.
+- _Lead:_ prototype reference: `statusLight()` in [`docs/wireframes/prototype/models.js`](../wireframes/prototype/models.js), the per-frame light/label update in [`world-status-excerpt.js`](../wireframes/prototype/world-status-excerpt.js), and `.label3d` in `prototype.css`. Labels use the existing `TextLabel` sprite (`layout/FloorScene.tsx`); drei `Html` misbehaves under React 19.
+- _Lead:_ all colours come from UI-1's tokens. The accent outline for the bottleneck settles AN-3's "dark ring" choice. Change "idle" to "Waiting for tech" in `docs/wireframes/README.md`.
+- _Lead:_ not run at the same time as UI-4: both change `simulation/`.

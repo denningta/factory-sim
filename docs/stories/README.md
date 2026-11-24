@@ -102,4 +102,4 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [UI-4](UI-4.md) | UI polish | 3   | Must     | UI-1, UI-6 |
 | [UI-8](UI-8.md) | UI polish | 5   | Should   | UI-7       |
 
-Order (2 builders): UI-1 ∥ UI-7 → UI-2, UI-5, UI-6 → UI-3, UI-4, UI-8. Starts after sprint 7's web stories merge (WS-4, PR-5, AN-4, EQ-5): UI-1 restyles their panels, and UI-7 builds on EQ-5. Decided in planning (product owner, 2026-11-23): per-type 3D models via the optional `model` key (ADR-0015, merged in #138); the engine's `idle` is shown as "Waiting for tech"; utilization moves from Simulate to Results.
+Order (lead, 2026-11-24): UI-1 ∥ UI-7 → UI-2 ∥ UI-5 → UI-6 ∥ UI-3 → UI-4 ∥ UI-8. UI-3 waits for UI-7 (both change `layout/`), and UI-4 and UI-5 don't run together (both change `simulation/`). Styling approach: ADR-0016. Prototype reference files: [`docs/wireframes/prototype/`](../wireframes/prototype/README.md). Decided in planning (product owner, 2026-11-23): per-type 3D models via the optional `model` key (ADR-0015, merged in #138); the engine's `idle` is shown as "Waiting for tech"; utilization moves from Simulate to Results.

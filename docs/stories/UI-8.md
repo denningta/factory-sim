@@ -20,12 +20,12 @@ issue:
 - [ ] With no `model` set, a workstation is drawn as `bench` when manual and `machine` when automatic; the other behaviors default to the models above
 - [ ] **Technicians** are drawn as a simplified person figure with a badge in the tech's colour, in a working pose at a station and arms down while walking, within 1,500 triangles
 - [ ] **Scene:** hemisphere and directional light; floor, grid and background colours from UI-1's tokens; the default camera frames the equipment, not the whole floor, whenever equipment exists. No shadows (ADR-0014 decision 6)
-- [ ] **Performance:** at the PL-5 target load (200 objects, 500 parts) the view stays at or above 30 fps on the PL-5 reference machine; numbers recorded in the PR
+- [ ] **Performance:** at the PL-5 target load (200 objects, 500 parts), `renderer.info` shows draw calls within ADR-0014's budget (low tens) and at most 275k visible triangles; numbers recorded in the PR. The product owner confirms ≥ 30 fps on the reference machine before merge (product owner, 2026-11-24)
 - [ ] Screenshots in `docs/screenshots/UI-8/`: a library preview of each model, and the reference line in 3D
 
 ## Notes
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- _Lead (2026-11-24):_ prototype reference, `~/code/lean/factory-sim/src/render/models.js`: `bench`, `benchMachine`, `machine`, `cncRouter`, `rack` + `rackSlot`, `pallet` + `palletSlot`, `operator` + `poseOperator` (simplify: fewer segments, no glasses), and `scene.js` for lights and camera framing.
+- _Lead (2026-11-24):_ prototype reference, [`docs/wireframes/prototype/models.js`](../wireframes/prototype/models.js): `bench`, `benchMachine`, `machine`, `cncRouter`, `rack` + `rackSlot`, `pallet` + `palletSlot`, `operator` + `poseOperator` (simplify: fewer segments, no glasses), and [`scene.js`](../wireframes/prototype/scene.js) for lights and camera framing.
 - _Lead:_ `Should`: carry over to sprint 9 if UI-1 to UI-7 run long.

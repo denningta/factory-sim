@@ -1,0 +1,81 @@
+<body>
+<aside id="side">
+  <h1>Lean Flow Simulator</h1>
+  <p class="sub">Place the line, run it, see the flow.</p>
+
+  <h2>Scenario</h2>
+  <select id="scenario"></select>
+  <ul class="lesson" id="lesson"></ul>
+
+  <div id="runError" hidden></div>
+  <h2>Try</h2>
+  <div class="presets" id="presets"></div>
+  <div class="row" style="margin-top:6px">
+    <button id="compare" class="primary grow" title="Run every option above for one day, headless, and tabulate">Compare all (1 day each)</button>
+  </div>
+
+  <h2>Demand</h2>
+  <div class="demand">
+    <label>Units / day<input id="demand" type="number" min="1"></label>
+    <label>Available min/day<input id="avail" type="number" min="1"></label>
+    <label>Planned uptime %<input id="uptime" type="number" min="30" max="100"></label>
+  </div>
+  <p class="sub" style="margin:4px 0 0">Takt <b id="taktv"></b></p>
+
+  <h2>Line settings</h2>
+  <label class="field">Transfer batch, all operations <b id="tbv">1</b><input id="tb" type="range" min="1" max="20" step="1"></label>
+  <label class="field"><span><input id="var" type="checkbox"> Variation</span><span id="cvv"></span><input id="cv" type="range" min="0" max="0.4" step="0.01"></label>
+  <label class="field"><span><input id="brk" type="checkbox"> Breakdowns</span></label>
+  <label class="field">Shift start (clock) <input id="shift" type="time" style="width:110px"></label>
+  <label class="field">Part shape <select id="shape" style="width:110px"><option value="box">Box</option><option value="panel">Panel</option></select></label>
+  <label class="field">Seed <input id="seed" type="number" min="1" step="1" style="width:80px"></label>
+
+  <h2>Inspector</h2>
+  <div id="inspector"></div>
+
+  <h2>Add to floor</h2>
+  <div class="palette" id="palette"></div>
+
+  <h2>Data</h2>
+  <div class="row">
+    <button id="newLine" class="grow" title="Start an empty line">New line</button>
+    <button id="import" class="grow">Import time study…</button>
+  </div>
+  <div class="row" style="margin-top:6px">
+    <button id="save" class="grow">Save scenario</button>
+    <button id="load" class="grow">Open…</button>
+    <input id="loadFile" type="file" accept=".json,application/json" hidden>
+  </div>
+
+  <h2>Legend</h2>
+  <div class="legend">
+    <span><i style="background:var(--working)"></i>working</span>
+    <span><i style="background:var(--starved)"></i>starved</span>
+    <span><i style="background:var(--blocked)"></i>blocked / waiting</span>
+    <span><i style="background:var(--batch)"></i>batch / cure running</span>
+    <span><i style="background:var(--down)"></i>down</span>
+  </div>
+  <p class="sub" style="margin-top:6px">Parts turn from teal to red the longer they have been in the line. With out-life tracking they show out-time used; purple = over the limit. Floor arrows show the routing (orange dashed = rework, red = blocked).</p>
+</aside>
+
+<main id="view">
+  <div class="hud">
+    <button id="play" title="Play / pause (space)">▶</button>
+    <button id="reset" title="Restart the run">⟲</button>
+    <span class="clock" id="clock">0:00:00</span>
+    <input id="speed" type="range" min="0" max="8" step="1" title="Speed">
+    <span id="speedv">20×</span>
+    <button id="undo" title="Undo (Ctrl+Z)">↶</button>
+    <button id="redo" title="Redo (Ctrl+Shift+Z)">↷</button>
+  </div>
+</main>
+
+<div id="bottom">
+  <section>
+    <div class="tabs"><button data-tab="ops" class="on">Operations</button><button data-tab="yz">Yamazumi</button></div>
+    <div id="builder"></div>
+    <div id="yamazumi" hidden></div>
+  </section>
+  <section id="kpis"></section>
+</div>
+
