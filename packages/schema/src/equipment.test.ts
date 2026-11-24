@@ -262,3 +262,44 @@ describe('schema v2 → v3 upgrade', () => {
     if (!result.ok) expect(result.error).toContain('has no port "out"');
   });
 });
+
+describe('schema v7: equipment `model` key (ADR-0015)', () => {
+  const ws = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === 'workstation')!;
+
+  it('is optional: built-in types have none and still validate', () => {
+    for (const type of BASE_EQUIPMENT_TYPES) expect(type.model).toBeUndefined();
+    expect(equipmentTypeSchema.safeParse(ws).success).toBe(true);
+  });
+
+  it('accepts a kebab-case model id on a type', () => {
+    for (const model of ['cnc', 'cnc-enclosure', 'oven-2']) {
+      expect(equipmentTypeSchema.safeParse({ ...ws, model }).success, model).toBe(true);
+    }
+  });
+
+  it('rejects ids that are not kebab-case or longer than 64 characters', () => {
+    for (const model of [
+      '',
+      'CNC',
+      'cnc enclosure',
+      '-cnc',
+      'cnc-',
+      'cnc--x',
+      '../x',
+      'a'.repeat(65),
+    ]) {
+      expect(equipmentTypeSchema.safeParse({ ...ws, model }).success, model).toBe(false);
+    }
+  });
+
+  it('is copied to placed instances like every other type setting', () => {
+    const e = instantiate(
+      { ...ws, model: 'cnc-enclosure' },
+      { id: 'w1', position: { x: 0, y: 0 } },
+    );
+    expect(e.model).toBe('cnc-enclosure');
+    const project = createProject();
+    project.equipment = [e];
+    expect(validateProject(project).ok).toBe(true);
+  });
+});

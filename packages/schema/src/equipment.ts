@@ -8,6 +8,7 @@ import { durationSchema } from './duration';
  * settings and then owns them, so editing a type never silently changes a project.
  *
  * Ports (v3) are the input/output points connections attach to (FL-1, EQ-4).
+ * `model` (v7) names the 3D model the renderer draws (ADR-0015).
  */
 
 export const idSchema = z.string().min(1);
@@ -166,12 +167,24 @@ export function defaultPorts(
   return [input, output];
 }
 
+/**
+ * Which 3D model the renderer draws (ADR-0015), e.g. `cnc-enclosure`. Appearance only: the
+ * engine ignores it, and behavior still decides how the equipment simulates. The schema
+ * doesn't list the models, so adding one to the web app's registry needs no schema change.
+ * Absent, or naming a model the renderer doesn't know, means the behavior's default model.
+ */
+export const modelIdSchema = z
+  .string()
+  .max(64)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Expected a kebab-case model id like cnc-enclosure');
+
 /** The settings a type defines and an instance copies. */
 const typeSettings = {
   footprint: footprintSchema,
   height: metersSchema,
   color: colorSchema,
   ports: z.array(portSchema),
+  model: modelIdSchema.optional(),
 };
 
 /** A library entry (EQ-1 built-in or EQ-3 user-defined). */

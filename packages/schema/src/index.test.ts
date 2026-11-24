@@ -491,3 +491,18 @@ describe('schema v6: saved minimum clearance (LE-5 follow-up)', () => {
     });
   });
 });
+
+describe('schema v7: optional equipment model key (ADR-0015)', () => {
+  it('upgrades a v6 document unchanged apart from the version', () => {
+    const current = sampleProject();
+    const v6 = JSON.parse(JSON.stringify({ ...current, schemaVersion: 6 }));
+    expect(loadProject(v6)).toEqual({ ok: true, project: current });
+  });
+
+  it('keeps a model key on placed equipment through save and load', () => {
+    const p = sampleProject();
+    p.equipment[1] = { ...p.equipment[1]!, model: 'cnc-enclosure' };
+    const result = loadProject(JSON.parse(JSON.stringify(p)));
+    expect(result.ok && result.project.equipment[1]?.model).toBe('cnc-enclosure');
+  });
+});

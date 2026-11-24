@@ -129,6 +129,8 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
   }),
   // v5 → v6: layout checks; clearance off, as in LE-5's session default.
   5: (doc) => ({ layout: { minClearance: null }, ...doc, schemaVersion: 6 }),
+  // v6 → v7: the optional equipment `model` key; absent means the behavior's default model.
+  6: (doc) => ({ ...doc, schemaVersion: 7 }),
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({
