@@ -3,7 +3,7 @@ import {
   type EquipmentTypeListResponse,
   type UserEquipmentType,
 } from '@factory-sim/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireUser, type AppContext } from '../context';
@@ -36,10 +36,10 @@ export const equipmentTypeRoutes: FastifyPluginAsync<{ ctx: AppContext }> = asyn
     const rows = await ctx.db
       .select()
       .from(equipmentTypes)
-      .where(eq(equipmentTypes.ownerId, request.user!.id));
-    const types = rows.map(toType);
-    types.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-    return { types };
+      .where(eq(equipmentTypes.ownerId, request.user!.id))
+      // Case-insensitive by name; id breaks ties so the order is stable.
+      .orderBy(sql`lower(${equipmentTypes.name})`, equipmentTypes.id);
+    return { types: rows.map(toType) };
   });
 
   app.post('/api/equipment-types', guard, async (request, reply): Promise<UserEquipmentType> => {

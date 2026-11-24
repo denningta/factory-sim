@@ -1,6 +1,7 @@
 import {
   BASE_EQUIPMENT_TYPES,
   apiErrorSchema,
+  createProject,
   defaultPorts,
   equipmentTypeListResponseSchema,
   userEquipmentTypeSchema,
@@ -114,13 +115,29 @@ describe('equipment library API (EQ-3)', () => {
     expect(equipmentTypeListResponseSchema.parse(res.json()).types).toEqual([]);
   });
 
-  it('AC3: editing or deleting a type leaves saved projects untouched', async () => {
+  it('AC3: editing or deleting a type leaves a saved project, and its placed instance, untouched', async () => {
     const { t, admin } = await withUsers();
     await t.call('POST', '/api/equipment-types', cnc(A), admin);
     const created = (await t.call('POST', '/api/projects', { name: 'Line 1' }, admin)).json();
+    const { id: _id, name, ...settings } = cnc(A);
+    const document = {
+      ...createProject(),
+      equipment: [
+        { ...settings, id: 'eq-1', name, typeId: A, position: { x: 5, y: 5 }, rotation: 0 },
+      ],
+    };
+    const saved = await t.call(
+      'PATCH',
+      `/api/projects/${created.id}`,
+      { document, baseRevision: 0 },
+      admin,
+    );
+    expect(saved.statusCode).toBe(200);
+    const before = (await t.call('GET', `/api/projects/${created.id}`, undefined, admin)).json();
     await t.call('PUT', `/api/equipment-types/${A}`, { ...cnc(A), height: 3 }, admin);
     await t.call('DELETE', `/api/equipment-types/${A}`, undefined, admin);
     const after = (await t.call('GET', `/api/projects/${created.id}`, undefined, admin)).json();
-    expect(after.revision).toBe(created.revision);
+    expect(after).toEqual(before);
+    expect(after.document.equipment[0]).toMatchObject({ typeId: A, height: 2.4 });
   });
 });
