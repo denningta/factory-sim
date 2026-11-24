@@ -465,3 +465,29 @@ describe('schema v5: saved run settings (SE-4 follow-up)', () => {
     });
   });
 });
+
+describe('schema v6: saved minimum clearance (LE-5 follow-up)', () => {
+  it('accepts a positive clearance in meters or null (off)', () => {
+    const p = sampleProject();
+    p.layout = { minClearance: 0.9144 };
+    expect(validateProject(p).ok).toBe(true);
+    p.layout = { minClearance: null };
+    expect(validateProject(p).ok).toBe(true);
+  });
+
+  it('rejects a zero or negative clearance', () => {
+    const p = sampleProject();
+    p.layout = { minClearance: 0 };
+    expectInvalid(p, 'layout.minClearance');
+  });
+
+  it('upgrades a v5 document with clearance off', () => {
+    const current = sampleProject();
+    const { layout: _layout, ...rest } = current;
+    const v5 = JSON.parse(JSON.stringify({ ...rest, schemaVersion: 5 }));
+    expect(loadProject(v5)).toEqual({
+      ok: true,
+      project: { ...current, layout: { minClearance: null } },
+    });
+  });
+});
