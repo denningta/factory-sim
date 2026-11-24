@@ -11,7 +11,7 @@ for e in platform layout-editor equipment-library products-routings workstation-
   label "epic:$e" 1d76db
 done
 for s in 1 2 3 4 5 6 7 8 9; do label "sprint:$s" 0e8a16; done
-for p in 1 2 3 5 8 13; do label "points:$p" c5def5; done
+for p in 1 2 3 4 5 8 13; do label "points:$p" c5def5; done
 label priority:must b60205; label priority:should fbca04; label priority:could cccccc
 label in-progress 5319e7 "A builder is working on it"
 label in-review 0052cc "PR open, awaiting review/merge"
