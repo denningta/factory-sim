@@ -95,6 +95,7 @@ function UtilTable<K extends string>({
     );
   const head = (key: 'name' | K, text: string, align: 'left' | 'right') => (
     <th
+      key={key}
       scope="col"
       aria-sort={sort?.key === key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
       style={{ ...cell, textAlign: align }}
@@ -112,7 +113,7 @@ function UtilTable<K extends string>({
   return (
     <table
       aria-label={label}
-      style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 12 }}
+      style={{ borderCollapse: 'collapse', width: '100%', marginBottom: 12, tableLayout: 'fixed' }}
     >
       <thead>
         <tr>

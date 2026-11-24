@@ -52,7 +52,7 @@ export function SimulateScreen({
     setApplied(toRunOptions(next, shiftLength));
   };
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 240px', height: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
       {result.ok ? (
         <Running session={result.session} />
       ) : (
