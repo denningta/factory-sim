@@ -172,6 +172,10 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
   const cycleTimes = new Map(p.cycleTimes.map((c) => [`${c.productId}\n${c.stationId}`, c.time]));
   const products: ProductDef[] = [];
   for (const product of p.products) {
+    if (product.routing.length === 0) {
+      error('no_routing', `${product.name} has no routing: add its steps.`, product.id);
+      continue; // nothing to path-check
+    }
     const route: Leg[] = [];
     let at = sources[0]?.id;
     for (const step of product.routing) {

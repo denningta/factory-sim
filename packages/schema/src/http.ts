@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { equipmentTypeSchema } from './equipment';
 import { projectSchema } from './project';
 
 /**
@@ -25,6 +26,10 @@ import { projectSchema } from './project';
  * | GET    /api/projects/:id   | —                    | ProjectDetail            | SC-1  |
  * | PATCH  /api/projects/:id   | UpdateProjectRequest | ProjectSummary           | SC-1  |
  * | DELETE /api/projects/:id   | —                    | 204                      | SC-1  |
+ * | GET    /api/equipment-types     | —                 | EquipmentTypeListResponse | EQ-3 |
+ * | POST   /api/equipment-types     | UserEquipmentType | UserEquipmentType (201)   | EQ-3 |
+ * | PUT    /api/equipment-types/:id | UserEquipmentType | UserEquipmentType         | EQ-3 |
+ * | DELETE /api/equipment-types/:id | —                 | 204                       | EQ-3 |
  *
  * Mutating routes accept only `Content-Type: application/json` (no form parsers), which
  * together with SameSite cookies blocks cross-site form posts.
@@ -159,6 +164,30 @@ export const updateProjectRequestSchema = z
     message: 'Nothing to update',
   });
 
+// ---- Equipment library (EQ-3) ----
+
+/**
+ * A user-defined library type (ADR-0010). Private to the user who created it, like projects
+ * (ADR-0011), and usable in all of that user's projects. The built-ins (`BASE_EQUIPMENT_TYPES`)
+ * are not stored or served; the web app lists them first.
+ *
+ * The client generates `id` as a lowercase UUID (what Postgres `uuid` returns, so ids round-trip), so it never collides with built-in ids and placed
+ * instances can point at it (`typeId`) before the POST returns. POST with an existing id
+ * answers 409 `conflict`; PUT needs `id` to equal `:id` (else 400 `validation`) and answers
+ * 404 for a type the user doesn't own. PUT replaces the whole type; placed instances are
+ * not touched (they keep their own copy, and the web app offers to update them).
+ * DELETE leaves instances alone too; their `typeId` then matches nothing.
+ */
+export const userEquipmentTypeSchema = equipmentTypeSchema.refine(
+  (t) => z.uuid().safeParse(t.id).success && t.id === t.id.toLowerCase(),
+  { message: 'User-defined types need a lowercase UUID id', path: ['id'] },
+);
+
+/** Sorted by name (case-insensitive). */
+export const equipmentTypeListResponseSchema = z.strictObject({
+  types: z.array(userEquipmentTypeSchema),
+});
+
 // ---- Errors ----
 
 export const apiErrorCodeSchema = z.enum([
@@ -193,5 +222,7 @@ export type ProjectDetail = z.infer<typeof projectDetailSchema>;
 export type ProjectListResponse = z.infer<typeof projectListResponseSchema>;
 export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 export type UpdateProjectRequest = z.infer<typeof updateProjectRequestSchema>;
+export type UserEquipmentType = z.infer<typeof userEquipmentTypeSchema>;
+export type EquipmentTypeListResponse = z.infer<typeof equipmentTypeListResponseSchema>;
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;
 export type ApiError = z.infer<typeof apiErrorSchema>;

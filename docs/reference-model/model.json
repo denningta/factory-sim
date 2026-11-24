@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "floor": {
     "width": 20,
     "length": 40,
@@ -775,5 +775,16 @@
       "walkSpeed": 1.2,
       "stationIds": ["s4", "s5"]
     }
-  ]
+  ],
+  "run": {
+    "warmUp": 3600,
+    "length": {
+      "unit": "seconds",
+      "value": 86400
+    },
+    "seed": {
+      "mode": "fixed",
+      "value": 1
+    }
+  }
 }

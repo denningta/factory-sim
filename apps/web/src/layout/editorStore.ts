@@ -214,6 +214,9 @@ export interface EditorState extends Prefs {
   /** Connections; part of the project document. */
   connections: Connection[];
   selectedConnectionId: string | null;
+  /** Product shown on the Products screen; session-only. */
+  selectedProductId: string | null;
+  selectProduct: (id: string | null) => void;
   /** The output port picked as the start of a connection being drawn; session-only. */
   pendingFrom: PortRef | null;
   /** First click an output (sets `pendingFrom`), then an input (connects). Esc cancels. */
@@ -939,6 +942,8 @@ export function createEditorStore() {
         set({ connections: next });
         return { ok: true };
       },
+      selectedProductId: null,
+      selectProduct: (id) => set({ selectedProductId: id }),
       selectConnection: (id) =>
         set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {
