@@ -158,6 +158,8 @@ export interface EditorState extends Prefs {
   setDemandBasis: (basis: Demand['basis']) => void;
   /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
   setDemandValue: (productId: string, value: number) => ProductResult;
+  /** True when the last mix edit rescaled every other product (all were already pinned). */
+  demandRescaled: boolean;
   /** Fixed interval = `smooth` product order; random = by mix; sequence = repeating pattern. */
   setReleaseMode: (mode: ReleaseMode) => void;
   /** Seconds between releases (a fixed interval). */
@@ -500,6 +502,7 @@ export function createEditorStore() {
         record();
         set({ demand: { basis, items }, ...intervalFor({ basis, items }) });
       },
+      demandRescaled: false,
       setDemandValue: (productId, value) => {
         const { demand, products } = get();
         if (!products.some((p) => p.id === productId))
