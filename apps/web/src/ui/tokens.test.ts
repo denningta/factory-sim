@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTokens, cssVariables, tokens, type StateName } from './tokens';
+import { applyTokens, cssVariables, light, tokens, type StateName } from './tokens';
 
 const STATES: StateName[] = ['working', 'starved', 'blocked', 'waiting', 'walking'];
 
@@ -30,12 +30,12 @@ describe('UI-1 AC1: one token module', () => {
     }
   });
 
-  it('uses the wireframe palette for the strong state colours', () => {
-    expect(tokens.state.working.strong).toBe('#1d9a55');
-    expect(tokens.state.starved.strong).toBe('#d9a21b');
-    expect(tokens.state.blocked.strong).toBe('#d43a3a');
-    expect(tokens.state.waiting.strong).toBe('#8a94a3');
-    expect(tokens.state.walking.strong).toBe('#7b2fbf');
+  it('uses the wireframe palette for the light strong state colours', () => {
+    expect(light.state.working.strong).toBe('#1d9a55');
+    expect(light.state.starved.strong).toBe('#d9a21b');
+    expect(light.state.blocked.strong).toBe('#d43a3a');
+    expect(light.state.waiting.strong).toBe('#8a94a3');
+    expect(light.state.walking.strong).toBe('#7b2fbf');
   });
 
   it('applies the tokens as CSS custom properties on the root', () => {
