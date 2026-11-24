@@ -76,16 +76,24 @@ describe('SC-2: sign in again without losing edits', () => {
     await screen.findByRole('button', { name: 'Simulate' });
     useEditorStore.getState().setClearance(0.7);
     const dialog = await screen.findByRole('dialog', undefined, { timeout: 5000 });
+    // Header and editor are inert behind the modal, and focus starts in the email field.
+    expect(screen.getByRole('button', { name: '← Projects' }).closest('[inert]')).not.toBeNull();
+    expect(document.activeElement).toBe(within(dialog).getByLabelText(/email/i));
     // Editor state is kept, and the project name is still on screen behind the dialog.
     expect(screen.getByText('Line')).toBeTruthy();
     expect(useEditorStore.getState().clearance).toBe(0.7);
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
     await userEvent.type(within(dialog).getByLabelText(/email/i), 'a@b.co');
     await userEvent.type(within(dialog).getByLabelText(/password/i), 'correct horse battery');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Sign in' }));
-    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2), { timeout: 5000 });
+    expect(reload).not.toHaveBeenCalled();
     expect(login).toHaveBeenCalled();
     expect(update.mock.calls[1]![1].document?.layout.minClearance).toBe(0.7);
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 5000 });
     expect(screen.getByRole('status').textContent).toBe('All changes saved');
+    expect(screen.getByRole('button', { name: '← Projects' }).closest('[inert]')).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

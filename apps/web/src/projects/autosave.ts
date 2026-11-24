@@ -64,7 +64,7 @@ export function createAutosaver(opts: {
           opts.onStatus('signin', err);
           return;
         }
-        // Network trouble and server faults may pass; anything else (stale app, expired session,
+        // Network trouble and server faults may pass; anything else (stale app,
         // deleted project, too large) would fail the same way every time, so tell the user.
         if (err instanceof ApiRequestError && err.code !== 'internal') {
           stopped = true;
