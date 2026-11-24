@@ -51,6 +51,7 @@ export function createTally(): Tally {
 }
 
 export function createTimeWeighted(clock: () => SimTime, initial: number): TimeWeighted {
+  assertFinite('createTimeWeighted', initial);
   let current = initial;
   let start = clock();
   let last = start;
