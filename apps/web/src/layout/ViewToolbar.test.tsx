@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ViewToolbar } from './ViewToolbar';
+import { BASE_EQUIPMENT_TYPES, instantiate } from '@factory-sim/schema';
 import { createEditorStore } from './editorStore';
 
 afterEach(cleanup);
@@ -32,5 +33,30 @@ describe('One click toggles an orthographic top-down view', () => {
     expect(store.getState().viewMode).toBe('2d');
     await user.click(d3);
     expect(store.getState().viewMode).toBe('3d');
+  });
+});
+
+describe('A count of issues shows in the toolbar', () => {
+  it('shows the number of overlapping pairs and updates with clearance', async () => {
+    const store = createEditorStore();
+    render(<ViewToolbar useStore={store} />);
+    expect(screen.getByText(/no layout issues/i)).toBeTruthy();
+    const a = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 });
+    const b = store.getState().placeEquipment('base-workstation', { x: 5.5, y: 5 });
+    expect(a && b).toBeTruthy();
+    expect(await screen.findByText(/1 layout issue\b/i)).toBeTruthy();
+  });
+
+  it('a clearance setting flags items that are too close', async () => {
+    const store = createEditorStore();
+    render(<ViewToolbar useStore={store} />);
+    const t = BASE_EQUIPMENT_TYPES.find((x) => x.id === 'base-workstation')!;
+    const at = (id: string, x: number) => instantiate(t, { id, name: id, position: { x, y: 5 } });
+    store.setState({ equipment: [at('a', 5), at('b', 5 + t.footprint.width + 0.5)] });
+    expect(await screen.findByText(/no layout issues/i)).toBeTruthy();
+    store.getState().setClearance(1);
+    expect(await screen.findByText(/1 layout issue\b/i)).toBeTruthy();
+    store.getState().setClearance(null);
+    expect(await screen.findByText(/no layout issues/i)).toBeTruthy();
   });
 });

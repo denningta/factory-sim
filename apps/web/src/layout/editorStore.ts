@@ -123,6 +123,9 @@ export interface EditorState extends Prefs {
   /** Display only: does not touch `floor`. */
   setUnit: (unit: DisplayUnit) => void;
   toggleSnap: () => void;
+  /** Minimum gap between footprints (m); null = clearance check off (LE-5). */
+  clearance: number | null;
+  setClearance: (meters: number | null) => void;
   /** The library type to preview and, with LE-2, to place. Session-only, not a preference. */
   selectedTypeId: string | null;
   selectType: (typeId: string | null) => void;
@@ -1004,6 +1007,10 @@ export function createEditorStore() {
       setUnit: (unit) => {
         set({ unit });
         savePrefs({ unit, snapEnabled: get().snapEnabled });
+      },
+      clearance: null,
+      setClearance: () => {
+        throw new Error('not implemented');
       },
       toggleSnap: () => {
         const snapEnabled = !get().snapEnabled;
