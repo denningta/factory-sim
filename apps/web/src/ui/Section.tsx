@@ -38,11 +38,10 @@ export function Section({
         )}
       </h2>
       {description && <p className={styles.description}>{description}</p>}
-      {shown && (
-        <div id={bodyId} className={styles.body}>
-          {children}
-        </div>
-      )}
+      {/* hidden, not unmounted: a closed section keeps its children's state and aria-controls target */}
+      <div id={bodyId} className={styles.body} hidden={!shown}>
+        {children}
+      </div>
     </section>
   );
 }

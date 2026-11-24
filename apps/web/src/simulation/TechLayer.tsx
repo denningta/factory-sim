@@ -3,11 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { TextLabel } from '../layout/FloorScene';
 import type { RunSession } from './runSession';
+import { tokens } from '../ui/tokens';
 
 const BODY_HEIGHT = 1.7;
 const BODY_RADIUS = 0.3;
 const LABEL_HEIGHT = 1.1;
-const WALKING_COLOR = '#9333ea';
+const WALKING_COLOR = tokens.state.walking.strong;
 const STANDING_COLOR = '#475569';
 
 /**

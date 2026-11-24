@@ -12,6 +12,7 @@ export function Field({
   error,
   onChange,
   className,
+  type = 'text',
   'aria-describedby': describedBy,
   ...input
 }: Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
@@ -35,13 +36,13 @@ export function Field({
       </label>
       <span className={styles.control}>
         <input
+          {...input}
           id={id}
-          type="text"
+          type={type}
           className={styles.input}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={described}
           onChange={(e) => onChange?.(e.target.value)}
-          {...input}
         />
         {unit && <span className={styles.unit}>{unit}</span>}
       </span>

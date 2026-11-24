@@ -56,6 +56,15 @@ describe('UI-1 AC2: base components expose an accessible role and name', () => {
     expect(onChange).toHaveBeenCalledWith('a');
   });
 
+  it('Field: caller props cannot override the wired id and aria-describedby', () => {
+    render(
+      <Field label="Width" error="Bad" value="" onChange={() => {}} id="x" aria-describedby="y" />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Width' });
+    expect(input.id).not.toBe('x');
+    expect(input.getAttribute('aria-describedby')).toContain(screen.getByRole('alert').id);
+  });
+
   it('Section: heading, optional description, optionally collapsible', async () => {
     const { rerender } = render(
       <Section heading="Floor" description="Size of the room">
@@ -74,7 +83,7 @@ describe('UI-1 AC2: base components expose an accessible role and name', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     await userEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByText('body')).toBeNull();
+    expect(screen.getByText('body', { selector: 'p' }).parentElement!.hidden).toBe(true);
   });
 
   it('Tabs: a tablist of tabs, the selected one flagged, onChange on click', async () => {
