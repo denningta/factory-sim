@@ -40,6 +40,7 @@ export function SimulateScreen() {
   const [applied, setApplied] = useState(() =>
     toRunOptions(DEFAULT_RUN_SETTINGS, useEditorStore.getState().shiftLength),
   );
+  const shiftLength = useEditorStore((s) => s.shiftLength);
   const result = useMemo<RunSessionResult>(
     () => createRunSession(currentProject(), applied.options),
     [applied],
@@ -53,9 +54,8 @@ export function SimulateScreen() {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 240px', height: '100%' }}>
       {result.ok ? <Running session={result.session} /> : <Issues issues={result.issues} />}
       <RunSettingsPanel
-        key="settings"
         initial={settings}
-        shiftLength={useEditorStore.getState().shiftLength}
+        shiftLength={shiftLength}
         seedUsed={applied.seed}
         onApply={apply}
       />
@@ -69,6 +69,7 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
   useEffect(() => session.subscribe(rerender), [session]);
   // The clock readout is text, not per-frame React state: poll it a few times a second.
   useEffect(() => {
+    setNow(session.now); // a new session starts at 0; don't show the old run's time
     const id = setInterval(() => setNow(session.now), 200);
     return () => clearInterval(id);
   }, [session]);

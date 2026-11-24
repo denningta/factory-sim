@@ -269,6 +269,7 @@ export function createEditorStore() {
       technicians: Technician[];
       demand: Demand;
       release: Release;
+      shiftLength: number;
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -279,6 +280,7 @@ export function createEditorStore() {
       technicians: get().technicians,
       demand: get().demand,
       release: get().release,
+      shiftLength: get().shiftLength,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -441,7 +443,7 @@ export function createEditorStore() {
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
       setShiftLength: (seconds) => {
-        if (!(Number.isFinite(seconds) && seconds > 0)) return;
+        if (!(Number.isFinite(seconds) && seconds > 0) || seconds === get().shiftLength) return;
         record();
         set({ shiftLength: seconds });
         set(intervalFor(get().demand));

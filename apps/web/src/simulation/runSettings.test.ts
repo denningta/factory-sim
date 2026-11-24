@@ -34,6 +34,9 @@ describe('SE-4: run settings', () => {
     expect(validateRunSettings(settings({ warmUpHours: -1 }))).not.toBeNull();
     expect(validateRunSettings(settings({ runLength: 0 }))).not.toBeNull();
     expect(validateRunSettings(settings({ seed: 1.5 }))).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: -1 }))).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: 2 ** 32 }))).not.toBeNull();
+    expect(validateRunSettings(settings({ seed: 2 ** 32 - 1 }))).toBeNull();
   });
 });
 

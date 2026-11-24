@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { validateRunSettings, type RunSettings } from './runSettings';
 
 interface Props {
@@ -20,6 +20,8 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
   const [seedMode, setSeedMode] = useState(initial.seedMode);
   const [seed, setSeed] = useState(String(initial.seed));
   const [shiftHours, setShiftHours] = useState(String(shiftLength / 3600));
+  // Follows edits made elsewhere (undo, load) without discarding other drafts.
+  useEffect(() => setShiftHours(String(shiftLength / 3600)), [shiftLength]);
   const [error, setError] = useState<string | null>(null);
 
   const apply = () => {

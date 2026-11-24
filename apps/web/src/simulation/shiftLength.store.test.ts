@@ -29,4 +29,16 @@ describe('SE-4: shift length', () => {
     s().setShiftLength(3600);
     expect(s().release.interval).toEqual({ kind: 'fixed', value: 60 });
   });
+
+  it('undo reverts shift length and the release interval together; no-op sets add no step', () => {
+    const p = s().addProduct();
+    s().setDemandBasis('perShift');
+    s().setDemandValue(p.id, 60);
+    s().setShiftLength(8 * 3600);
+    s().setShiftLength(3600);
+    expect(s().release.interval).toEqual({ kind: 'fixed', value: 60 });
+    s().undo();
+    expect(s().shiftLength).toBe(8 * 3600);
+    expect(s().release.interval).toEqual({ kind: 'fixed', value: 8 * 60 });
+  });
 });

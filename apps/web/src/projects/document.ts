@@ -17,6 +17,10 @@ export type EditedParts = Pick<
  * The document to save: the loaded document with the editor's slices on top. Spreading
  * `base` keeps every section the editor doesn't manage yet (calendar, …) instead of dropping it.
  */
-export function documentForSave(base: Project, parts: EditedParts): Project {
-  return { ...base, ...parts };
+export function documentForSave(
+  base: Project,
+  { shiftLength, ...parts }: EditedParts & { shiftLength?: number },
+): Project {
+  const calendar = shiftLength === undefined ? base.calendar : { ...base.calendar, shiftLength };
+  return { ...base, ...parts, calendar };
 }

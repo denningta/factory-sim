@@ -47,4 +47,26 @@ describe('documentForSave (schema v4 adoption)', () => {
     });
     expect(saved.technicians).toEqual(technicians);
   });
+
+  it('saves the editor shift length into calendar and keeps other calendar fields (SE-4)', () => {
+    const base = createProject();
+    const { floor, equipment, products, connections, cycleTimes, technicians, demand, release } =
+      base;
+    const parts = {
+      floor,
+      equipment,
+      products,
+      connections,
+      cycleTimes,
+      technicians,
+      demand,
+      release,
+    };
+    const saved = documentForSave(
+      { ...base, calendar: { ...base.calendar, extra: 1 } as typeof base.calendar },
+      { ...parts, shiftLength: 3600 },
+    );
+    expect(saved.calendar).toEqual({ shiftLength: 3600, extra: 1 });
+    expect(documentForSave(base, parts).calendar).toEqual(base.calendar);
+  });
 });

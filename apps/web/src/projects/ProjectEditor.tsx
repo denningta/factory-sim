@@ -60,7 +60,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               release,
               shiftLength,
             } = useEditorStore.getState();
-            const edited = documentForSave(base, {
+            const document = documentForSave(base, {
               floor,
               equipment,
               products,
@@ -69,8 +69,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               technicians,
               demand,
               release,
+              shiftLength,
             });
-            const document = { ...edited, calendar: { ...base.calendar, shiftLength } };
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
             base = document;
