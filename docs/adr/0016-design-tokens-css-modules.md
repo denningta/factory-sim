@@ -1,6 +1,6 @@
 # ADR-0016: Design tokens in TypeScript, styling with CSS Modules
 
-- **Status:** Proposed (needs product-owner sign-off)
+- **Status:** Accepted (product owner, 2026-11-24)
 - **Date:** 2026-11-24
 - **Amends:** ADR-0002 (adds the styling approach to the frontend stack)
 
