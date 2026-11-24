@@ -22,4 +22,7 @@ issue: 16
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- Footprints are oriented rectangles (position, rotation, footprint); overlap via separating-axis test, gap via vertex-to-edge distance. Touching is not overlapping.
+- One issue = one flagged pair. Overlap wins over too-close, so a pair counts once. Red tint: strong for overlap, lighter for too-close.
+- Clearance is a UI/editor setting (meters in the store, shown in the display unit); not persisted in the project document (no schema change). Blank = off.
+- Red tint updates on commit, not live during a drag preview.

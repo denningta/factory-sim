@@ -1,4 +1,7 @@
+import { useMemo, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
+import { findIssues } from './overlaps';
+import { formatNumber, fromDisplay, toDisplay } from './units';
 import type { ViewMode } from './viewControls';
 
 const SEGMENTS: { mode: ViewMode; label: string }[] = [
@@ -11,8 +14,23 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
   const requestFit = useStore((s) => s.requestFit);
   const viewMode = useStore((s) => s.viewMode);
   const toggleView = useStore((s) => s.toggleView);
+  const equipment = useStore((s) => s.equipment);
+  const clearance = useStore((s) => s.clearance);
+  const setClearance = useStore((s) => s.setClearance);
+  const unit = useStore((s) => s.unit);
+  // Typed text is kept while editing so "0." or "" aren't reformatted under the cursor.
+  const [draft, setDraft] = useState<string | null>(null);
+  const issues = useMemo(() => findIssues(equipment, clearance).count, [equipment, clearance]);
   return (
-    <div style={{ padding: 8, borderBottom: '1px solid #e5e7eb', display: 'flex', gap: 8 }}>
+    <div
+      style={{
+        padding: 8,
+        alignItems: 'center',
+        borderBottom: '1px solid #e5e7eb',
+        display: 'flex',
+        gap: 8,
+      }}
+    >
       <div role="group" aria-label="View" style={{ display: 'flex' }}>
         {SEGMENTS.map(({ mode, label }) => {
           const active = viewMode === mode;
@@ -35,6 +53,37 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
       <button type="button" onClick={requestFit}>
         Zoom to fit
       </button>
+      <label style={{ display: 'flex', gap: 4, alignItems: 'center', font: '13px sans-serif' }}>
+        Min clearance ({unit})
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label="Minimum clearance"
+          style={{ width: 64 }}
+          value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
+          placeholder="off"
+          onChange={(e) => {
+            const text = e.target.value;
+            setDraft(text);
+            const n = Number(text);
+            // Blank or invalid means off; the store ignores non-positive values too.
+            setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
+          }}
+          onBlur={() => setDraft(null)}
+        />
+      </label>
+      <span
+        role="status"
+        style={{
+          font: '13px sans-serif',
+          color: issues ? '#b91c1c' : '#4b5563',
+          marginLeft: 'auto',
+        }}
+      >
+        {issues === 0
+          ? 'No layout issues'
+          : `${issues} layout ${issues === 1 ? 'issue' : 'issues'}`}
+      </span>
     </div>
   );
 }
