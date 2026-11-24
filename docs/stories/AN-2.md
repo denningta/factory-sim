@@ -22,4 +22,6 @@ issue: 2
 
 ## Notes
 
-_Added by the lead or builder during the story: design decisions, open questions, links._
+- No Results screen exists yet (AN-3 / later), so the utilization panel sits in the Simulate screen's right column under the live KPIs; the sidebar grew 240 → 300px to fit four state columns. It moves with the KPI panel when a Results screen lands.
+- The engine already reports per-state fractions (`RunStats.stations/techs`, warm-up excluded); the web layer only converts to % and sorts. Stations are workstations; the figures update live like the KPIs.
+- Sort: clicking a header sorts descending first (name: A–Z), a second click reverses; unsorted = layout order.

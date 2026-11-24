@@ -112,6 +112,18 @@ describe('SE-4: run settings panel', () => {
   });
 });
 
+describe('AN-2: utilization panel on the Simulate screen', () => {
+  it('renders the station and technician utilization tables after a run', async () => {
+    render(<SimulateScreen />);
+    await userEvent.click(button('Run to end'));
+    await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 5000 });
+    const table = screen.getByRole('table', { name: 'Station utilization' });
+    expect(within(table).getAllByRole('rowheader').length).toBeGreaterThan(0);
+    expect(within(table).getAllByRole('cell')[0]!.textContent).toMatch(/^\d+\.\d%$/);
+    expect(screen.getByRole('table', { name: 'Technician utilization' })).toBeTruthy();
+  });
+});
+
 describe('AN-1: live KPI panel', () => {
   const panel = () => screen.getByRole('region', { name: 'Live KPIs' });
 
