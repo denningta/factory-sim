@@ -1009,9 +1009,8 @@ export function createEditorStore() {
         savePrefs({ unit, snapEnabled: get().snapEnabled });
       },
       clearance: null,
-      setClearance: () => {
-        throw new Error('not implemented');
-      },
+      setClearance: (clearance) =>
+        set({ clearance: clearance !== null && clearance > 0 ? clearance : null }),
       toggleSnap: () => {
         const snapEnabled = !get().snapEnabled;
         set({ snapEnabled });
