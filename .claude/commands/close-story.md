@@ -1,5 +1,5 @@
 ---
-description: (lead only) After a story PR is merged, close out the story and clean up. Usage: /close-story <ID>
+description: (lead only) After the product owner merges a story PR, close out the story and clean up. Usage: /close-story <ID>
 argument-hint: <story-id>
 ---
 
