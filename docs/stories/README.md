@@ -77,3 +77,14 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [SE-8](SE-8.md) | Simulation engine | 2   | Should   | SE-2       |
 | [TE-3](TE-3.md) | Technicians       | 3   | Should   | TE-2       |
 | [LE-6](LE-6.md) | Layout editor     | 1   | Should   | LE-5       |
+
+## Sprint 7: Hardening: post-MVP follow-ups (12 pts)
+
+| ID              | Epic                 | Pts | Priority | Depends on |
+| --------------- | -------------------- | --- | -------- | ---------- |
+| [SE-9](SE-9.md) | Simulation engine    | 2   | Should   | SE-1       |
+| [PR-5](PR-5.md) | Products & routings  | 2   | Should   | PR-4       |
+| [EQ-5](EQ-5.md) | Equipment library    | 3   | Should   | EQ-2       |
+| [WS-4](WS-4.md) | Workstation config   | 1   | Should   | WS-3, TE-1 |
+| [SC-2](SC-2.md) | Scenarios & projects | 2   | Should   | SC-1       |
+| [AN-4](AN-4.md) | Analytics & KPIs     | 2   | Should   | AN-3       |
