@@ -9,6 +9,8 @@ import { SimulateScreen } from './SimulateScreen';
 vi.mock('../layout/FloorScene', () => ({
   FloorScene: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
+// R3F hooks need a real Canvas.
+vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
 // Stands in for the render loop that calls session.frame in the real PartLayer.
 vi.mock('./PartLayer', () => ({
   PartLayer: ({ session }: { session: RunSession }) => {

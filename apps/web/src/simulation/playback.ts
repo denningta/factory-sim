@@ -1,9 +1,12 @@
 import type { Run } from '@factory-sim/sim-engine';
+import { createTechTracks, type TechInfo, type TechTracks } from './techTracks';
 import { createPartTracks, type LineGeometry, type PartTracks } from './partTracks';
 
 export interface Playback {
   readonly run: Run;
   readonly tracks: PartTracks;
+  /** Tech walks. Kept when animation is toggled: each walk starts from its own station. */
+  readonly techs: TechTracks;
   speed: number;
   /** Animation off: no events are recorded and the run goes as fast as time slices allow. */
   animate: boolean;
@@ -17,6 +20,8 @@ export interface PlaybackOptions {
   /** Wall-clock budget per `advance` while animation is off. Default 8 ms. */
   sliceMs?: number;
   nowMs?: () => number;
+  /** Technicians to draw. */
+  techs?: readonly TechInfo[];
 }
 
 /** Sim seconds simulated between wall-clock checks while animation is off. */
@@ -31,11 +36,18 @@ export function createPlayback(
   const sliceMs = options.sliceMs ?? 8;
   const nowMs = options.nowMs ?? (() => performance.now());
   const tracks = createPartTracks(geometry, colors);
+  const techs = createTechTracks(geometry, options.techs ?? []);
   let animate = true;
-  tracks.ingest(run.drainEvents()); // the t = 0 events recorded when the run was created
+  const ingest = () => {
+    const events = run.drainEvents();
+    tracks.ingest(events);
+    techs.ingest(events);
+  };
+  ingest(); // the t = 0 events recorded when the run was created
   const pb: Playback = {
     run,
     tracks,
+    techs,
     speed: 1,
     get animate() {
       return animate;
@@ -51,7 +63,7 @@ export function createPlayback(
     advance(wallSeconds) {
       if (animate) {
         run.runUntil(run.now + wallSeconds * pb.speed);
-        tracks.ingest(run.drainEvents());
+        ingest();
         return;
       }
       const start = nowMs();
@@ -60,7 +72,7 @@ export function createPlayback(
     },
     step() {
       run.step();
-      if (animate) tracks.ingest(run.drainEvents());
+      if (animate) ingest();
     },
   };
   return pb;

@@ -4,6 +4,7 @@ import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
 import { PartLayer } from './PartLayer';
+import { TechLayer } from './TechLayer';
 import { createRunSession, type RunSessionResult } from './runSession';
 
 const SPEEDS = [1, 10, 100, 1000];
@@ -106,6 +107,7 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
       </div>
       <FloorScene interactive={false}>
         <PartLayer session={session} />
+        <TechLayer session={session} />
       </FloorScene>
     </div>
   );

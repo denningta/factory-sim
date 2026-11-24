@@ -8,6 +8,7 @@ import {
   type RunStats,
 } from '@factory-sim/sim-engine';
 import { buildLineGeometry, type PartPose } from './partTracks';
+import type { TechPose } from './techTracks';
 import { createPlayback, type Playback } from './playback';
 
 /**
@@ -38,6 +39,8 @@ export interface RunSession {
   stats(): RunStats;
   /** Parts on the floor at sim time `t` (none while animation is off). */
   poses(t: number): PartPose[];
+  /** Techs at sim time `t`, standing or walking (none while animation is off, like parts). */
+  techPoses(t: number): TechPose[];
   /** Notified when play state, speed, animation, reset or the end of the run changes; not every frame. */
   subscribe(listener: () => void): () => void;
 }
@@ -55,6 +58,11 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
   const model: LineModel = compiled.model;
   const geometry = buildLineGeometry(project.equipment, project.connections);
   const colors = new Map(project.products.map((p) => [p.id, p.color]));
+  const techInfo = project.technicians.map((t) => ({
+    id: t.id,
+    name: t.name,
+    homeId: t.stationIds[0],
+  }));
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());
 
@@ -62,7 +70,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
   let speed = 1;
   let animate = true;
   const start = (): Playback => {
-    const pb = createPlayback(createRun(model, options), geometry, colors);
+    const pb = createPlayback(createRun(model, options), geometry, colors, { techs: techInfo });
     pb.speed = speed;
     pb.animate = animate;
     return pb;
@@ -130,6 +138,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       return speed;
     },
     stats: () => pb.run.stats(),
+    techPoses: (t) => (animate ? pb.techs.at(t) : []),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {
       listeners.add(listener);
