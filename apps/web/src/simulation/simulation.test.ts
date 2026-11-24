@@ -7,28 +7,23 @@ import { createPlayback } from './playback';
 import { createTechTracks } from './techTracks';
 import { createRunSession } from './runSession';
 import { realLine } from './testLine';
+import { resolveModel } from '../equipment/models/registry';
 
 const A = { x: 0, z: 0 };
 const B = { x: 10, z: 0 };
+/** Fixture slots: a line running back from x = 8, raised 0.25 m like a table top. */
+const slots = (x0: number) => (i: number) => ({ x: x0 - 0.5 * i, y: 0.25, z: 0 });
 const geometry: LineGeometry = {
   connections: new Map([['c1', { from: A, to: B }]]),
   equipment: new Map([
-    ['src', { center: A, queueOrigin: A, queueDir: { x: -1, z: 0 }, path: [A, A] }],
-    [
-      'ws',
-      {
-        center: B,
-        queueOrigin: { x: 8, z: 0 },
-        queueDir: { x: -1, z: 0 },
-        path: [B, B],
-      },
-    ],
+    ['src', { center: A, operator: A, queueSlot: slots(0), path: [A, A] }],
+    ['ws', { center: B, operator: { x: 10, z: 1 }, queueSlot: slots(8), path: [B, B] }],
     [
       'belt',
       {
         center: { x: 20, z: 0 },
-        queueOrigin: A,
-        queueDir: { x: -1, z: 0 },
+        operator: { x: 20, z: 0 },
+        queueSlot: slots(0),
         path: [B, { x: 30, z: 0 }],
       },
     ],
@@ -130,6 +125,14 @@ describe('SE-3 AC1: parts queue at stations', () => {
     expect(p2.x).toBeLessThan(p1.x);
   });
 
+  it('UI-7 AC5: waiting parts rest at the queueSlot anchors, slot by slot in arrival order', () => {
+    const tr = createPartTracks(geometry, colors);
+    tr.ingest([release(0, 1, 'p1'), enter(1, 1), release(0, 2, 'p2'), enter(2, 2)]);
+    const poses = tr.at(3);
+    expect(poses.find((p) => p.partId === 1)).toMatchObject({ x: 8, y: 0.25, z: 0 });
+    expect(poses.find((p) => p.partId === 2)).toMatchObject({ x: 7.5, y: 0.25, z: 0 });
+  });
+
   it('moves the head of the queue to the station when it starts and closes the gap', () => {
     const tr = createPartTracks(geometry, colors);
     tr.ingest([
@@ -146,7 +149,7 @@ describe('SE-3 AC1: parts queue at stations', () => {
 });
 
 describe('buildLineGeometry', () => {
-  it('maps connections to port positions and stations to a queue behind the input', () => {
+  it('maps connections to port positions and stations to their centers', () => {
     const store = createEditorStore();
     const s = store.getState;
     const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
@@ -157,10 +160,28 @@ describe('buildLineGeometry', () => {
     expect(g.connections.get(c.id)).toBeDefined();
     const w = g.equipment.get(ws.id)!;
     expect(w.center).toEqual({ x: 4, z: 0 });
-    // The queue starts at the input port and runs away from the station center.
-    const inPort = { x: 4 + 0, z: 0 };
-    expect(Math.hypot(w.queueOrigin.x - inPort.x, w.queueOrigin.z - inPort.z)).toBeGreaterThan(0);
-    expect(Math.hypot(w.queueDir.x, w.queueDir.z)).toBeCloseTo(1);
+  });
+
+  it("UI-7 AC5: queue slots and the operator spot come from the model's anchors, placed and turned", () => {
+    const ws = createEditorStore().getState().placeEquipment('base-workstation', { x: 4, y: 3 })!;
+    const e = { ...ws, rotation: Math.PI / 2 };
+    const w = buildLineGeometry([e], []).equipment.get(e.id)!;
+    const { anchors } = resolveModel(e).build(
+      { width: e.footprint.width, length: e.footprint.length, height: e.height },
+      e.params,
+    );
+    // Rotating by +90° in plan turns local x onto plan y (as ports do).
+    const plan = ([x, y, z]: [number, number, number]) => ({ x: 4 - z, y, z: 3 + x });
+    for (const i of [0, 1, 5]) {
+      const want = plan(anchors.queueSlot(i));
+      const got = w.queueSlot(i);
+      expect(got.x).toBeCloseTo(want.x, 9);
+      expect(got.y).toBeCloseTo(want.y, 9);
+      expect(got.z).toBeCloseTo(want.z, 9);
+    }
+    const op = plan(anchors.operator!);
+    expect(w.operator.x).toBeCloseTo(op.x, 9);
+    expect(w.operator.z).toBeCloseTo(op.z, 9);
   });
 });
 
@@ -514,8 +535,10 @@ describe('TE-2: techs walk between their stations', () => {
     tracks.ingest(evs);
     const walkTime = walk.arrivesAt - walk.t;
     expect(walkTime).toBeCloseTo(12 / tech.walkSpeed, 9);
-    const from = geometry.equipment.get(a.id)!.center;
-    const to = geometry.equipment.get(b.id)!.center;
+    // UI-7 AC5: techs walk between and stand at the stations' operator anchors.
+    const from = geometry.equipment.get(a.id)!.operator;
+    const to = geometry.equipment.get(b.id)!.operator;
+    expect(from).not.toEqual(geometry.equipment.get(a.id)!.center);
     const quarter = tracks.at(walk.t + walkTime / 4)[0]!;
     expect(quarter.state).toBe('walking');
     expect(quarter.x).toBeCloseTo(from.x + (to.x - from.x) / 4, 9);
@@ -531,7 +554,7 @@ describe('TE-2: techs walk between their stations', () => {
     const tracks = createTechTracks(geometry, [
       { id: tech.id, name: tech.name, homeId: tech.stationIds[0] },
     ]);
-    const c = geometry.equipment.get(a.id)!.center;
+    const c = geometry.equipment.get(a.id)!.operator;
     expect(tracks.at(0)).toEqual([
       { techId: tech.id, name: tech.name, x: c.x, z: c.z, state: 'standing' },
     ]);
@@ -591,7 +614,7 @@ describe('TE-3: tech markers stay correct when animation is turned back on', () 
   const setup = () => {
     const { project, a, b, tech } = twoStations();
     const geometry = buildLineGeometry(project.equipment, project.connections);
-    const center = (id: string) => geometry.equipment.get(id)!.center;
+    const center = (id: string) => geometry.equipment.get(id)!.operator;
     return { project, geometry, a, b, tech, center };
   };
   /** Toggles Animate off at t = 0, runs to `t`, turns it back on. */

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { useThree, type ThreeEvent } from '@react-three/fiber';
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { EQUIPMENT_DRAG_TYPE } from '../equipment/LibraryPanel';
 import { useEditorStore } from './editorStore';
@@ -7,18 +7,16 @@ import { pointerToFloor } from './picking';
 import { dragTargets } from './selection';
 import { instanceTint } from './instanceTint';
 import { findIssues } from './overlaps';
-import {
-  groupEquipment,
-  partScale,
-  unitGeometryArgs,
-  type EquipmentGroup,
-} from './equipmentGroups';
+import type { Equipment } from '@factory-sim/schema';
+import { roleColor, roleMaterial } from '../equipment/models/materials';
+import { writePartMatrix } from '../equipment/models/instances';
+import { UnitGeometry } from '../equipment/EquipmentModel';
+import { groupEquipment, lodForDistance, splitByLod, type EquipmentGroup } from './equipmentGroups';
 
 type Point = { x: number; y: number };
 
 type Group = EquipmentGroup;
 
-const UP = new THREE.Vector3(0, 1, 0);
 /** Below this floor distance (m) a drag on empty floor is a click, not a box. */
 const CLICK_RADIUS = 0.15;
 
@@ -46,10 +44,22 @@ function trackDrag(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) =>
   return stop;
 }
 
+/** Camera distance (m) to an item's center, for picking its LOD. */
+function itemDistance(cam: THREE.Vector3, e: Equipment, at: Point) {
+  return Math.hypot(cam.x - at.x, cam.y - e.height / 2, cam.z - at.y);
+}
+
+const sameSplit = (a: number[][] | undefined, b: number[][]) =>
+  !!a &&
+  a.length === b.length &&
+  a.every((l, i) => l.length === b[i]!.length && l.every((x, j) => x === b[i]![j]));
+
 /**
- * Placed equipment, one InstancedMesh per (type, part), whatever the instance sizes (ADR-0014). Matrices are written
- * imperatively: a drag previews through refs and commits to the store once on release, so no
- * React state changes per pointer move.
+ * Placed equipment, one InstancedMesh per (model, LOD, part), whatever the instance sizes or
+ * types (ADR-0014, ADR-0015). Each mesh can hold every item of its group; the items at that LOD
+ * fill its first `count` slots. Matrices are written imperatively: a drag previews through refs
+ * and commits to the store once on release, and a camera move rewrites them only when an item
+ * changes LOD, so no React state changes per frame or pointer move.
  */
 export function EquipmentLayer() {
   const equipment = useEditorStore((s) => s.equipment);
@@ -58,50 +68,79 @@ export function EquipmentLayer() {
   const getThree = useThree((s) => s.get);
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
   const stopDrag = useRef<(() => void) | null>(null);
+  /** Per group key, the item indices drawn at each LOD. */
+  const splits = useRef(new Map<string, number[][]>());
+  const preview = useRef<Record<string, Point> | null>(null);
 
   const clearance = useEditorStore((s) => s.clearance);
   const issues = useMemo(() => findIssues(equipment, clearance), [equipment, clearance]);
   const groups = useMemo(() => groupEquipment(equipment), [equipment]);
 
-  /** Writes every instance matrix and tint; `preview` overrides positions during a drag. */
-  const write = (preview: Record<string, Point> | null) => {
-    const dummy = new THREE.Object3D();
-    const offset = new THREE.Vector3();
+  const at = (e: Equipment) => preview.current?.[e.id] ?? e.position;
+
+  /** Recomputes which items draw at which LOD; true if anything changed. */
+  const updateSplits = () => {
+    const cam = getThree().camera.position;
+    let changed = false;
+    for (const g of groups) {
+      const split = splitByLod(
+        g.items.length,
+        (i) =>
+          lodForDistance(g.model.lodDistances, itemDistance(cam, g.items[i]!, at(g.items[i]!))),
+        g.lods.length,
+      );
+      if (sameSplit(splits.current.get(g.key), split)) continue;
+      splits.current.set(g.key, split);
+      changed = true;
+    }
+    return changed;
+  };
+
+  /** Writes every instance matrix and tint from the current splits and drag preview. */
+  const write = () => {
     const color = new THREE.Color();
     const selected = new Set(useEditorStore.getState().selectedIds);
     for (const g of groups) {
-      g.parts.forEach((part, pi) => {
-        const mesh = meshes.current.get(`${g.key}:${pi}`);
-        if (!mesh) return;
-        g.items.forEach((e, i) => {
-          const sized = g.itemParts[i]![pi]!; // this instance's part, at its own size
-          const p = preview?.[e.id] ?? e.position;
-          offset.set(...sized.position).applyAxisAngle(UP, -e.rotation);
-          dummy.position.set(p.x + offset.x, offset.y, p.y + offset.z);
-          dummy.rotation.set(0, -e.rotation, 0); // plan angle runs x→y, which is -y in three
-          dummy.scale.set(...partScale(sized)); // size lives in the matrix; geometry is unit
-          dummy.updateMatrix();
-          mesh.setMatrixAt(i, dummy.matrix);
-          instanceTint(
-            color.set(e.color).multiplyScalar(part.tone),
-            {
-              overlapping: issues.overlappingIds.has(e.id),
-              tooClose: issues.tooCloseIds.has(e.id),
-              selected: selected.has(e.id),
-            },
-            color,
-          );
-          mesh.setColorAt(i, color);
+      const split = splits.current.get(g.key);
+      if (!split) continue;
+      g.lods.forEach((parts, lod) => {
+        const slots = split[lod]!;
+        parts.forEach((part, pi) => {
+          const mesh = meshes.current.get(`${g.key}:${lod}:${pi}`);
+          if (!mesh) return;
+          slots.forEach((i, slot) => {
+            const e = g.items[i]!;
+            const p = at(e);
+            writePartMatrix(mesh, slot, g.itemLods[i]![lod]![pi]!, { ...p, rotation: e.rotation });
+            instanceTint(
+              color.set(roleColor(part.role, e.color)),
+              {
+                overlapping: issues.overlappingIds.has(e.id),
+                tooClose: issues.tooCloseIds.has(e.id),
+                selected: selected.has(e.id),
+              },
+              color,
+            );
+            mesh.setColorAt(slot, color);
+          });
+          mesh.count = slots.length;
+          mesh.instanceMatrix.needsUpdate = true;
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+          mesh.computeBoundingSphere(); // keeps picking and culling right after moves
         });
-        mesh.instanceMatrix.needsUpdate = true;
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-        mesh.computeBoundingSphere(); // keeps picking and culling right after moves
       });
     }
   };
 
   // Selection only changes tints, but it still needs a rewrite.
-  useLayoutEffect(() => write(null), [groups, selectedIds, issues]);
+  useLayoutEffect(() => {
+    splits.current.clear();
+    updateSplits();
+    write();
+  }, [groups, selectedIds, issues]);
+  useFrame(() => {
+    if (updateSplits()) write();
+  });
   useEffect(
     () => () => {
       stopDrag.current?.();
@@ -110,8 +149,10 @@ export function EquipmentLayer() {
     [],
   );
 
-  const onPointerDown = (g: Group) => (e: ThreeEvent<PointerEvent>) => {
-    const item = e.instanceId === undefined ? undefined : g.items[e.instanceId];
+  const onPointerDown = (g: Group, lod: number) => (e: ThreeEvent<PointerEvent>) => {
+    const i =
+      e.instanceId === undefined ? undefined : splits.current.get(g.key)?.[lod]?.[e.instanceId];
+    const item = i === undefined ? undefined : g.items[i];
     if (!item || e.button !== 0) return;
     e.stopPropagation();
     const store = useEditorStore.getState();
@@ -146,14 +187,16 @@ export function EquipmentLayer() {
           moving = true;
           useEditorStore.getState().setDragging(Object.keys(starts));
         }
-        write(dragTargets(starts, item.id, d, snap()));
+        preview.current = dragTargets(starts, item.id, d, snap());
+        write();
       },
       (ev) => {
         stopDrag.current = null;
         if (moving) useEditorStore.getState().setDragging([]);
         const d = deltaOf(ev);
+        preview.current = null;
         if (d) useEditorStore.getState().dragSelected(starts, item.id, d);
-        write(null);
+        write();
       },
     );
   };
@@ -161,26 +204,24 @@ export function EquipmentLayer() {
   return (
     <>
       {groups.map((g) =>
-        g.parts.map((part, pi) => (
-          <instancedMesh
-            // Remount when the count changes: an InstancedMesh's capacity is fixed at creation.
-            key={`${g.key}:${pi}:${g.items.length}`}
-            ref={(m: THREE.InstancedMesh | null) => {
-              const k = `${g.key}:${pi}`;
-              if (m) meshes.current.set(k, m);
-              else meshes.current.delete(k);
-            }}
-            args={[undefined, undefined, g.items.length]}
-            onPointerDown={onPointerDown(g)}
-          >
-            {part.shape === 'box' ? (
-              <boxGeometry args={unitGeometryArgs(part).args} />
-            ) : (
-              <cylinderGeometry args={[...unitGeometryArgs(part).args, 24]} />
-            )}
-            <meshStandardMaterial />
-          </instancedMesh>
-        )),
+        g.lods.map((parts, lod) =>
+          parts.map((part, pi) => (
+            <instancedMesh
+              // Remount when the count changes: an InstancedMesh's capacity is fixed at creation.
+              key={`${g.key}:${lod}:${pi}:${g.items.length}`}
+              ref={(m: THREE.InstancedMesh | null) => {
+                const k = `${g.key}:${lod}:${pi}`;
+                if (m) meshes.current.set(k, m);
+                else meshes.current.delete(k);
+              }}
+              args={[undefined, undefined, g.items.length]}
+              material={roleMaterial(part.role)}
+              onPointerDown={onPointerDown(g, lod)}
+            >
+              <UnitGeometry part={part} />
+            </instancedMesh>
+          )),
+        ),
       )}
     </>
   );

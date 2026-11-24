@@ -1,0 +1,49 @@
+import * as THREE from 'three';
+import type { MaterialRole } from './types';
+
+export interface RoleSpec {
+  /** Ignored for `body`, which takes the equipment's color. */
+  color: string;
+  roughness: number;
+  metalness: number;
+  opacity?: number;
+  emissive?: string;
+}
+
+/** The one material set every model is drawn with. */
+export const ROLE_SPECS: Record<MaterialRole, RoleSpec> = {
+  frame: { color: '#8a929c', roughness: 0.5, metalness: 0.6 },
+  body: { color: '#ffffff', roughness: 0.6, metalness: 0.1 },
+  accent: { color: '#d7dbe0', roughness: 0.4, metalness: 0.3 },
+  dark: { color: '#2b2f36', roughness: 0.8, metalness: 0.2 },
+  glass: { color: '#a9d4ec', roughness: 0.1, metalness: 0, opacity: 0.4 },
+  screen: { color: '#1e3a5f', roughness: 0.3, metalness: 0, emissive: '#1d4ed8' },
+};
+
+/** A part's base color: the equipment's for `body`, the role's own otherwise. */
+export function roleColor(role: MaterialRole, bodyColor: string): string {
+  return role === 'body' ? bodyColor : ROLE_SPECS[role].color;
+}
+
+const cache = new Map<MaterialRole, THREE.MeshStandardMaterial>();
+
+/**
+ * The shared material of a role. Its color is white: the part's color comes from the instance
+ * color (`roleColor`, tinted for selection), so one material serves every equipment and view.
+ * Shared for the app's lifetime; never dispose it.
+ */
+export function roleMaterial(role: MaterialRole): THREE.MeshStandardMaterial {
+  let m = cache.get(role);
+  if (!m) {
+    const s = ROLE_SPECS[role];
+    m = new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      roughness: s.roughness,
+      metalness: s.metalness,
+      ...(s.opacity !== undefined ? { transparent: true, opacity: s.opacity } : {}),
+      ...(s.emissive ? { emissive: s.emissive, emissiveIntensity: 0.4 } : {}),
+    });
+    cache.set(role, m);
+  }
+  return m;
+}

@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { userEquipmentTypeSchema } from '@factory-sim/schema';
 import { TypeEditor } from './TypeEditor';
 
+// The 3D preview needs WebGL and ResizeObserver, which jsdom lacks.
+vi.mock('./EquipmentModel', () => ({ ModelPreview: () => <div /> }));
+
 afterEach(cleanup);
 
 async function fill(label: RegExp, value: string) {

@@ -5,11 +5,18 @@ export function portWorldPosition(
   e: Pick<Equipment, 'position' | 'rotation' | 'footprint'>,
   port: Pick<Port, 'u' | 'v'>,
 ): { x: number; y: number } {
-  const dx = port.u * e.footprint.width;
-  const dy = port.v * e.footprint.length;
+  return localToPlan(e, port.u * e.footprint.width, port.v * e.footprint.length);
+}
+
+/** Plan point of a point in the equipment's own frame (m: x across the width, z along the length). */
+export function localToPlan(
+  e: Pick<Equipment, 'position' | 'rotation'>,
+  x: number,
+  z: number,
+): { x: number; y: number } {
   const cos = Math.cos(e.rotation);
   const sin = Math.sin(e.rotation);
-  return { x: e.position.x + dx * cos - dy * sin, y: e.position.y + dx * sin + dy * cos };
+  return { x: e.position.x + x * cos - z * sin, y: e.position.y + x * sin + z * cos };
 }
 
 /**

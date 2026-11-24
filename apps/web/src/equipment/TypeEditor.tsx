@@ -17,6 +17,8 @@ import {
   type DisplayUnit,
 } from '../layout/units';
 import { PORT_SIDES, portAt, portOffset, portSide, type PortSide } from './portSides';
+import { ModelPreview, type PreviewType } from './EquipmentModel';
+import { defaultModelFor, modelsFor } from './models/registry';
 
 interface Props {
   unit: DisplayUnit;
@@ -73,6 +75,13 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
   const [length, setLength] = useState(len(seed.footprint.length));
   const [height, setHeight] = useState(len(seed.height));
   const [color, setColor] = useState(seed.color);
+  // '' = the behavior's default model; otherwise a registry id that suits the behavior.
+  // A stored id that resolveModel would ignore (unknown, or unsuited to the behavior) shows as
+  // the default, since that is what is drawn; saving then drops it.
+  const [model, setModel] = useState(() => {
+    const stored = initial?.model;
+    return stored && modelsFor(seed.behavior).some((m) => m.id === stored) ? stored : '';
+  });
   const p = seed.params as Record<string, unknown>;
   const [capacity, setCapacity] = useState(String(p.capacity ?? 1));
   const [batchSize, setBatchSize] = useState(String(p.batchSize ?? 1));
@@ -104,6 +113,7 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       footprint: { width: fromDisplay(num(width), unit), length: fromDisplay(num(length), unit) },
       height: fromDisplay(num(height), unit),
       color,
+      ...(model ? { model } : {}),
       ports: portDrafts.map((d) =>
         d.edited ? { id: d.id, kind: d.kind, ...portAt(d.side, num(d.offset) / 100) } : d.original,
       ),
@@ -135,6 +145,26 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
     return {};
   }
 
+  /** The draft as the preview draws it; unparseable sizes fall back to the seed's. */
+  function previewType() {
+    const m = (t: string, fallback: number) => {
+      const v = fromDisplay(num(t), unit);
+      return v > 0 ? v : fallback;
+    };
+    const params = paramsFor(behavior);
+    return {
+      behavior,
+      params: typeof params === 'string' ? {} : params,
+      footprint: {
+        width: m(width, seed.footprint.width),
+        length: m(length, seed.footprint.length),
+      },
+      height: m(height, seed.height),
+      color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : seed.color,
+      ...(model ? { model } : {}),
+    } satisfies PreviewType;
+  }
+
   const field = (label: string, value: string, set: (v: string) => void) => (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {label}
@@ -163,6 +193,7 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
             const b = e.target.value as EquipmentBehavior;
             setBehavior(b);
             setPortDrafts(defaultPorts(b).map(toDraft));
+            setModel('');
           }}
         >
           {EQUIPMENT_BEHAVIORS.map((b) => (
@@ -176,6 +207,19 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       {field(`Length (${unit})`, length, setLength)}
       {field(`Height (${unit})`, height, setHeight)}
       {field('Color', color, setColor)}
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        3D model
+        {/* Registry ids only (ADR-0015): a typed id could silently fall back to the default. */}
+        <select value={model} onChange={(e) => setModel(e.target.value)}>
+          <option value="">Behavior default ({defaultModelFor(behavior).label})</option>
+          {modelsFor(behavior).map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ModelPreview type={previewType()} label="3D model preview" />
       {(behavior === 'workstation' || behavior === 'buffer') &&
         field('Capacity', capacity, setCapacity)}
       {behavior === 'workstation' && field('Batch size', batchSize, setBatchSize)}
