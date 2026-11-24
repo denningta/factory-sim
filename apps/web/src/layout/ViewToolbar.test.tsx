@@ -77,4 +77,17 @@ describe('Clearance input keeps typed text', () => {
     await userEvent.setup().clear(input);
     expect(store.getState().clearance).toBeNull();
   });
+
+  it('LE-6: typing a multi-character clearance is one undo step', async () => {
+    const store = createEditorStore();
+    store.getState().setUnit('m');
+    render(<ViewToolbar useStore={store} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/minimum clearance/i), '0.75');
+    await user.tab();
+    expect(store.getState().clearance).toBeCloseTo(0.75);
+    store.getState().undo();
+    expect(store.getState().clearance).toBeNull();
+    expect(store.getState().canUndo).toBe(false);
+  });
 });

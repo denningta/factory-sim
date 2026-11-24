@@ -124,7 +124,10 @@ export interface EditorState extends Prefs {
   /** Display only: does not touch `floor`. */
   setUnit: (unit: DisplayUnit) => void;
   toggleSnap: () => void;
-  /** Minimum gap between footprints (m); null = clearance check off (LE-5). Saved in layout.minClearance. */
+  /**
+   * Minimum gap between footprints (m); null = clearance check off (LE-5).
+   * Saved in layout.minClearance.
+   */
   clearance: number | null;
   setClearance: (meters: number | null) => void;
   /** The library type to preview and, with LE-2, to place. Session-only, not a preference. */
