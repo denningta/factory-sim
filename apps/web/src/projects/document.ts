@@ -19,8 +19,8 @@ export type EditedParts = Pick<
  */
 export function documentForSave(
   base: Project,
-  { shiftLength, ...parts }: EditedParts & { shiftLength?: number },
+  { shiftLength, run, ...parts }: EditedParts & { shiftLength?: number; run?: Project['run'] },
 ): Project {
   const calendar = shiftLength === undefined ? base.calendar : { ...base.calendar, shiftLength };
-  return { ...base, ...parts, calendar };
+  return { ...base, ...parts, calendar, run: run ?? base.run };
 }

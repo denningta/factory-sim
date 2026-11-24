@@ -4,12 +4,12 @@ How the Factory Flow Simulator is built by Claude Code agents in herdr. Backgrou
 
 ## Roles
 
-| Agent                 | Runs where                        | Role file                    | Model                        | Does                                                                                                        | Never                                           |
-| --------------------- | --------------------------------- | ---------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Product owner (human) | —                                 | —                            | —                            | Priorities, product decisions, reserved merges                                                              | —                                               |
-| `lead`                | main checkout, tab "control"      | `.claude/agents/lead.md`     | Opus                         | Picks and dispatches stories, owns ADRs, `packages/schema`, sim-engine API, issues, **merges** approved PRs | Implements feature stories, merges reserved PRs |
-| `builder-1..3`        | own worktree, branch `story/<ID>` | `.claude/agents/builder.md`  | Sonnet (Opus for SE-1, PR-2) | One story, tests first, opens a PR                                                                          | Touches lead-owned areas, pushes main, merges   |
-| `reviewer`            | main checkout, tab "control"      | `.claude/agents/reviewer.md` | Opus, Edit/Write disabled    | Reviews PRs vs acceptance criteria, ADRs, DoD; runs tests                                                   | Edits code, merges                              |
+| Agent                 | Runs where                        | Role file                    | Model                        | Does                                                                               | Never                                         |
+| --------------------- | --------------------------------- | ---------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------- |
+| Product owner (human) | —                                 | —                            | —                            | Priorities, answers, **merges**                                                    | —                                             |
+| `lead`                | main checkout, tab "control"      | `.claude/agents/lead.md`     | Opus                         | Picks and dispatches stories, owns ADRs, `packages/schema`, sim-engine API, issues | Implements feature stories, merges            |
+| `builder-1..3`        | own worktree, branch `story/<ID>` | `.claude/agents/builder.md`  | Sonnet (Opus for SE-1, PR-2) | One story, tests first, opens a PR                                                 | Touches lead-owned areas, pushes main, merges |
+| `reviewer`            | main checkout, tab "control"      | `.claude/agents/reviewer.md` | Opus, Edit/Write disabled    | Reviews PRs vs acceptance criteria, ADRs, DoD; runs tests                          | Edits code, merges                            |
 
 **Max concurrent builders:** Sprint 1 = **2** (raised by the product owner on 2026-11-21 so SE-1 can run in parallel). Sprint 2 = **2**. Raise to 3 only when CI and your review time keep up (product owner decides; update this line).
 
@@ -30,7 +30,7 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 3. **Build**: builder plans against the acceptance criteria, writes failing tests, implements, `pnpm check`, commits.
 4. **PR**: builder opens a PR (template: criterion → verification table), waits for CI, prints `PR READY: #N`.
 5. **Review**: lead prompts reviewer with `/review-pr N`. REQUEST CHANGES goes back to the same builder until APPROVE.
-6. **Merge**: when the merge rule in `.claude/agents/lead.md` holds, the lead squash-merges and sends you a one-line note (PR, summary, demo). Anything reserved (product decisions, ADR status, `.claude/`, CI, hooks, the merge rule) comes to you to merge.
+6. **Merge**: lead pings you with link and summary. You read the reviewer's comment, check the demo/screenshots, and merge on GitHub.
 7. **Close**: lead `/close-story <ID>`: closes the issue, removes the worktree (branch kept), picks the next story.
 
 ## Token budget (product owner, 2026-11-22)
@@ -45,7 +45,7 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 - **Read the pane before answering. Never auto-approve.** Anything outside the story's scope (new dependency, editing schema/ADRs/CI, deleting files, network installs) → ask the lead, or decide yourself.
 - To redirect a builder: tell the lead, or type in the builder's pane directly.
 
-## Merge checklist (lead; product owner for reserved PRs)
+## Merge checklist (product owner)
 
 - [ ] Reviewer verdict is APPROVE and CI is green
 - [ ] Each acceptance criterion has a named test in the PR table
@@ -55,8 +55,8 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 
 ## Guardrails (already configured)
 
-- **Branch protection on main**: PR + green `check` required, no force pushes, no deletions. All agents use your GitHub account, so GitHub approvals can't separate you from them. The rule that holds is that **only the lead merges**: a PreToolUse hook (`scripts/hooks/guard-merge.sh`) blocks `gh pr merge` for every agent except `lead` (`CLAUDE_CODE_AGENT`), and requires `--squash` without `--admin`; a SessionStart hook puts `scripts/bin` first on `PATH`, whose `gh` wrapper refuses merges, `gh api …/merge` and aliases for non-lead agents (this also catches scripts and `node -e`). Both are defence in depth: all agents share your GitHub account, so GitHub itself can't tell them apart.
-- **Shared permissions** (`.claude/settings.json`): allows pnpm, git (push only `story/*`), gh issue/pr/run, docker compose, herdr agent/pane/worktree. Denies pushing main, force push, `reset --hard`, `sudo`, reading `.env`.
+- **Branch protection on main**: PR + green `check` required, no force pushes, no deletions. All agents use your GitHub account, so GitHub approvals can't separate you from them. The rule that holds is that **only you click merge**; `gh pr merge` is denied for agents in `.claude/settings.json`.
+- **Shared permissions** (`.claude/settings.json`): allows pnpm, git (push only `story/*`), gh issue/pr/run, docker compose, herdr agent/pane/worktree. Denies pushing main, force push, `gh pr merge`, `reset --hard`, `sudo`, reading `.env`.
 - **Hook**: after every Edit/Write, prettier and the owning package's type check run; type errors are fed back to the agent.
 - **Secrets**: `.env` is git-ignored and unreadable by agents; use `.env.example`.
 

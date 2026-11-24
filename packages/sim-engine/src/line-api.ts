@@ -138,6 +138,19 @@ export interface PartInLine {
   last: Extract<LineEvent, { type: 'partReleased' | 'partMoved' | 'partEntered' | 'partStarted' }>;
 }
 
+/** Where a technician is now (TE-3), tracked even while events are disabled. */
+export interface TechInLine {
+  techId: string;
+  state: TechState;
+  /**
+   * The station it last arrived at, initially its home station (`null` only for a tech with
+   * no stations). While walking, the station it left.
+   */
+  atId: string | null;
+  /** The walk in progress, if any: the `techMoved` event that started it. */
+  walk?: Extract<LineEvent, { type: 'techMoved' }>;
+}
+
 /** Flow figures for one product, or for all products. Statistics cover the measured window. */
 export interface FlowStats {
   released: number;
@@ -189,6 +202,8 @@ export interface Run {
   setEventsEnabled(enabled: boolean): void;
   /** Every part released and not yet exited, by partId ascending. For re-seeding the renderer when animation is turned back on (SE-3 AC3). */
   wip(): PartInLine[];
+  /** Every technician, in model order. For re-seeding tech markers when animation is turned back on (TE-3). */
+  techs(): TechInLine[];
   /** Live statistics for the window so far (AN-1 AC3). Cheap enough to call every frame. */
   stats(): RunStats;
 }

@@ -10,7 +10,7 @@ import { UtilizationPanel } from './UtilizationPanel';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
 import { createRunSession, type RunSessionResult } from './runSession';
-import { DEFAULT_RUN_SETTINGS, toRunOptions, type RunSettings } from './runSettings';
+import { fromProjectRun, toProjectRun, toRunOptions, type RunSettings } from './runSettings';
 
 const SPEEDS = [1, 10, 100, 1000];
 
@@ -28,10 +28,13 @@ export function SimulateScreen({
   /** Switches the editor screen when a clicked issue points at an object on another one. */
   onNavigate?: (screen: 'layout' | 'products') => void;
 }) {
-  const [settings, setSettings] = useState<RunSettings>(DEFAULT_RUN_SETTINGS);
+  const run = useEditorStore((s) => s.run);
   // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
   const [applied, setApplied] = useState(() =>
-    toRunOptions(DEFAULT_RUN_SETTINGS, useEditorStore.getState().shiftLength),
+    toRunOptions(
+      fromProjectRun(useEditorStore.getState().run),
+      useEditorStore.getState().shiftLength,
+    ),
   );
   const shiftLength = useEditorStore((s) => s.shiftLength);
   const products = useEditorStore((s) => s.products);
@@ -47,8 +50,7 @@ export function SimulateScreen({
     [applied],
   );
   const apply = (next: RunSettings, shiftLength: number) => {
-    useEditorStore.getState().setShiftLength(shiftLength);
-    setSettings(next);
+    useEditorStore.getState().applyRun(toProjectRun(next), shiftLength);
     setApplied(toRunOptions(next, shiftLength));
   };
   return (
@@ -66,7 +68,9 @@ export function SimulateScreen({
           </>
         )}
         <RunSettingsPanel
-          initial={settings}
+          // Remounts on undo or load so the fields follow the saved values.
+          key={JSON.stringify([run, shiftLength])}
+          initial={fromProjectRun(run)}
           shiftLength={shiftLength}
           seedUsed={applied.seed}
           onApply={apply}

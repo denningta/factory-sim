@@ -59,6 +59,8 @@ interface TechRt {
   readonly resource: Resource;
   readonly walkSpeed: number;
   location: StationRt | undefined;
+  /** The walk in progress, for `Run.techs()` (TE-3). */
+  walk: Extract<LineEvent, { type: 'techMoved' }> | undefined;
   state: TechState;
   readonly stateStats: Record<TechState, TimeWeighted>;
 }
@@ -160,6 +162,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
         resource: sim.createResource(t.id, 1),
         walkSpeed: t.walkSpeed,
         location: undefined,
+        walk: undefined,
         state: 'idle',
         stateStats: indicators(TECH_STATES, 'idle'),
       },
@@ -242,6 +245,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
         for (const h of handles) h.cancel();
         const arrive = () => {
           tech.location = st;
+          tech.walk = undefined;
           st.awaiting--;
           setTech(tech, 'working');
           work(tech);
@@ -255,14 +259,15 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
         const dy = st.def.position.y - from.def.position.y;
         const walk = Math.sqrt(dx * dx + dy * dy) / tech.walkSpeed;
         setTech(tech, 'walking');
-        emit({
+        tech.walk = {
           t: sim.now,
           type: 'techMoved',
           techId: tech.id,
           fromId: from.def.id,
           toId: st.def.id,
           arrivesAt: sim.now + walk,
-        });
+        };
+        emit({ ...tech.walk });
         sim.schedule(walk, arrive);
       }),
     );
@@ -545,6 +550,15 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     wip() {
       // Copies, so a caller can't see later events change what it holds.
       return [...inLine.values()].map((p) => ({ ...p })).sort((a, b) => a.partId - b.partId);
+    },
+    techs() {
+      // Map insertion order = model order (built from line.techs).
+      return [...techs.values()].map((t) => ({
+        techId: t.id,
+        state: t.state,
+        atId: t.location?.def.id ?? null,
+        ...(t.walk ? { walk: { ...t.walk } } : {}),
+      }));
     },
     stats(): RunStats {
       const to = Math.max(warmUp, Math.min(sim.now, endTime));

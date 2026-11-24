@@ -1,8 +1,8 @@
 # Definition of Done
 
-Applies to every story PR. (Lead docs-only PRs, such as story notes or runbook wording, skip the reviewer pass; contract, CI, `.claude` and code PRs don't.) A story PR is not ready to merge until all are true:
+Applies to every story PR. (Lead docs-only PRs, such as story notes or runbook wording, skip the reviewer pass; contract, CI, `.claude` and code PRs don't.) A story PR is not ready for the product owner until all are true:
 
-- [ ] code reviewed and merged (by the lead under its merge rule, or by the product owner where reserved)
+- [ ] code reviewed and merged
 - [ ] automated tests pass
 - [ ] acceptance criteria verified
 - [ ] works in the Docker Compose build
