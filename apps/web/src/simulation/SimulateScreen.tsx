@@ -3,6 +3,7 @@ import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
 import { currentProject } from './currentProject';
+import { KpiPanel } from './KpiPanel';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { RunSettingsPanel } from './RunSettingsPanel';
@@ -32,6 +33,7 @@ export function SimulateScreen({
     toRunOptions(DEFAULT_RUN_SETTINGS, useEditorStore.getState().shiftLength),
   );
   const shiftLength = useEditorStore((s) => s.shiftLength);
+  const products = useEditorStore((s) => s.products);
   const result = useMemo<RunSessionResult>(
     () => createRunSession(currentProject(), applied.options),
     [applied],
@@ -48,12 +50,17 @@ export function SimulateScreen({
       ) : (
         <Issues issues={result.issues} onNavigate={onNavigate} />
       )}
-      <RunSettingsPanel
-        initial={settings}
-        shiftLength={shiftLength}
-        seedUsed={applied.seed}
-        onApply={apply}
-      />
+      <div style={{ overflowY: 'auto' }}>
+        {result.ok && (
+          <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
+        )}
+        <RunSettingsPanel
+          initial={settings}
+          shiftLength={shiftLength}
+          seedUsed={applied.seed}
+          onApply={apply}
+        />
+      </div>
     </div>
   );
 }
