@@ -143,6 +143,7 @@ export function DemandPanel({ useStore = defaultStore }: { useStore?: Store }) {
   const {
     products,
     demand,
+    demandRescaled,
     release,
     setDemandBasis,
     setDemandValue,
@@ -183,6 +184,11 @@ export function DemandPanel({ useStore = defaultStore }: { useStore?: Store }) {
           endEdit={endEdit}
         />
       ))}
+      {!perShift && demandRescaled && (
+        <p role="status" style={{ color: '#6b7280', fontSize: 12, margin: 0 }}>
+          Every other product was already set, so they were rescaled to fit.
+        </p>
+      )}
       <label style={label}>
         Release rule
         <select value={mode} onChange={(e) => setReleaseMode(e.target.value as ReleaseMode)}>

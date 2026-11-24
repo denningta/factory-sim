@@ -299,6 +299,8 @@ export function createEditorStore() {
       shiftLength: number;
       run: Project['run'];
       clearance: number | null;
+      /** Products pinned by a mix edit, so undo/redo restores them with the values. */
+      pinned: string[];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -312,6 +314,7 @@ export function createEditorStore() {
       shiftLength: get().shiftLength,
       run: get().run,
       clearance: get().clearance,
+      pinned: [...editedDemand],
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -330,10 +333,13 @@ export function createEditorStore() {
       future = [];
       syncFlags();
     };
-    const restore = (to: Snapshot) => {
+    const restore = ({ pinned, ...to }: Snapshot) => {
+      editedDemand.clear();
+      for (const id of pinned) editedDemand.add(id);
       const ids = new Set(to.equipment.map((e) => e.id));
       set({
         ...to,
+        demandRescaled: false,
         selectedIds: get().selectedIds.filter((id) => ids.has(id)),
         selectedConnectionId: to.connections.some((c) => c.id === get().selectedConnectionId)
           ? get().selectedConnectionId
@@ -516,6 +522,7 @@ export function createEditorStore() {
         const current = new Map(demand.items.map((i) => [i.productId, i.value]));
         const ids = products.map((p) => p.id);
         let items: Demand['items'];
+        let rescaled = false;
         if (demand.basis === 'mix') {
           // Products the user already set keep their value; only the rest absorb the remainder,
           // so 3+ products can be set exactly. If that can't fit, everyone else rescales.
@@ -523,7 +530,7 @@ export function createEditorStore() {
           const open = others.filter((id) => !editedDemand.has(id));
           const fixed = others.filter((id) => editedDemand.has(id));
           const fixedSum = fixed.reduce((t, id) => t + (current.get(id) ?? 0), 0);
-          const absorb = open.length > 0 && 100 - value - fixedSum >= 0;
+          const absorb = open.length > 0 && Math.round((100 - value - fixedSum) * 100) >= 0;
           const share = absorb ? open : others;
           const kept = absorb ? fixed : [];
           const rest = toMix(
@@ -531,7 +538,7 @@ export function createEditorStore() {
             new Map(share.map((id) => [id, current.get(id) ?? 0])),
             Math.round((100 - value - (absorb ? fixedSum : 0)) * 100) / 100,
           );
-          editedDemand.add(productId);
+          rescaled = others.length > 0 && !absorb;
           items = [
             { productId, value: others.length === 0 ? 100 : value },
             ...kept.map((id) => ({ productId: id, value: current.get(id) ?? 0 })),
@@ -544,7 +551,8 @@ export function createEditorStore() {
         }
         const next = { basis: demand.basis, items };
         record();
-        set({ demand: next, ...intervalFor(next) });
+        if (demand.basis === 'mix') editedDemand.add(productId); // after record: the snapshot keeps the old pins
+        set({ demand: next, demandRescaled: rescaled, ...intervalFor(next) });
         return { ok: true };
       },
       setReleaseMode: (mode) => {

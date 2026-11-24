@@ -51,7 +51,7 @@ describe('PR-5 demand mix polish', () => {
     s().setDemandValue(c!.id, 99.7); // exactly fits; D absorbs 0
     expect(val(0)).toBe(0.1);
     expect(val(1)).toBe(0.2);
-    expect(val(3)).toBe(0);
+    expect(val(3)).toBeCloseTo(0, 9);
     expect(s().demandRescaled).toBe(false);
   });
 });
