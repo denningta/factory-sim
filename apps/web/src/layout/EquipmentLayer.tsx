@@ -7,7 +7,12 @@ import { pointerToFloor } from './picking';
 import { dragTargets } from './selection';
 import { instanceTint } from './instanceTint';
 import { findIssues } from './overlaps';
-import { groupEquipment, partScale, type EquipmentGroup } from './equipmentGroups';
+import {
+  groupEquipment,
+  partScale,
+  unitGeometryArgs,
+  type EquipmentGroup,
+} from './equipmentGroups';
 
 type Point = { x: number; y: number };
 
@@ -78,7 +83,7 @@ export function EquipmentLayer() {
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
           instanceTint(
-            color.set(g.color).multiplyScalar(part.tone),
+            color.set(e.color).multiplyScalar(part.tone),
             {
               overlapping: issues.overlappingIds.has(e.id),
               tooClose: issues.tooCloseIds.has(e.id),
@@ -169,9 +174,9 @@ export function EquipmentLayer() {
             onPointerDown={onPointerDown(g)}
           >
             {part.shape === 'box' ? (
-              <boxGeometry args={[1, 1, 1]} />
+              <boxGeometry args={unitGeometryArgs(part).args} />
             ) : (
-              <cylinderGeometry args={[part.radiusTop / part.radiusBottom, 1, 1, 24]} />
+              <cylinderGeometry args={[...unitGeometryArgs(part).args, 24]} />
             )}
             <meshStandardMaterial />
           </instancedMesh>

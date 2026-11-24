@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { partBounds } from '../equipment/shapes';
-import { drawCalls, groupEquipment, partScale } from './equipmentGroups';
+import { drawCalls, groupEquipment, partScale, unitGeometryArgs } from './equipmentGroups';
 import { createEditorStore } from './editorStore';
 
 describe('Clearance checks (LE-5) use the real footprint', () => {
@@ -31,14 +31,14 @@ describe('Clearance checks (LE-5) use the real footprint', () => {
     expect(groupEquipment(store.getState().equipment)).toHaveLength(1);
   });
 
-  it('same-size instances with different colors render in separate groups', () => {
+  it('same-size instances with different colors share one group and keep their own color', () => {
     const store = createEditorStore();
     store.getState().placeEquipment('base-workstation', { x: 2, y: 2 });
     store.getState().placeEquipment('base-workstation', { x: 8, y: 8 });
     const [a, b] = store.getState().equipment;
     const groups = groupEquipment([a!, { ...b!, color: '#ff0000' }]);
-    expect(groups).toHaveLength(2);
-    expect(groups.map((g) => g.color).sort()).toEqual([a!.color, '#ff0000'].sort());
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.items.map((i) => i.color)).toEqual([a!.color, '#ff0000']);
   });
 });
 
@@ -92,5 +92,42 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
     );
     // The signal tower (a part that must not stretch with the cabinet) differs per instance.
     expect(partScale(g.itemParts[0]![2]!)).not.toEqual(partScale(g.itemParts[2]![2]!));
+  });
+
+  it('N instances in N colors give a constant draw-call count', () => {
+    const counts = [1, 5, 12].map((n) => {
+      const eq = place(n).map((e, i) => ({
+        ...e,
+        color: `#${(i * 20 + 16).toString(16).padStart(2, '0')}3366`,
+      }));
+      const groups = groupEquipment(eq);
+      expect(groups).toHaveLength(1);
+      return drawCalls(groups);
+    });
+    expect(new Set(counts).size).toBe(1);
+  });
+
+  it('unit geometry scaled by partScale reproduces every part exactly', () => {
+    for (const t of [
+      'base-workstation',
+      'base-buffer',
+      'base-conveyor',
+      'base-source',
+      'base-sink',
+    ]) {
+      const g = groupEquipment(place(3, t))[0]!;
+      for (const parts of g.itemParts)
+        parts.forEach((p) => {
+          const u = unitGeometryArgs(p);
+          const s = partScale(p);
+          expect(u.shape).toBe(p.shape);
+          if (p.shape === 'box') expect(u.args.map((a, i) => a * s[i]!)).toEqual([...p.size]);
+          else {
+            expect(u.args[0]! * s[0]).toBeCloseTo(p.radiusTop, 9);
+            expect(u.args[1]! * s[0]).toBeCloseTo(p.radiusBottom, 9);
+            expect(u.args[2]! * s[1]).toBeCloseTo(p.height, 9);
+          }
+        });
+    }
   });
 });
