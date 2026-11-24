@@ -5,13 +5,14 @@ import { EQUIPMENT_DRAG_TYPE } from '../equipment/LibraryPanel';
 import { useEditorStore } from './editorStore';
 import { pointerToFloor } from './picking';
 import { dragTargets } from './selection';
+import { instanceTint } from './instanceTint';
+import { findIssues } from './overlaps';
 import { groupEquipment, type EquipmentGroup } from './equipmentGroups';
 
 type Point = { x: number; y: number };
 
 type Group = EquipmentGroup;
 
-const SELECTED_TINT = new THREE.Color('#2563eb');
 const UP = new THREE.Vector3(0, 1, 0);
 /** Below this floor distance (m) a drag on empty floor is a click, not a box. */
 const CLICK_RADIUS = 0.15;
@@ -53,6 +54,8 @@ export function EquipmentLayer() {
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
   const stopDrag = useRef<(() => void) | null>(null);
 
+  const clearance = useEditorStore((s) => s.clearance);
+  const issues = useMemo(() => findIssues(equipment, clearance), [equipment, clearance]);
   const groups = useMemo(() => groupEquipment(equipment), [equipment]);
 
   /** Writes every instance matrix and tint; `preview` overrides positions during a drag. */
@@ -72,8 +75,15 @@ export function EquipmentLayer() {
           dummy.rotation.set(0, -e.rotation, 0); // plan angle runs x→y, which is -y in three
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
-          color.set(g.color).multiplyScalar(part.tone);
-          if (selected.has(e.id)) color.lerp(SELECTED_TINT, 0.55);
+          instanceTint(
+            color.set(g.color).multiplyScalar(part.tone),
+            {
+              overlapping: issues.overlappingIds.has(e.id),
+              tooClose: issues.tooCloseIds.has(e.id),
+              selected: selected.has(e.id),
+            },
+            color,
+          );
           mesh.setColorAt(i, color);
         });
         mesh.instanceMatrix.needsUpdate = true;
@@ -84,7 +94,7 @@ export function EquipmentLayer() {
   };
 
   // Selection only changes tints, but it still needs a rewrite.
-  useLayoutEffect(() => write(null), [groups, selectedIds]);
+  useLayoutEffect(() => write(null), [groups, selectedIds, issues]);
   useEffect(
     () => () => {
       stopDrag.current?.();
