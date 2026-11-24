@@ -20,7 +20,12 @@ const geometry: LineGeometry = {
     ['ws', { center: B, operator: { x: 10, z: 1 }, queueSlot: slots(8), path: [B, B] }],
     [
       'belt',
-      { center: { x: 20, z: 0 }, operator: { x: 20, z: 0 }, queueSlot: slots(0), path: [B, { x: 30, z: 0 }] },
+      {
+        center: { x: 20, z: 0 },
+        operator: { x: 20, z: 0 },
+        queueSlot: slots(0),
+        path: [B, { x: 30, z: 0 }],
+      },
     ],
   ]),
 };

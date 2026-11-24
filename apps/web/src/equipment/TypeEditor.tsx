@@ -150,7 +150,10 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
     return {
       behavior,
       params: typeof params === 'string' ? {} : params,
-      footprint: { width: m(width, seed.footprint.width), length: m(length, seed.footprint.length) },
+      footprint: {
+        width: m(width, seed.footprint.width),
+        length: m(length, seed.footprint.length),
+      },
       height: m(height, seed.height),
       color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : seed.color,
       ...(model ? { model } : {}),

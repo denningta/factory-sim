@@ -50,7 +50,9 @@ function itemDistance(cam: THREE.Vector3, e: Equipment, at: Point) {
 }
 
 const sameSplit = (a: number[][] | undefined, b: number[][]) =>
-  !!a && a.length === b.length && a.every((l, i) => l.length === b[i]!.length && l.every((x, j) => x === b[i]![j]));
+  !!a &&
+  a.length === b.length &&
+  a.every((l, i) => l.length === b[i]!.length && l.every((x, j) => x === b[i]![j]));
 
 /**
  * Placed equipment, one InstancedMesh per (model, LOD, part), whatever the instance sizes or
@@ -83,7 +85,8 @@ export function EquipmentLayer() {
     for (const g of groups) {
       const split = splitByLod(
         g.items.length,
-        (i) => lodForDistance(g.model.lodDistances, itemDistance(cam, g.items[i]!, at(g.items[i]!))),
+        (i) =>
+          lodForDistance(g.model.lodDistances, itemDistance(cam, g.items[i]!, at(g.items[i]!))),
         g.lods.length,
       );
       if (sameSplit(splits.current.get(g.key), split)) continue;
@@ -147,7 +150,8 @@ export function EquipmentLayer() {
   );
 
   const onPointerDown = (g: Group, lod: number) => (e: ThreeEvent<PointerEvent>) => {
-    const i = e.instanceId === undefined ? undefined : splits.current.get(g.key)?.[lod]?.[e.instanceId];
+    const i =
+      e.instanceId === undefined ? undefined : splits.current.get(g.key)?.[lod]?.[e.instanceId];
     const item = i === undefined ? undefined : g.items[i];
     if (!item || e.button !== 0) return;
     e.stopPropagation();

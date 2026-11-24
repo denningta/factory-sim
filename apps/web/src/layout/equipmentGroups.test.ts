@@ -101,7 +101,10 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
     );
     // The cabinet stretches with each instance; the signal tower (fixed) keeps its radius.
     expect(partScale(g.itemLods[0]![0]![0]!)).not.toEqual(partScale(g.itemLods[2]![0]![0]!));
-    expect(partScale(g.itemLods[0]![0]![2]!)[0]).toBeCloseTo(partScale(g.itemLods[2]![0]![2]!)[0], 9);
+    expect(partScale(g.itemLods[0]![0]![2]!)[0]).toBeCloseTo(
+      partScale(g.itemLods[2]![0]![2]!)[0],
+      9,
+    );
   });
 
   it('N instances in N colors give a constant draw-call count', () => {
