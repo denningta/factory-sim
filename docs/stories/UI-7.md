@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [EQ-5]
 builder_model: opus
 owner: builder
-issue:
+issue: 150
 ---
 
 # UI-7: Extensible 3D model library

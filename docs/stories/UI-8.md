@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-7]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 151
 ---
 
 # UI-8: Refined equipment models, technicians and scene

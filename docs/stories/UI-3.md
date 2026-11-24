@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-1]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 146
 ---
 
 # UI-3: Layout screen organized by task

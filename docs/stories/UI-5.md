@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-7, AN-4]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 148
 ---
 
 # UI-5: Station status visible in the 3D view

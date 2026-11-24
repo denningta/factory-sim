@@ -7,7 +7,7 @@ sprint: 8
 depends_on: []
 builder_model: sonnet
 owner: builder
-issue:
+issue: 144
 ---
 
 # UI-1: Design tokens and base components
