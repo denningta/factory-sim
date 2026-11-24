@@ -14,19 +14,25 @@ export interface LineGeometry {
     string,
     {
       center: Pt;
-      /** Where the first waiting part stands, just outside the input port. */
-      queueOrigin: Pt;
-      /** Unit vector the queue grows along, away from the station. */
-      queueDir: Pt;
+      /** Where a tech stands to work it: the model's operator anchor, else the center. */
+      operator: Pt;
+      /** Where the i-th waiting part rests (bottom center): the model's queueSlot anchor. */
+      queueSlot: (i: number) => Pt3;
       /** A conveyor's travel path: input port to output port. */
       path: [Pt, Pt];
     }
   >;
 }
 
+export interface Pt3 extends Pt {
+  y: number;
+}
+
 export interface PartPose {
   partId: number;
   x: number;
+  /** Height of the part's bottom; 0 = on the floor. */
+  y: number;
   z: number;
   color: string;
   state: 'moving' | 'queued' | 'processing';
@@ -82,10 +88,14 @@ export function buildLineGeometry(
     const dz = inPt.z - center.z;
     const len = Math.hypot(dx, dz);
     const queueDir = len > 1e-9 ? { x: dx / len, z: dz / len } : { x: -1, z: 0 };
+    void QUEUE_GAP;
+    void queueDir;
     eq.set(e.id, {
       center,
-      queueOrigin: { x: inPt.x + queueDir.x * QUEUE_GAP, z: inPt.z + queueDir.z * QUEUE_GAP },
-      queueDir,
+      operator: center,
+      queueSlot: () => {
+        throw new Error('not implemented');
+      },
       path: [inPt, outPt],
     });
   }
@@ -133,7 +143,7 @@ export function createPartTracks(
           g && {
             t: ev.t,
             kind: 'at',
-            at: g.queueOrigin,
+            at: g.center,
             state: 'queued',
             equipmentId: ev.equipmentId,
           }
@@ -204,6 +214,7 @@ export function createPartTracks(
           partId: part.id,
           x: k.from.x + (k.to.x - k.from.x) * f,
           z: k.from.z + (k.to.z - k.from.z) * f,
+          y: 0,
           color: part.color,
           state: 'moving',
         });
@@ -213,6 +224,7 @@ export function createPartTracks(
         partId: part.id,
         x: k.at.x,
         z: k.at.z,
+        y: 0,
         color: part.color,
         state: k.state,
       };
@@ -224,7 +236,8 @@ export function createPartTracks(
       }
     }
     for (const [equipmentId, q] of queues) {
-      const dir = geometry.equipment.get(equipmentId)!.queueDir;
+      const dir = { x: -1, z: 0 };
+      void equipmentId;
       // Map iteration is release order, which is arrival order closely enough; sort by the
       // entry time so a later arrival always stands behind an earlier one.
       q.sort((a, b) => a.since - b.since || a.pose.partId - b.pose.partId);

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { partBounds } from '../equipment/shapes';
-import { drawCalls, groupEquipment, partScale, unitGeometryArgs } from './equipmentGroups';
+import { partBounds } from '../equipment/models/parts';
+import { defaultModelFor } from '../equipment/models/registry';
+import {
+  drawCalls,
+  groupEquipment,
+  lodForDistance,
+  partScale,
+  splitByLod,
+  unitGeometryArgs,
+} from './equipmentGroups';
 import { createEditorStore } from './editorStore';
 
 describe('Clearance checks (LE-5) use the real footprint', () => {
@@ -16,11 +24,11 @@ describe('Clearance checks (LE-5) use the real footprint', () => {
     const g = groups[0]!;
     const ia = g.items.findIndex((i) => i.id === a.id);
     const ib = g.items.findIndex((i) => i.id === b.id);
-    const bb = partBounds(g.itemParts[ib]!);
+    const bb = partBounds(g.itemLods[ib]![0]!);
     expect(bb.max[0]! - bb.min[0]!).toBeCloseTo(4, 9);
     expect(bb.max[2]! - bb.min[2]!).toBeCloseTo(3, 9);
     expect(bb.max[1]).toBeCloseTo(2, 9);
-    const ba = partBounds(g.itemParts[ia]!);
+    const ba = partBounds(g.itemLods[ia]![0]!);
     expect(ba.max[0]! - ba.min[0]!).toBeCloseTo(2, 9);
   });
 
@@ -76,22 +84,24 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
       }
     const groups = groupEquipment(store.getState().equipment);
     expect(groups).toHaveLength(2);
-    expect(drawCalls(groups)).toBe(groups[0]!.parts.length + groups[1]!.parts.length);
+    const meshes = (g: (typeof groups)[number]) => g.lods.reduce((n, l) => n + l.length, 0);
+    expect(drawCalls(groups)).toBe(meshes(groups[0]!) + meshes(groups[1]!));
   });
 
   it('size is encoded in the instance transform, and each part keeps its own absolute size', () => {
     const eq = place(3);
     const g = groupEquipment(eq)[0]!;
-    g.itemParts.forEach((parts) =>
-      parts.forEach((p, pi) => {
+    g.itemLods.forEach((lods) =>
+      lods[0]!.forEach((p, pi) => {
         const s = partScale(p);
         if (p.shape === 'box') expect(s).toEqual(p.size);
         else expect(s).toEqual([p.radiusBottom, p.height, p.radiusBottom]);
-        expect(p.shape).toBe(g.parts[pi]!.shape);
+        expect(p.shape).toBe(g.lods[0]![pi]!.shape);
       }),
     );
-    // The signal tower (a part that must not stretch with the cabinet) differs per instance.
-    expect(partScale(g.itemParts[0]![2]!)).not.toEqual(partScale(g.itemParts[2]![2]!));
+    // The cabinet stretches with each instance; the signal tower (fixed) keeps its radius.
+    expect(partScale(g.itemLods[0]![0]![0]!)).not.toEqual(partScale(g.itemLods[2]![0]![0]!));
+    expect(partScale(g.itemLods[0]![0]![2]!)[0]).toBeCloseTo(partScale(g.itemLods[2]![0]![2]!)[0], 9);
   });
 
   it('N instances in N colors give a constant draw-call count', () => {
@@ -116,7 +126,7 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
       'base-sink',
     ]) {
       const g = groupEquipment(place(3, t))[0]!;
-      for (const parts of g.itemParts)
+      for (const parts of g.itemLods.flat())
         parts.forEach((p) => {
           const u = unitGeometryArgs(p);
           const s = partScale(p);
@@ -129,5 +139,48 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
           }
         });
     }
+  });
+});
+
+describe('UI-7 AC5: instancing groups are keyed by (model, LOD)', () => {
+  it('types that resolve to the same model share one group', () => {
+    const store = createEditorStore();
+    const a = store.getState().placeEquipment('base-workstation', { x: 2, y: 2 })!;
+    const b = store.getState().placeEquipment('base-workstation', { x: 8, y: 8 })!;
+    // Another type, and an id the registry doesn't know: both draw the default model.
+    const other = { ...b, typeId: 'user-cnc', model: 'no-such-model' };
+    const groups = groupEquipment([a, other]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.model).toBe(defaultModelFor('workstation'));
+    expect(groups[0]!.key).toContain(defaultModelFor('workstation').id);
+  });
+
+  it('a group holds every LOD level of its model, per item', () => {
+    const store = createEditorStore();
+    store.getState().placeEquipment('base-buffer', { x: 2, y: 2 });
+    store.getState().placeEquipment('base-buffer', { x: 6, y: 2 });
+    const [g] = groupEquipment(store.getState().equipment);
+    const levels = g!.model.lodDistances.length + 1;
+    expect(g!.lods).toHaveLength(levels);
+    for (const lods of g!.itemLods) {
+      expect(lods).toHaveLength(levels);
+      lods.forEach((parts, l) => expect(parts).toHaveLength(g!.lods[l]!.length));
+    }
+  });
+
+  it('picks the LOD by camera distance', () => {
+    expect(lodForDistance([30, 80], 5)).toBe(0);
+    expect(lodForDistance([30, 80], 30)).toBe(0);
+    expect(lodForDistance([30, 80], 31)).toBe(1);
+    expect(lodForDistance([30, 80], 500)).toBe(2);
+    expect(lodForDistance([], 500)).toBe(0);
+  });
+
+  it('splits a group into per-LOD instance lists, in item order', () => {
+    const lod = [0, 1, 1, 0, 1];
+    expect(splitByLod(lod.length, (i) => lod[i]!, 2)).toEqual([
+      [0, 3],
+      [1, 2, 4],
+    ]);
   });
 });

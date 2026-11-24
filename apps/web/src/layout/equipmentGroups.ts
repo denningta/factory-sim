@@ -1,5 +1,7 @@
 import type { Equipment } from '@factory-sim/schema';
 import { equipmentParts, type Part } from '../equipment/shapes';
+import type { ModelDefinition, ModelPart } from '../equipment/models/types';
+import { resolveModel } from '../equipment/models/registry';
 
 export interface EquipmentGroup {
   key: string;
@@ -8,13 +10,28 @@ export interface EquipmentGroup {
   items: Equipment[];
   /** Per item, its parts at its own size, in `items` order. */
   itemParts: Part[][];
+  model: ModelDefinition;
+  lods: ModelPart[][];
+  itemLods: ModelPart[][][];
+}
+
+export function lodForDistance(_distances: readonly number[], _d: number): number {
+  throw new Error('not implemented');
+}
+
+export function splitByLod(
+  _count: number,
+  _lodOf: (i: number) => number,
+  _levels: number,
+): number[][] {
+  throw new Error('not implemented');
 }
 
 /**
  * Scale that turns a part's unit geometry into the part at its size: a unit box, or a cylinder
  * of bottom radius 1 and height 1 (top radius = the part's top/bottom ratio, same at any size).
  */
-export function partScale(part: Part): [number, number, number] {
+export function partScale(part: Part | ModelPart): [number, number, number] {
   if (part.shape === 'box') return [...part.size];
   return [part.radiusBottom, part.height, part.radiusBottom];
 }
@@ -29,7 +46,7 @@ export type UnitGeometry =
   | { shape: 'box'; args: [number, number, number] }
   | { shape: 'cylinder'; args: [number, number, number] };
 
-export function unitGeometryArgs(part: Part): UnitGeometry {
+export function unitGeometryArgs(part: Part | ModelPart): UnitGeometry {
   if (part.shape === 'box') return { shape: 'box', args: [1, 1, 1] };
   return { shape: 'cylinder', args: [part.radiusTop / part.radiusBottom, 1, 1] };
 }
@@ -51,7 +68,15 @@ export function groupEquipment(equipment: readonly Equipment[]): EquipmentGroup[
   for (const e of equipment) {
     const key = e.typeId;
     const parts = equipmentParts(e);
-    const g = groups.get(key) ?? { key, parts, items: [], itemParts: [] };
+    const g = groups.get(key) ?? {
+      key,
+      parts,
+      items: [],
+      itemParts: [],
+      model: resolveModel(e),
+      lods: [],
+      itemLods: [],
+    };
     g.items.push(e);
     g.itemParts.push(parts);
     groups.set(key, g);

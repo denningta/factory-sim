@@ -1,0 +1,153 @@
+import { describe, expect, it } from 'vitest';
+import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { defaultModelFor, MODELS } from './registry';
+import { partBounds, partTriangles, structureKey } from './parts';
+import type { ModelAnchors, ModelDefinition, ModelSize, Vec3 } from './types';
+
+/**
+ * Contract every registered model must meet (UI-7 AC7). A new model gets this for free by
+ * being in the registry.
+ */
+const EPS = 1e-9;
+const MAX_FULL_TRIANGLES = 1500;
+const MAX_LOW_TRIANGLES = 200;
+
+function sizesFor(m: ModelDefinition): Record<string, ModelSize> {
+  const base = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === m.behaviors[0])!;
+  return {
+    minimum: { width: 0.1, length: 0.1, height: 0.3 },
+    default: { width: base.footprint.width, length: base.footprint.length, height: base.height },
+    large: { width: 10, length: 10, height: 3 },
+    // Long and thin either way round (#61).
+    narrow: { width: 0.2, length: 3, height: 1 },
+    shallow: { width: 10, length: 0.4, height: 1 },
+  };
+}
+
+const paramsFor = (m: ModelDefinition) =>
+  BASE_EQUIPMENT_TYPES.find((t) => t.behavior === m.behaviors[0])!.params;
+
+const inside = (p: Vec3, s: ModelSize) =>
+  p.every(Number.isFinite) &&
+  Math.abs(p[0]) <= s.width / 2 + EPS &&
+  Math.abs(p[2]) <= s.length / 2 + EPS &&
+  p[1] >= -EPS &&
+  p[1] <= s.height + EPS;
+
+function anchorPoints(a: ModelAnchors): [string, Vec3][] {
+  const pts: [string, Vec3][] = [
+    ['label', a.label],
+    ['input', a.input],
+    ['output', a.output],
+  ];
+  if (a.statusLight) pts.push(['statusLight', a.statusLight]);
+  if (a.operator) pts.push(['operator', a.operator]);
+  for (let i = 0; i < 60; i++) pts.push([`queueSlot(${i})`, a.queueSlot(i)]);
+  return pts;
+}
+
+describe.each(MODELS.map((m) => [m.id, m] as const))('UI-7 AC7: model %s', (_id, m) => {
+  const sizes = sizesFor(m);
+  const params = paramsFor(m);
+
+  it('declares one LOD distance fewer than it builds levels, ascending', () => {
+    const { lods } = m.build(sizes.default!, params);
+    expect(lods.length).toBeGreaterThanOrEqual(2);
+    expect(m.lodDistances.length).toBe(lods.length - 1);
+    m.lodDistances.forEach((d, i) => {
+      expect(d).toBeGreaterThan(i === 0 ? 0 : m.lodDistances[i - 1]!);
+    });
+  });
+
+  it.each(Object.entries(sizes))('parts fit inside the footprint and height (%s)', (_n, s) => {
+    for (const lod of m.build(s, params).lods) {
+      expect(lod.length).toBeGreaterThan(0);
+      const b = partBounds(lod);
+      expect(b.min[0]).toBeGreaterThanOrEqual(-s.width / 2 - EPS);
+      expect(b.max[0]).toBeLessThanOrEqual(s.width / 2 + EPS);
+      expect(b.min[2]).toBeGreaterThanOrEqual(-s.length / 2 - EPS);
+      expect(b.max[2]).toBeLessThanOrEqual(s.length / 2 + EPS);
+      expect(b.min[1]).toBeGreaterThanOrEqual(-EPS);
+      expect(b.max[1]).toBeLessThanOrEqual(s.height + EPS);
+    }
+  });
+
+  it.each(Object.entries(sizes))('anchors lie inside the bounds (%s)', (_n, s) => {
+    for (const [name, p] of anchorPoints(m.build(s, params).anchors))
+      expect(inside(p, s), `${name} ${p.join(',')}`).toBe(true);
+  });
+
+  it('workstation models have a status light and an operator anchor', () => {
+    if (!m.behaviors.includes('workstation')) return;
+    const { anchors } = m.build(sizes.default!, params);
+    expect(anchors.statusLight).toBeDefined();
+    expect(anchors.operator).toBeDefined();
+  });
+
+  it.each(Object.entries(sizes))('stays within the triangle budget (%s)', (_n, s) => {
+    const { lods } = m.build(s, params);
+    const tris = (parts: (typeof lods)[number]) => parts.reduce((n, p) => n + partTriangles(p), 0);
+    expect(tris(lods[0]!)).toBeLessThanOrEqual(MAX_FULL_TRIANGLES);
+    expect(tris(lods[lods.length - 1]!)).toBeLessThanOrEqual(MAX_LOW_TRIANGLES);
+  });
+
+  it('the same input builds the same parts and anchors', () => {
+    for (const s of Object.values(sizes)) {
+      const a = m.build(s, params);
+      const b = m.build({ ...s }, { ...params });
+      expect(b.lods).toEqual(a.lods);
+      expect(anchorPoints(b.anchors)).toEqual(anchorPoints(a.anchors));
+    }
+  });
+
+  it('the part structure does not depend on size, so instances can share meshes', () => {
+    const keys = Object.values(sizes).map((s) =>
+      m
+        .build(s, params)
+        .lods.map((l) => structureKey(l))
+        .join('/'),
+    );
+    expect(new Set(keys).size).toBe(1);
+  });
+
+  it('parts carry a material role and no tone multiplier (AC2)', () => {
+    for (const lod of m.build(sizes.default!, params).lods)
+      for (const p of lod) {
+        expect(p.role).toBeTruthy();
+        expect('tone' in p).toBe(false);
+      }
+  });
+});
+
+describe('UI-7 AC3: fixed parts keep their real size', () => {
+  const s0 = { width: 2, length: 3, height: 1.5 };
+  const s1 = { width: 6, length: 9, height: 3 };
+
+  it.each(MODELS.map((m) => [m.id, m] as const))(
+    '%s: fixed parts keep their cross-section when the footprint and height grow',
+    (_id, m) => {
+      const params = paramsFor(m);
+      const a = m.build(s0, params).lods[0]!;
+      const b = m.build(s1, params).lods[0]!;
+      a.forEach((p, i) => {
+        if (!p.fixed) return;
+        const q = b[i]!;
+        expect(q.fixed).toBe(true);
+        if (p.shape === 'box' && q.shape === 'box') {
+          expect(q.size[0]).toBeCloseTo(p.size[0], 9);
+          expect(q.size[2]).toBeCloseTo(p.size[2], 9);
+        } else if (p.shape === 'cylinder' && q.shape === 'cylinder') {
+          expect(q.radiusTop).toBeCloseTo(p.radiusTop, 9);
+          expect(q.radiusBottom).toBeCloseTo(p.radiusBottom, 9);
+        }
+      });
+    },
+  );
+
+  it('legs, posts, rails and the light pole are marked fixed', () => {
+    for (const b of ['workstation', 'buffer', 'conveyor'] as const) {
+      const m = defaultModelFor(b);
+      expect(m.build(s0, paramsFor(m)).lods[0]!.some((p) => p.fixed)).toBe(true);
+    }
+  });
+});
