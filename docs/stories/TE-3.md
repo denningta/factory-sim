@@ -25,3 +25,4 @@ issue: 110
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-23):_ needs a sim-engine public API addition (lead-owned), e.g. `Run.techs()` listing each tech's station or current walk, tracked even with events off (like `run.wip()`). The lead lands it before dispatch. Seed `TechTracks` from it the way parts are seeded from `wip()`.
+- _Builder:_ `TechTracks.seed(run.techs())` drops recorded walks, sets each tech's standing station to `atId`, and adds the in-progress walk (the `techMoved` event), mirroring `tracks.seed(run.wip())`. AC3 (a code comment) is verified by review, not a test.
