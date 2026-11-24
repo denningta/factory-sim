@@ -6,3 +6,6 @@ docs/planning
 *.xlsx
 
 docs/wireframes/prototype
+
+# Vendored agent skills (pinned in skills-lock.json); keep byte-identical
+.agents/
