@@ -6,6 +6,7 @@ import {
   type ModelIssue,
   type RunOptions,
   type RunStats,
+  type StationState,
 } from '@factory-sim/sim-engine';
 import { buildLineGeometry, type PartPose } from './partTracks';
 import type { TechPose } from './techTracks';
@@ -37,6 +38,8 @@ export interface RunSession {
   readonly animate: boolean;
   readonly speed: number;
   stats(): RunStats;
+  /** Latest state of each workstation (empty while animation is off: no events are recorded). */
+  stationStates(): ReadonlyMap<string, StationState>;
   /** Parts on the floor at sim time `t` (none while animation is off). */
   poses(t: number): PartPose[];
   /** Techs at sim time `t`, standing or walking (none while animation is off, like parts). */
@@ -138,6 +141,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
       return speed;
     },
     stats: () => pb.run.stats(),
+    stationStates: () => pb.stationStates.current(),
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {

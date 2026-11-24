@@ -9,6 +9,7 @@ vi.mock('../layout/FloorScene', () => ({
   FloorScene: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
+vi.mock('./StationLayer', () => ({ StationLayer: () => <div /> }));
 vi.mock('./PartLayer', () => ({ PartLayer: () => <div /> }));
 
 let wsId: string;
