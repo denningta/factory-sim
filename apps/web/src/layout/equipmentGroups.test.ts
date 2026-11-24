@@ -45,14 +45,15 @@ describe('Clearance checks (LE-5) use the real footprint', () => {
 describe('EQ-5: draw calls per equipment type, not per size', () => {
   const place = (n: number, typeId = 'base-workstation') => {
     const store = createEditorStore();
+    store.getState().setFloor({ width: 200, length: 200 });
     for (let i = 0; i < n; i++) {
-      const e = store.getState().placeEquipment(typeId, { x: 2 + i * 6, y: 2 })!;
-      store
+      const e = store
         .getState()
-        .updateEquipment(e.id, {
-          footprint: { width: 1 + i * 0.1, length: 1 + i * 0.2 },
-          height: 1 + i * 0.05,
-        });
+        .placeEquipment(typeId, { x: 3 + (i % 5) * 6, y: 3 + Math.floor(i / 5) * 6 })!;
+      store.getState().updateEquipment(e.id, {
+        footprint: { width: 1 + i * 0.1, length: 1 + i * 0.2 },
+        height: 1 + i * 0.05,
+      });
     }
     return store.getState().equipment;
   };
@@ -65,11 +66,12 @@ describe('EQ-5: draw calls per equipment type, not per size', () => {
 
   it('two types of many sizes cost one set each', () => {
     const store = createEditorStore();
+    store.getState().setFloor({ width: 200, length: 200 });
     for (const t of ['base-workstation', 'base-buffer'])
       for (let i = 0; i < 6; i++) {
         const e = store
           .getState()
-          .placeEquipment(t, { x: 2 + i * 6, y: t === 'base-buffer' ? 9 : 2 })!;
+          .placeEquipment(t, { x: 3 + i * 6, y: t === 'base-buffer' ? 12 : 3 })!;
         store.getState().updateEquipment(e.id, { footprint: { width: 1 + i * 0.3, length: 1.5 } });
       }
     const groups = groupEquipment(store.getState().equipment);

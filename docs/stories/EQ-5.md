@@ -25,3 +25,4 @@ issue: 73
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-24):_ from the review of #72 (issue #73).
+- _Builder:_ groups are keyed by `(typeId, color)`. Each instance's parts are still computed by `equipmentParts` at its own size; the layer writes size into the instance matrix (`partScale` on a unit box / unit cylinder), so rails, legs and the signal tower keep exactly the absolute sizes they had. LOD levels do not exist yet (ADR-0014); when they do, the key gains the level. Draw calls = parts per type (workstation 3, buffer 14, conveyor 7, source 3, sink 5), independent of size.

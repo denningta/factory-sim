@@ -7,7 +7,7 @@ import { pointerToFloor } from './picking';
 import { dragTargets } from './selection';
 import { instanceTint } from './instanceTint';
 import { findIssues } from './overlaps';
-import { groupEquipment, type EquipmentGroup } from './equipmentGroups';
+import { groupEquipment, partScale, type EquipmentGroup } from './equipmentGroups';
 
 type Point = { x: number; y: number };
 
@@ -42,7 +42,7 @@ function trackDrag(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) =>
 }
 
 /**
- * Placed equipment, one InstancedMesh per (type, part) (ADR-0014). Matrices are written
+ * Placed equipment, one InstancedMesh per (type, part), whatever the instance sizes (ADR-0014). Matrices are written
  * imperatively: a drag previews through refs and commits to the store once on release, so no
  * React state changes per pointer move.
  */
@@ -69,10 +69,12 @@ export function EquipmentLayer() {
         const mesh = meshes.current.get(`${g.key}:${pi}`);
         if (!mesh) return;
         g.items.forEach((e, i) => {
+          const sized = g.itemParts[i]![pi]!; // this instance's part, at its own size
           const p = preview?.[e.id] ?? e.position;
-          offset.set(...part.position).applyAxisAngle(UP, -e.rotation);
+          offset.set(...sized.position).applyAxisAngle(UP, -e.rotation);
           dummy.position.set(p.x + offset.x, offset.y, p.y + offset.z);
           dummy.rotation.set(0, -e.rotation, 0); // plan angle runs x→y, which is -y in three
+          dummy.scale.set(...partScale(sized)); // size lives in the matrix; geometry is unit
           dummy.updateMatrix();
           mesh.setMatrixAt(i, dummy.matrix);
           instanceTint(
@@ -167,9 +169,9 @@ export function EquipmentLayer() {
             onPointerDown={onPointerDown(g)}
           >
             {part.shape === 'box' ? (
-              <boxGeometry args={part.size} />
+              <boxGeometry args={[1, 1, 1]} />
             ) : (
-              <cylinderGeometry args={[part.radiusTop, part.radiusBottom, part.height, 24]} />
+              <cylinderGeometry args={[part.radiusTop / part.radiusBottom, 1, 1, 24]} />
             )}
             <meshStandardMaterial />
           </instancedMesh>
