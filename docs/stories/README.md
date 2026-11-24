@@ -76,3 +76,4 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 | [SE-7](SE-7.md) | Simulation engine | 2   | Must     | SE-4       |
 | [SE-8](SE-8.md) | Simulation engine | 2   | Should   | SE-2       |
 | [TE-3](TE-3.md) | Technicians       | 3   | Should   | TE-2       |
+| [LE-6](LE-6.md) | Layout editor     | 1   | Should   | LE-5       |
