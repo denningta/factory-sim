@@ -18,7 +18,11 @@ export function issueTarget(
   if (project.products.some((p) => p.id === id)) return { screen: 'products', productId: id };
   for (const p of project.products) {
     const step = p.routing.find((s) => s.id === id);
-    if (step) return { screen: 'layout', equipmentId: step.stationId };
+    if (!step) continue;
+    // A missing cycle time is fixed in the product's grid; other step issues are about the station.
+    return issue.code === 'missing_cycle_time'
+      ? { screen: 'products', productId: p.id }
+      : { screen: 'layout', equipmentId: step.stationId };
   }
   return undefined;
 }

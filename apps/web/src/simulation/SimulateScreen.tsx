@@ -156,6 +156,7 @@ function Issues({
     if (!target) return;
     if (target.screen === 'layout')
       useEditorStore.getState().selectEquipment(target.equipmentId, false);
+    else useEditorStore.getState().selectProduct(target.productId);
     onNavigate?.(target.screen);
   };
   return (
@@ -167,7 +168,17 @@ function Issues({
             {i.objectId ? (
               <button
                 onClick={() => select(i)}
-                style={{ all: 'unset', cursor: 'pointer', textDecoration: 'underline' }}
+                // Not `all: unset`: that would also remove the browser's focus outline.
+                style={{
+                  background: 'none',
+                  border: 0,
+                  padding: 0,
+                  font: 'inherit',
+                  color: 'inherit',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
               >
                 {i.message}
               </button>

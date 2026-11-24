@@ -940,9 +940,7 @@ export function createEditorStore() {
         return { ok: true };
       },
       selectedProductId: null,
-      selectProduct: () => {
-        throw new Error('not implemented');
-      },
+      selectProduct: (id) => set({ selectedProductId: id }),
       selectConnection: (id) =>
         set({ selectedConnectionId: id, selectedIds: id ? [] : get().selectedIds }),
       loadDocument: (doc) => {
