@@ -147,6 +147,10 @@ export interface EditorState extends Prefs {
   shiftLength: number;
   /** Sets the shift length in seconds (> 0); re-derives the per-shift release interval. */
   setShiftLength: (seconds: number) => void;
+  /** Run settings (SE-7); part of the project document. */
+  run: Project['run'];
+  /** Applies run settings and shift length as one undo step. */
+  applyRun: (run: Project['run'], shiftLength: number) => void;
   /** Switches between units per shift and % of mix, converting the values. */
   setDemandBasis: (basis: Demand['basis']) => void;
   /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
@@ -282,6 +286,7 @@ export function createEditorStore() {
       demand: Demand;
       release: Release;
       shiftLength: number;
+      run: Project['run'];
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -293,6 +298,7 @@ export function createEditorStore() {
       demand: get().demand,
       release: get().release,
       shiftLength: get().shiftLength,
+      run: get().run,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -454,6 +460,15 @@ export function createEditorStore() {
       demand: { basis: 'mix', items: [] },
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
+      run: createProject().run,
+      applyRun: (run, shiftLength) => {
+        if (!(Number.isFinite(shiftLength) && shiftLength > 0)) return;
+        if (JSON.stringify(run) === JSON.stringify(get().run) && shiftLength === get().shiftLength)
+          return;
+        record();
+        set({ run, shiftLength });
+        set(intervalFor(get().demand));
+      },
       setShiftLength: (seconds) => {
         if (!(Number.isFinite(seconds) && seconds > 0) || seconds === get().shiftLength) return;
         record();
@@ -988,6 +1003,7 @@ export function createEditorStore() {
           demand: doc.demand,
           release: doc.release,
           shiftLength: doc.calendar.shiftLength,
+          run: doc.run,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,

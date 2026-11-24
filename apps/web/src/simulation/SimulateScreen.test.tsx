@@ -169,11 +169,71 @@ describe('AN-1: live KPI panel', () => {
     await upTo(1);
     expect(cells(total())).toEqual(['0.0', '0', '0.0', '–']);
     cleanup();
+    // The warm-up is saved with the project (SE-7), so clear it for the no-warm-up run.
+    useEditorStore.setState({ run: { ...useEditorStore.getState().run, warmUp: 0 } });
 
     render(<SimulateScreen />);
     await upTo(1);
     const [perHour, , wip] = cells(total());
     expect(Number(perHour)).toBeGreaterThan(0);
     expect(Number(wip)).toBeGreaterThan(0);
+  });
+});
+
+describe('SE-7: run settings panel', () => {
+  it('AC1: shows the saved run settings from the project', () => {
+    useEditorStore.getState().applyRun(
+      {
+        warmUp: 3600,
+        length: { unit: 'seconds', value: 7200 },
+        seed: { mode: 'fixed', value: 42 },
+      },
+      8 * 3600,
+    );
+    render(<SimulateScreen />);
+    expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('1');
+    expect((screen.getByLabelText('Run length') as HTMLInputElement).value).toBe('2');
+    expect((screen.getByLabelText('Run length unit') as HTMLSelectElement).value).toBe('hours');
+    expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('42');
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
+  });
+
+  it('AC2/AC3: Apply saves to the project; a warm-up not shorter than the run is refused', async () => {
+    render(<SimulateScreen />);
+    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
+    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '8');
+    await userEvent.click(button('Apply'));
+    expect(screen.getByText(/shorter/)).toBeTruthy();
+    expect(useEditorStore.getState().run.warmUp).toBe(0);
+    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
+    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '2');
+    await userEvent.click(button('Apply'));
+    expect(useEditorStore.getState().run.warmUp).toBe(7200);
+    useEditorStore.getState().undo();
+    await waitFor(() =>
+      expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('0'),
+    );
+  });
+
+  it('AC4: after a random-mode run with saved value 77, picking Fixed shows 77', async () => {
+    render(<SimulateScreen />);
+    await userEvent.clear(screen.getByLabelText('Seed'));
+    await userEvent.type(screen.getByLabelText('Seed'), '77');
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
+    await userEvent.click(button('Apply'));
+    expect(useEditorStore.getState().run.seed).toEqual({ mode: 'random', value: 77 });
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toContain('77');
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
+    expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('77');
+  });
+
+  it('refuses an invalid seed in random mode, so nothing invalid is saved', async () => {
+    render(<SimulateScreen />);
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
+    await userEvent.clear(screen.getByLabelText('Seed'));
+    await userEvent.type(screen.getByLabelText('Seed'), '1.5');
+    await userEvent.click(button('Apply'));
+    expect(screen.getByText(/Seed must be a whole number/)).toBeTruthy();
+    expect(useEditorStore.getState().run.seed.value).toBe(1);
   });
 });
