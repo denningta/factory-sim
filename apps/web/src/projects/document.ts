@@ -27,6 +27,6 @@ export function documentForSave(
   }: EditedParts & { shiftLength?: number; run?: Project['run']; minClearance?: number | null },
 ): Project {
   const calendar = shiftLength === undefined ? base.calendar : { ...base.calendar, shiftLength };
-  void minClearance; // stub
-  return { ...base, ...parts, calendar, run: run ?? base.run };
+  const layout = minClearance === undefined ? base.layout : { ...base.layout, minClearance };
+  return { ...base, ...parts, calendar, run: run ?? base.run, layout };
 }

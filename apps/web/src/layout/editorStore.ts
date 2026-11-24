@@ -124,7 +124,7 @@ export interface EditorState extends Prefs {
   /** Display only: does not touch `floor`. */
   setUnit: (unit: DisplayUnit) => void;
   toggleSnap: () => void;
-  /** Minimum gap between footprints (m); null = clearance check off (LE-5). */
+  /** Minimum gap between footprints (m); null = clearance check off (LE-5). Saved in layout.minClearance. */
   clearance: number | null;
   setClearance: (meters: number | null) => void;
   /** The library type to preview and, with LE-2, to place. Session-only, not a preference. */
@@ -293,6 +293,7 @@ export function createEditorStore() {
       release: Release;
       shiftLength: number;
       run: Project['run'];
+      clearance: number | null;
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -305,6 +306,7 @@ export function createEditorStore() {
       release: get().release,
       shiftLength: get().shiftLength,
       run: get().run,
+      clearance: get().clearance,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -1032,6 +1034,7 @@ export function createEditorStore() {
           release: doc.release,
           shiftLength: doc.calendar.shiftLength,
           run: doc.run,
+          clearance: doc.layout.minClearance,
           connections: doc.connections,
           selectedIds: [],
           selectedConnectionId: null,
@@ -1086,8 +1089,12 @@ export function createEditorStore() {
         savePrefs({ unit, snapEnabled: get().snapEnabled });
       },
       clearance: null,
-      setClearance: (clearance) =>
-        set({ clearance: clearance !== null && clearance > 0 ? clearance : null }),
+      setClearance: (value) => {
+        const clearance = value !== null && value > 0 ? value : null;
+        if (clearance === get().clearance) return;
+        record();
+        set({ clearance });
+      },
       toggleSnap: () => {
         const snapEnabled = !get().snapEnabled;
         set({ snapEnabled });
