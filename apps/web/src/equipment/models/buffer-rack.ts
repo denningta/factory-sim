@@ -14,6 +14,9 @@ export const bufferRack: ModelDefinition = {
   build({ width: w, length: l, height: h }) {
     const post = real(POST, Math.min(w, l), 0.2);
     const t = h * 0.04;
+    const crate = h * 0.14;
+    // Waiting parts rest on the crate tops, where they show, not on the shelves under the crates.
+    const levels = SHELVES.map((f) => h * f + t + crate);
     const parts = [];
     for (const sx of [-1, 1])
       for (const sz of [-1, 1])
@@ -25,20 +28,20 @@ export const bufferRack: ModelDefinition = {
         );
     for (const f of SHELVES) {
       parts.push(slab(w, t, l, h * f));
-      parts.push(slab(w * 0.6, h * 0.14, l * 0.6, h * f + t, 0, 0, { role: 'accent' }));
+      parts.push(slab(w * 0.6, crate, l * 0.6, h * f + t, 0, 0, { role: 'accent' }));
     }
     return {
       lods: [parts, [slab(w, h, l, 0)]],
       anchors: {
         label: [0, h, 0],
-        input: [0, h * SHELVES[0]! + t, -l / 2],
-        output: [0, h * SHELVES[0]! + t, l / 2],
+        input: [0, levels[0]!, -l / 2],
+        output: [0, levels[0]!, l / 2],
         queueSlot: gridSlots({
-          x0: -w / 2 + post,
-          x1: w / 2 - post,
-          z0: -l / 2 + post,
-          z1: l / 2 - post,
-          levels: SHELVES.map((f) => h * f + t),
+          x0: -w * 0.3,
+          x1: w * 0.3,
+          z0: -l * 0.3,
+          z1: l * 0.3,
+          levels,
           yMax: h,
         }),
       },

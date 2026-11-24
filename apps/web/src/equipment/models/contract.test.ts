@@ -91,6 +91,24 @@ describe.each(MODELS.map((m) => [m.id, m] as const))('UI-7 AC7: model %s', (_id,
     expect(tris(lods[lods.length - 1]!)).toBeLessThanOrEqual(MAX_LOW_TRIANGLES);
   });
 
+  it.each(Object.entries(sizes))(
+    "no queue slot's resting point is inside a full-detail part, so waiting parts stay visible (%s)",
+    (_n, s) => {
+      const { lods, anchors } = m.build(s, params);
+      for (let i = 0; i < 60; i++) {
+        // A part resting on the slot fills the space just above its bottom point; a point on a
+        // part's bottom face (a slot on the shelf under a crate) must count as hidden too.
+        const [x, y, z] = anchors.queueSlot(i);
+        const p = [x, y + 0.01, z];
+        lods[0]!.forEach((part, pi) => {
+          const b = partBounds([part]);
+          const strictlyInside = p.every((v, k) => v > b.min[k]! + EPS && v < b.max[k]! - EPS);
+          expect(strictlyInside, `queueSlot(${i}) ${p.join(',')} inside part ${pi}`).toBe(false);
+        });
+      }
+    },
+  );
+
   it('the same input builds the same parts and anchors', () => {
     for (const s of Object.values(sizes)) {
       const a = m.build(s, params);
