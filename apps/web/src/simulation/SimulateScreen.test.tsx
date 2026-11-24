@@ -214,4 +214,26 @@ describe('SE-7: run settings panel', () => {
       expect((screen.getByLabelText('Warm-up (hr)') as HTMLInputElement).value).toBe('0'),
     );
   });
+
+  it('AC4: after a random-mode run with saved value 77, picking Fixed shows 77', async () => {
+    render(<SimulateScreen />);
+    await userEvent.clear(screen.getByLabelText('Seed'));
+    await userEvent.type(screen.getByLabelText('Seed'), '77');
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
+    await userEvent.click(button('Apply'));
+    expect(useEditorStore.getState().run.seed).toEqual({ mode: 'random', value: 77 });
+    expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toContain('77');
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
+    expect((screen.getByLabelText('Seed') as HTMLInputElement).value).toBe('77');
+  });
+
+  it('refuses an invalid seed in random mode, so nothing invalid is saved', async () => {
+    render(<SimulateScreen />);
+    await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
+    await userEvent.clear(screen.getByLabelText('Seed'));
+    await userEvent.type(screen.getByLabelText('Seed'), '1.5');
+    await userEvent.click(button('Apply'));
+    expect(screen.getByText(/Seed must be a whole number/)).toBeTruthy();
+    expect(useEditorStore.getState().run.seed.value).toBe(1);
+  });
 });
