@@ -204,6 +204,11 @@ export interface Run {
   wip(): PartInLine[];
   /** Every technician, in model order. For re-seeding tech markers when animation is turned back on (TE-3). */
   techs(): TechInLine[];
+  /**
+   * Each workstation's current state, keyed by station id in model order, tracked even with
+   * events off. For re-seeding station colours when animation is turned back on (AN-4).
+   */
+  stationStates(): Record<string, StationState>;
   /** Live statistics for the window so far (AN-1 AC3). Cheap enough to call every frame. */
   stats(): RunStats;
 }

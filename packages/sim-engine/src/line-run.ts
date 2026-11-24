@@ -560,6 +560,10 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
         ...(t.walk ? { walk: { ...t.walk } } : {}),
       }));
     },
+    stationStates() {
+      // Map insertion order = model order (built from line.stations).
+      return Object.fromEntries([...stations.values()].map((st) => [st.def.id, st.state]));
+    },
     stats(): RunStats {
       const to = Math.max(warmUp, Math.min(sim.now, endTime));
       const window = to - warmUp;
