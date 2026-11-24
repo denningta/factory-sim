@@ -111,3 +111,44 @@ describe('SE-4: run settings panel', () => {
     expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
   });
 });
+
+describe('AN-1: live KPI panel', () => {
+  const panel = () => screen.getByRole('region', { name: 'Live KPIs' });
+
+  it('shows throughput per hour and per shift, WIP and lead time per product and in total, warm-up excluded', () => {
+    render(<SimulateScreen />);
+    const text = panel().textContent ?? '';
+    expect(text).toContain('Warm-up excluded');
+    expect(text).toMatch(/Throughput/);
+    expect(text).toMatch(/units\/hr/);
+    expect(text).toMatch(/units\/shift/);
+    expect(text).toMatch(/WIP/);
+    expect(text).toMatch(/Lead time/);
+    expect(screen.getByRole('row', { name: /Total/ })).toBeTruthy();
+    const name = useEditorStore.getState().products[0]!.name;
+    expect(screen.getByRole('row', { name: new RegExp(name) })).toBeTruthy();
+  });
+
+  it('updates while the run plays and keeps final values at the end', async () => {
+    render(<SimulateScreen />);
+    const total = () => screen.getByRole('row', { name: /Total/ }).textContent ?? '';
+    const before = total();
+    await userEvent.click(button('Run to end'));
+    await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 5000 });
+    await waitFor(() => expect(total()).not.toBe(before));
+    const final = total();
+    expect(final).toMatch(/\d/);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(total()).toBe(final);
+  });
+
+  it('excludes the warm-up: nothing is counted before it ends', async () => {
+    render(<SimulateScreen />);
+    await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
+    await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '1');
+    await userEvent.click(button('Apply'));
+    for (let i = 0; i < 6; i++) await userEvent.click(button('Step'));
+    const total = screen.getByRole('row', { name: /Total/ });
+    expect(total.textContent).toMatch(/^Total\s*0\.0/);
+  });
+});

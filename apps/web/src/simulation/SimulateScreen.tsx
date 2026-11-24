@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
-import { createProject, type Project } from '@factory-sim/schema';
 import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
+import { currentProject } from './currentProject';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { RunSettingsPanel } from './RunSettingsPanel';
@@ -11,21 +11,6 @@ import { createRunSession, type RunSessionResult } from './runSession';
 import { DEFAULT_RUN_SETTINGS, toRunOptions, type RunSettings } from './runSettings';
 
 const SPEEDS = [1, 10, 100, 1000];
-
-function currentProject(): Project {
-  const s = useEditorStore.getState();
-  return {
-    ...createProject(),
-    floor: s.floor,
-    equipment: s.equipment,
-    connections: s.connections,
-    products: s.products,
-    cycleTimes: s.cycleTimes,
-    technicians: s.technicians,
-    demand: s.demand,
-    release: s.release,
-  };
-}
 
 const clock = (t: number) => {
   const h = Math.floor(t / 3600);
