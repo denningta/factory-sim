@@ -24,11 +24,33 @@ describe('PR-5 demand mix polish', () => {
   });
 
   it('AC1: redo restores the pins too', () => {
+    const [a, b, c] = s().products;
+    s().setDemandValue(a!.id, 40);
+    s().setDemandValue(b!.id, 10);
+    s().undo();
+    s().undo();
+    s().redo(); // A pinned again, B not
+    s().setDemandValue(c!.id, 50); // fits only if B is open: A stays 40
+    expect(val(0)).toBe(40);
+    expect(val(1)).toBe(5);
+    expect(val(3)).toBe(5);
+  });
+
+  it('AC1: undo of a basis switch restores the pins', () => {
     const [a, b] = s().products;
     s().setDemandValue(a!.id, 40);
+    s().setDemandBasis('perShift');
     s().undo();
-    s().redo();
-    s().setDemandValue(b!.id, 10); // A stays pinned at 40
+    s().setDemandValue(b!.id, 10);
+    expect(val(0)).toBe(40);
+  });
+
+  it('AC1: undo of a product delete restores the pins', () => {
+    const [a, b] = s().products;
+    s().setDemandValue(a!.id, 40);
+    s().deleteProduct(a!.id);
+    s().undo();
+    s().setDemandValue(b!.id, 10);
     expect(val(0)).toBe(40);
   });
 

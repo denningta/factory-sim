@@ -158,7 +158,7 @@ export interface EditorState extends Prefs {
   setDemandBasis: (basis: Demand['basis']) => void;
   /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
   setDemandValue: (productId: string, value: number) => ProductResult;
-  /** True when the last mix edit rescaled every other product (all were already pinned). */
+  /** True when the last mix edit rescaled every other product (every other product was already set). */
   demandRescaled: boolean;
   /** Fixed interval = `smooth` product order; random = by mix; sequence = repeating pattern. */
   setReleaseMode: (mode: ReleaseMode) => void;
@@ -504,9 +504,9 @@ export function createEditorStore() {
           basis === 'mix'
             ? toMix(ids, weights)
             : ids.map((productId) => ({ productId, value: weights.get(productId) ?? 0 }));
-        editedDemand.clear();
         record();
-        set({ demand: { basis, items }, ...intervalFor({ basis, items }) });
+        editedDemand.clear(); // after record: undo restores the old pins
+        set({ demand: { basis, items }, demandRescaled: false, ...intervalFor({ basis, items }) });
       },
       demandRescaled: false,
       setDemandValue: (productId, value) => {
@@ -701,7 +701,6 @@ export function createEditorStore() {
       deleteProduct: (id) => {
         if (!get().products.some((p) => p.id === id)) return;
         const products = get().products.filter((p) => p.id !== id);
-        editedDemand.delete(id);
         const { demand, release } = get();
         // Demand and the pattern may only name products that exist, or autosave fails validation.
         const kept = demand.items.filter((i) => i.productId !== id);
@@ -723,6 +722,7 @@ export function createEditorStore() {
         }
         const derived = intervalFor(nextDemand);
         record();
+        editedDemand.delete(id); // after record: undo restores the old pins
         set({
           products,
           cycleTimes: get().cycleTimes.filter((c) => c.productId !== id),
@@ -1039,6 +1039,7 @@ export function createEditorStore() {
         session = null;
         editedDemand.clear();
         set({
+          demandRescaled: false,
           floor: doc.floor,
           equipment: doc.equipment,
           products: doc.products,

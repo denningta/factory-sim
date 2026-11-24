@@ -186,7 +186,7 @@ export function DemandPanel({ useStore = defaultStore }: { useStore?: Store }) {
       ))}
       {!perShift && demandRescaled && (
         <p role="status" style={{ color: '#6b7280', fontSize: 12, margin: 0 }}>
-          Every other product was already set, so they were rescaled to fit.
+          Other products were rescaled to fit 100%
         </p>
       )}
       <label style={label}>
