@@ -62,3 +62,19 @@ describe('DemandPanel (PR-4)', () => {
     expect(s().release.product).toEqual({ kind: 'sequence', pattern: [a!.id, a!.id, b!.id] });
   });
 });
+
+describe('DemandPanel (PR-5)', () => {
+  it('AC2: shows a hint when an edit rescales every other product', async () => {
+    const user = userEvent.setup();
+    const [a, b] = s().products;
+    render(<DemandPanel useStore={store} />);
+    expect(screen.queryByText(/rescal/i)).toBeNull();
+    const fa = screen.getByLabelText(new RegExp(`${a!.name}.*% of mix`, 'i'));
+    await user.clear(fa);
+    await user.type(fa, '70');
+    const fb = screen.getByLabelText(new RegExp(`${b!.name}.*% of mix`, 'i'));
+    await user.clear(fb);
+    await user.type(fb, '20');
+    expect(screen.getByText(/rescal/i)).toBeTruthy();
+  });
+});
