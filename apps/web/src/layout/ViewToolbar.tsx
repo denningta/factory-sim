@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { findIssues } from './overlaps';
 import { formatNumber, fromDisplay, toDisplay } from './units';
@@ -18,6 +18,8 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
   const clearance = useStore((s) => s.clearance);
   const setClearance = useStore((s) => s.setClearance);
   const unit = useStore((s) => s.unit);
+  // Typed text is kept while editing so "0." or "" aren't reformatted under the cursor.
+  const [draft, setDraft] = useState<string | null>(null);
   const issues = useMemo(() => findIssues(equipment, clearance).count, [equipment, clearance]);
   return (
     <div
@@ -54,17 +56,20 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
       <label style={{ display: 'flex', gap: 4, alignItems: 'center', font: '13px sans-serif' }}>
         Min clearance ({unit})
         <input
-          type="number"
-          min={0}
-          step="any"
+          type="text"
+          inputMode="decimal"
           aria-label="Minimum clearance"
           style={{ width: 64 }}
-          value={clearance === null ? '' : formatNumber(toDisplay(clearance, unit))}
+          value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
           placeholder="off"
           onChange={(e) => {
-            const v = e.target.valueAsNumber;
-            setClearance(Number.isFinite(v) ? fromDisplay(v, unit) : null);
+            const text = e.target.value;
+            setDraft(text);
+            const n = Number(text);
+            // Blank or invalid means off; the store ignores non-positive values too.
+            setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
           }}
+          onBlur={() => setDraft(null)}
         />
       </label>
       <span

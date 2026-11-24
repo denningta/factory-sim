@@ -60,3 +60,21 @@ describe('A count of issues shows in the toolbar', () => {
     expect(await screen.findByText(/no layout issues/i)).toBeTruthy();
   });
 });
+
+describe('Clearance input keeps typed text', () => {
+  it('typing "0.5" stores metres, converts from the display unit, and updates the count', async () => {
+    const store = createEditorStore();
+    store.getState().setUnit('m');
+    const t = BASE_EQUIPMENT_TYPES.find((x) => x.id === 'base-workstation')!;
+    const at = (id: string, x: number) => instantiate(t, { id, name: id, position: { x, y: 5 } });
+    store.setState({ equipment: [at('a', 5), at('b', 5 + t.footprint.width + 0.3)] });
+    render(<ViewToolbar useStore={store} />);
+    const input = screen.getByLabelText(/minimum clearance/i) as HTMLInputElement;
+    await userEvent.setup().type(input, '0.5');
+    expect(input.value).toBe('0.5');
+    expect(store.getState().clearance).toBeCloseTo(0.5);
+    expect(await screen.findByText(/1 layout issue\b/i)).toBeTruthy();
+    await userEvent.setup().clear(input);
+    expect(store.getState().clearance).toBeNull();
+  });
+});
