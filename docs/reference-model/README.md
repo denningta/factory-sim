@@ -3,7 +3,7 @@
 ADR-0012: a small model with known results runs in CI so that engine changes that shift results are caught. SE-6 AC1 runs it through `compileLine` / `createRun` and checks `expected.json`. Owner: lead; change the model or its expected results only in a lead PR.
 
 - `model.json`: the project document (schema v4).
-- `expected.json`: run settings, expected results and tolerances. `value` + `relTol`/`absTol`, or `min`/`max` bounds. Check the fixed seed `run.seed` and every seed in `seeds`.
+- `expected.json`: run settings, expected results and tolerances. `value` + `relTol`/`absTol`, or `min`/`max` bounds. Check the fixed seed `run.seed` and every seed in `seeds`. `expected.json.run` is authoritative for the test; `model.json.run` (schema v5) mirrors it so the model opens in the app with the same settings. Change both together.
 
 ## Line
 
