@@ -47,3 +47,16 @@ describe('SE-7: ProjectEditor saves run settings', () => {
     expect(req.document?.run.warmUp).toBe(7200);
   });
 });
+
+describe('LE-6: ProjectEditor saves minimum clearance', () => {
+  it('changing it marks the project dirty and autosaves layout.minClearance', async () => {
+    const update = vi
+      .spyOn(api, 'updateProject')
+      .mockResolvedValue({ id: 'p1', name: 'Line', updatedAt: '', revision: 4 });
+    render(<ProjectEditor id="p1" onClose={() => {}} />);
+    await screen.findByRole('button', { name: 'Simulate' });
+    useEditorStore.getState().setClearance(0.6);
+    await waitFor(() => expect(update).toHaveBeenCalled(), { timeout: 5000 });
+    expect(update.mock.calls[0]![1].document?.layout.minClearance).toBe(0.6);
+  });
+});

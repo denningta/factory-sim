@@ -244,3 +244,21 @@ describe('PR-1 undo on the Products screen', () => {
     expect(s.getState().products).toEqual([]);
   });
 });
+
+describe('LE-6 minimum clearance in the document', () => {
+  it('is restored from the loaded document (empty = off)', () => {
+    store.getState().loadDocument({ ...createProject(), layout: { minClearance: 0.75 } });
+    expect(store.getState().clearance).toBe(0.75);
+    store.getState().loadDocument(createProject());
+    expect(store.getState().clearance).toBeNull();
+  });
+
+  it('changing it is an undoable step', () => {
+    store.getState().setClearance(0.5);
+    expect(store.getState().canUndo).toBe(true);
+    store.getState().undo();
+    expect(store.getState().clearance).toBeNull();
+    store.getState().redo();
+    expect(store.getState().clearance).toBe(0.5);
+  });
+});

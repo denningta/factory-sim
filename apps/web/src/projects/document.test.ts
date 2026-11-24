@@ -70,3 +70,23 @@ describe('documentForSave (schema v4 adoption)', () => {
     expect(documentForSave(base, parts).calendar).toEqual(base.calendar);
   });
 });
+
+describe('LE-6: documentForSave layout', () => {
+  it('writes minClearance into layout, null = off, and keeps base when omitted', () => {
+    const base = createProject();
+    const parts = {
+      floor: base.floor,
+      equipment: base.equipment,
+      products: base.products,
+      connections: base.connections,
+      cycleTimes: base.cycleTimes,
+      technicians: base.technicians,
+      demand: base.demand,
+      release: base.release,
+    };
+    expect(documentForSave(base, { ...parts, minClearance: 0.8 }).layout.minClearance).toBe(0.8);
+    const on = { ...base, layout: { minClearance: 1 } };
+    expect(documentForSave(on, { ...parts, minClearance: null }).layout.minClearance).toBeNull();
+    expect(documentForSave(on, parts).layout.minClearance).toBe(1);
+  });
+});
