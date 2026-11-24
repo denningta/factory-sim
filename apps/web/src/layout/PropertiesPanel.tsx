@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { Field, parseNumber } from './Field';
 import { DurationEditor } from '../products/DurationEditor';
@@ -184,11 +184,14 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
     beginEdit,
     endEdit,
     selectedConnectionId,
+    technicians,
   } = useStore();
   /** Set when a params edit breaks a rule on another field, so both fields show the reason. */
   const [linked, setLinked] = useState<{ key: string; message: string } | null>(null);
   const selected = equipment.filter((e) => selectedIds.includes(e.id));
   const first = selected[0];
+  // WS-4: techs assigned to the first selected station.
+  const assigned = first ? technicians.filter((t) => t.stationIds.includes(first.id)).length : 0;
   if (!first && selectedConnectionId) return <ConnectionProperties useStore={useStore} />;
   if (!first) {
     return (
@@ -275,32 +278,44 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
             .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
             .map(([key, v]) => {
               const isSpeed = key === 'speed';
+              const techLimited =
+                key === 'capacity' &&
+                first.behavior === 'workstation' &&
+                first.params.labor.mode === 'manual' &&
+                v > assigned;
               return (
-                <Field
-                  beginEdit={beginEdit}
-                  endEdit={endEdit}
-                  key={`${key}-${first.id}`}
-                  label={
-                    isSpeed
-                      ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
-                      : (PARAM_LABELS[key] ?? key)
-                  }
-                  value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
-                  commit={(t) => {
-                    const parsed = parseNumber(t);
-                    if (typeof parsed === 'string') return parsed;
-                    const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
-                    const r = updateEquipment(first.id, { params: { [key]: n } });
-                    setLinked(
-                      !r.ok && r.field && r.field !== key
-                        ? { key: r.field, message: r.error }
-                        : null,
-                    );
-                    return r.ok ? null : r.error;
-                  }}
-                  extraError={linked?.key === key ? linked.message : null}
-                  onBlur={() => setLinked(null)}
-                />
+                <Fragment key={`${key}-${first.id}`}>
+                  <Field
+                    beginEdit={beginEdit}
+                    describedBy={techLimited ? 'tech-limit-hint' : undefined}
+                    endEdit={endEdit}
+                    label={
+                      isSpeed
+                        ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
+                        : (PARAM_LABELS[key] ?? key)
+                    }
+                    value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
+                    commit={(t) => {
+                      const parsed = parseNumber(t);
+                      if (typeof parsed === 'string') return parsed;
+                      const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
+                      const r = updateEquipment(first.id, { params: { [key]: n } });
+                      setLinked(
+                        !r.ok && r.field && r.field !== key
+                          ? { key: r.field, message: r.error }
+                          : null,
+                      );
+                      return r.ok ? null : r.error;
+                    }}
+                    extraError={linked?.key === key ? linked.message : null}
+                    onBlur={() => setLinked(null)}
+                  />
+                  {techLimited && (
+                    <p id="tech-limit-hint" style={{ color: '#b45309', margin: 0 }}>
+                      {`Parallel units limited by assigned techs (${assigned})`}
+                    </p>
+                  )}
+                </Fragment>
               );
             })}
           {first.behavior === 'workstation' && (
