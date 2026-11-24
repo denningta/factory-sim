@@ -141,6 +141,8 @@ export interface EditorState extends Prefs {
   release: Release;
   /** Seconds per shift (read-only here); turns per-shift demand into a release interval. */
   shiftLength: number;
+  /** Sets the shift length in seconds (> 0); re-derives the per-shift release interval. */
+  setShiftLength: (seconds: number) => void;
   /** Switches between units per shift and % of mix, converting the values. */
   setDemandBasis: (basis: Demand['basis']) => void;
   /** Sets one product's demand. In mix, the others share the rest so the total stays 100. */
@@ -267,6 +269,7 @@ export function createEditorStore() {
       technicians: Technician[];
       demand: Demand;
       release: Release;
+      shiftLength: number;
     }
     const snapshot = (): Snapshot => ({
       floor: get().floor,
@@ -277,6 +280,7 @@ export function createEditorStore() {
       technicians: get().technicians,
       demand: get().demand,
       release: get().release,
+      shiftLength: get().shiftLength,
     });
     let past: Snapshot[] = [];
     let future: Snapshot[] = [];
@@ -438,6 +442,12 @@ export function createEditorStore() {
       demand: { basis: 'mix', items: [] },
       release: { interval: { kind: 'fixed', value: 60 }, product: { kind: 'smooth' } },
       shiftLength: 28800,
+      setShiftLength: (seconds) => {
+        if (!(Number.isFinite(seconds) && seconds > 0) || seconds === get().shiftLength) return;
+        record();
+        set({ shiftLength: seconds });
+        set(intervalFor(get().demand));
+      },
       setDemandBasis: (basis) => {
         const { demand, products } = get();
         if (demand.basis === basis) return;

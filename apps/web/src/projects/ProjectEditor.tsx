@@ -58,6 +58,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               technicians,
               demand,
               release,
+              shiftLength,
             } = useEditorStore.getState();
             const document = documentForSave(base, {
               floor,
@@ -68,6 +69,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               technicians,
               demand,
               release,
+              shiftLength,
             });
             const saved = await api.updateProject(id, { document, baseRevision: revision });
             revision = saved.revision;
@@ -83,7 +85,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             s.cycleTimes !== prev.cycleTimes ||
             s.technicians !== prev.technicians ||
             s.demand !== prev.demand ||
-            s.release !== prev.release
+            s.release !== prev.release ||
+            s.shiftLength !== prev.shiftLength
           )
             saver?.markDirty();
         });
