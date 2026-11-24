@@ -143,8 +143,8 @@ export interface TechInLine {
   techId: string;
   state: TechState;
   /**
-   * The station it last arrived at, or `null` before its first job (the renderer then uses
-   * its home station). While walking, the station it left.
+   * The station it last arrived at, initially its home station (`null` only for a tech with
+   * no stations). While walking, the station it left.
    */
   atId: string | null;
   /** The walk in progress, if any: the `techMoved` event that started it. */

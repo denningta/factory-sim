@@ -20,6 +20,22 @@ function newRun() {
 }
 
 describe('TE-3: Run.techs() says where each tech is', () => {
+  it('starts at the home station, before any job', () => {
+    const c = compileLine(
+      lineProject({
+        products: ['A'],
+        stations: [
+          { id: 'S1', cycle: { A: fixed(10) } },
+          { id: 'S2', cycle: { A: fixed(10) } },
+        ],
+        techs: [{ id: 'T', name: 'T', walkSpeed: 1, stationIds: ['S2', 'S1'] }],
+      }),
+    );
+    if (!c.ok) throw new Error(JSON.stringify(c.issues));
+    const r = createRun(c.model, { seed: 1, warmUp: 0, runLength: 3600 });
+    expect(r.techs()[0]).toMatchObject({ techId: 'T', atId: 'S2' });
+  });
+
   it('reports a walk in progress with the techMoved event that started it', () => {
     const r = newRun();
     r.runUntil(12);

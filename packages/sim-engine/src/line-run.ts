@@ -552,6 +552,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       return [...inLine.values()].map((p) => ({ ...p })).sort((a, b) => a.partId - b.partId);
     },
     techs() {
+      // Map insertion order = model order (built from line.techs).
       return [...techs.values()].map((t) => ({
         techId: t.id,
         state: t.state,
