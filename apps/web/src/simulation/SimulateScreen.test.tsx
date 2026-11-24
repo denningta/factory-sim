@@ -285,5 +285,5 @@ describe('SE-8: playback toolbar matches the wireframe', () => {
     await waitFor(() => expect(clock()).toMatch(/^Day 2, 06:00:00 \(finished\)/), {
       timeout: 8000,
     });
-  });
+  }, 10000);
 });

@@ -116,9 +116,6 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
         <button onClick={() => session.step()} disabled={session.done}>
           Step
         </button>
-        <button onClick={() => session.runToEnd()} disabled={session.done}>
-          Run to end
-        </button>
         <button
           onClick={() => {
             session.reset();
@@ -126,6 +123,9 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
           }}
         >
           Reset
+        </button>
+        <button onClick={() => session.runToEnd()} disabled={session.done}>
+          Run to end
         </button>
         <label>
           Speed{' '}
@@ -147,9 +147,12 @@ function Running({ session }: { session: Extract<RunSessionResult, { ok: true }>
           />{' '}
           Animate
         </label>
-        <span role="timer" aria-label="Simulation clock">
-          {clock(now)}
-          {session.done ? ' (finished)' : ''}
+        <span>
+          Sim clock ·{' '}
+          <span role="timer" aria-label="Simulation clock">
+            {clock(now)}
+            {session.done ? ' (finished)' : ''}
+          </span>
         </span>
       </div>
       <FloorScene interactive={false}>
