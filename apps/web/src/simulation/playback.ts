@@ -6,7 +6,7 @@ import { createPartTracks, type LineGeometry, type PartTracks } from './partTrac
 export interface Playback {
   readonly run: Run;
   readonly tracks: PartTracks;
-  /** Tech walks. Kept when animation is toggled: each walk starts from its own station. */
+  /** Tech walks. Cleared and re-seeded from `run.techs()` when animation is turned back on, as parts are from `run.wip()`. */
   readonly techs: TechTracks;
   /** Latest state of every station, from the same events as the parts. */
   readonly stationStates: StationStates;
@@ -68,7 +68,10 @@ export function createPlayback(
       tracks.clear();
       stationStates = createStationStates();
       // Events weren't recorded while off, so ask the engine which parts are in the line.
-      if (on) tracks.seed(run.wip());
+      if (on) {
+        tracks.seed(run.wip());
+        techs.seed(run.techs());
+      }
     },
     advance(wallSeconds) {
       if (animate) {

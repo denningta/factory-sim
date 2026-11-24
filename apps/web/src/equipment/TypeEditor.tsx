@@ -6,6 +6,7 @@ import {
   userEquipmentTypeSchema,
   type EquipmentBehavior,
   type EquipmentType,
+  type Port,
 } from '@factory-sim/schema';
 import {
   formatNumber,
@@ -15,6 +16,7 @@ import {
   toDisplay,
   type DisplayUnit,
 } from '../layout/units';
+import { PORT_SIDES, portAt, portOffset, portSide, type PortSide } from './portSides';
 
 interface Props {
   unit: DisplayUnit;
@@ -31,6 +33,33 @@ const BEHAVIOR_LABEL: Record<EquipmentBehavior, string> = {
   source: 'Source',
   sink: 'Sink',
 };
+
+const SIDE_LABEL: Record<PortSide, string> = {
+  back: 'Back',
+  front: 'Front',
+  left: 'Left',
+  right: 'Right',
+};
+
+interface PortDraft {
+  id: string;
+  kind: Port['kind'];
+  side: PortSide;
+  /** Percent of the edge, −50…50 from its center. */
+  offset: string;
+  /** The port as loaded; kept as-is until the user edits this row, so the display rounding never alters it. */
+  original: Port;
+  edited: boolean;
+}
+
+const toDraft = (p: Port): PortDraft => ({
+  id: p.id,
+  kind: p.kind,
+  side: portSide(p),
+  offset: String(Math.round(portOffset(p) * 1000) / 10),
+  original: p,
+  edited: false,
+});
 
 const num = (t: string) => (t.trim() === '' ? NaN : Number(t));
 
@@ -50,6 +79,8 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
   const [speed, setSpeed] = useState(
     formatNumber(speedToDisplay(typeof p.speed === 'number' ? p.speed : 0.2, unit)),
   );
+  // Drafts start from the type's ports (ids kept); changing the behavior of a new type resets them to its defaults.
+  const [portDrafts, setPortDrafts] = useState<PortDraft[]>(seed.ports.map(toDraft));
   const [error, setError] = useState<string | null>(null);
 
   function save() {
@@ -61,6 +92,8 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
     if (name.trim() === '') return setError('Name is required');
     const bad = sizes.find(([, v]) => !(v > 0));
     if (bad) return setError(`${bad[0]} must be a number greater than 0`);
+    if (portDrafts.some((d) => d.edited && !(Math.abs(num(d.offset)) <= 50)))
+      return setError('Port offset must be a number from −50 to 50 (% of the edge)');
     const params = paramsFor(behavior);
     if (typeof params === 'string') return setError(params);
     const draft = {
@@ -71,8 +104,9 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       footprint: { width: fromDisplay(num(width), unit), length: fromDisplay(num(length), unit) },
       height: fromDisplay(num(height), unit),
       color,
-      // Ports follow the behavior; an unchanged behavior keeps the ports it had.
-      ports: initial && initial.behavior === behavior ? initial.ports : defaultPorts(behavior),
+      ports: portDrafts.map((d) =>
+        d.edited ? { id: d.id, kind: d.kind, ...portAt(d.side, num(d.offset) / 100) } : d.original,
+      ),
     };
     const parsed = userEquipmentTypeSchema.safeParse(draft);
     if (!parsed.success) return setError(parsed.error.issues[0]!.message);
@@ -125,7 +159,11 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
         <select
           value={behavior}
           disabled={initial !== undefined}
-          onChange={(e) => setBehavior(e.target.value as EquipmentBehavior)}
+          onChange={(e) => {
+            const b = e.target.value as EquipmentBehavior;
+            setBehavior(b);
+            setPortDrafts(defaultPorts(b).map(toDraft));
+          }}
         >
           {EQUIPMENT_BEHAVIORS.map((b) => (
             <option key={b} value={b}>
@@ -143,6 +181,26 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       {behavior === 'workstation' && field('Batch size', batchSize, setBatchSize)}
       {behavior === 'conveyor' &&
         field(`Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`, speed, setSpeed)}
+      {portDrafts.map((d, i) => {
+        const label = d.kind === 'input' ? 'Input' : 'Output';
+        const set = (patch: Partial<PortDraft>) =>
+          setPortDrafts((ds) => ds.map((x, j) => (j === i ? { ...x, ...patch, edited: true } : x)));
+        return (
+          <div key={d.id} style={{ display: 'flex', gap: 8 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {label} port side
+              <select value={d.side} onChange={(e) => set({ side: e.target.value as PortSide })}>
+                {PORT_SIDES.map((s) => (
+                  <option key={s} value={s}>
+                    {SIDE_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {field(`${label} port offset (%)`, d.offset, (v) => set({ offset: v }))}
+          </div>
+        );
+      })}
       {error && (
         <p role="alert" style={{ color: '#b91c1c', margin: 0 }}>
           {error}

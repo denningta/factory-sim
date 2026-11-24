@@ -449,42 +449,42 @@ describe('SE-2 AC3: run to end with no animation finishes a one-week 20-station 
   }, 60_000);
 });
 
-describe('TE-2: techs walk between their stations', () => {
-  /** Two stations 12 m apart (centers), one tech at 2 m/s assigned to both. */
-  const twoStations = () => {
-    const store = createEditorStore();
-    const s = store.getState;
-    const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
-    const a = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
-    const b = s().placeEquipment('base-workstation', { x: 18, y: 0 })!;
-    const sink = s().placeEquipment('base-sink', { x: 24, y: 0 })!;
-    s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: a.id, portId: 'in' });
-    s().connect({ equipmentId: a.id, portId: 'out' }, { equipmentId: b.id, portId: 'in' });
-    s().connect({ equipmentId: b.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
-    const p = s().addProduct();
-    s().addRoutingStep(p.id, a.id);
-    s().addRoutingStep(p.id, b.id);
-    s().setCycleTime(p.id, a.id, 5);
-    s().setCycleTime(p.id, b.id, 5);
-    s().setReleaseInterval(20);
-    const tech = s().addTechnician();
-    s().setTechnicianStation(tech.id, a.id, true);
-    s().setTechnicianStation(tech.id, b.id, true);
-    s().updateTechnician(tech.id, { name: 'Ana', walkSpeed: 2 });
-    const st = s();
-    const project: Project = {
-      ...createProject(),
-      floor: st.floor,
-      equipment: st.equipment,
-      connections: st.connections,
-      products: st.products,
-      cycleTimes: st.cycleTimes,
-      technicians: st.technicians,
-      demand: st.demand,
-      release: st.release,
-    };
-    return { project, a, b, tech: st.technicians[0]! };
+/** Two stations 12 m apart (centers), one tech at 2 m/s assigned to both. */
+const twoStations = () => {
+  const store = createEditorStore();
+  const s = store.getState;
+  const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
+  const a = s().placeEquipment('base-workstation', { x: 6, y: 0 })!;
+  const b = s().placeEquipment('base-workstation', { x: 18, y: 0 })!;
+  const sink = s().placeEquipment('base-sink', { x: 24, y: 0 })!;
+  s().connect({ equipmentId: src.id, portId: 'out' }, { equipmentId: a.id, portId: 'in' });
+  s().connect({ equipmentId: a.id, portId: 'out' }, { equipmentId: b.id, portId: 'in' });
+  s().connect({ equipmentId: b.id, portId: 'out' }, { equipmentId: sink.id, portId: 'in' });
+  const p = s().addProduct();
+  s().addRoutingStep(p.id, a.id);
+  s().addRoutingStep(p.id, b.id);
+  s().setCycleTime(p.id, a.id, 5);
+  s().setCycleTime(p.id, b.id, 5);
+  s().setReleaseInterval(20);
+  const tech = s().addTechnician();
+  s().setTechnicianStation(tech.id, a.id, true);
+  s().setTechnicianStation(tech.id, b.id, true);
+  s().updateTechnician(tech.id, { name: 'Ana', walkSpeed: 2 });
+  const st = s();
+  const project: Project = {
+    ...createProject(),
+    floor: st.floor,
+    equipment: st.equipment,
+    connections: st.connections,
+    products: st.products,
+    cycleTimes: st.cycleTimes,
+    technicians: st.technicians,
+    demand: st.demand,
+    release: st.release,
   };
+  return { project, a, b, tech: st.technicians[0]! };
+};
+describe('TE-2: techs walk between their stations', () => {
   const events = (project: Project, until: number) => {
     const run = newRun(project);
     run.runUntil(until);
@@ -573,5 +573,67 @@ describe('TE-2 review: marker edge cases', () => {
     expect(r.session.techPoses(0)).toHaveLength(1);
     r.session.setAnimate(false);
     expect(r.session.techPoses(0)).toEqual([]);
+  });
+});
+
+describe('TE-3: tech markers stay correct when animation is turned back on', () => {
+  const setup = () => {
+    const { project, a, b, tech } = twoStations();
+    const geometry = buildLineGeometry(project.equipment, project.connections);
+    const center = (id: string) => geometry.equipment.get(id)!.center;
+    return { project, geometry, a, b, tech, center };
+  };
+  /** Toggles Animate off at t = 0, runs to `t`, turns it back on. */
+  const toggled = (t: number) => {
+    const { project, geometry, a, b, tech, center } = setup();
+    const pb = createPlayback(newRun(project), geometry, new Map(), {
+      techs: [{ id: tech.id, name: tech.name, homeId: tech.stationIds[0] }],
+    });
+    pb.animate = false;
+    pb.run.runUntil(t);
+    pb.animate = true;
+    return { pose: pb.techs.at(t)[0]!, a, b, center };
+  };
+
+  it('AC1: after Animate is toggled off and on mid-run, a tech is drawn at its current station', () => {
+    // Walks A → B from t = 5 to 11 and works B: at t = 12 it stands at B.
+    const { pose, b, center } = toggled(12);
+    expect(pose.state).toBe('standing');
+    expect([pose.x, pose.z]).toEqual([center(b.id).x, center(b.id).z]);
+  });
+
+  it('AC1: a walk recorded before Animate went off does not outlive the re-seed', () => {
+    const { project, geometry, a, tech, center } = setup();
+    const pb = createPlayback(newRun(project), geometry, new Map(), {
+      techs: [{ id: tech.id, name: tech.name, homeId: tech.stationIds[0] }],
+    });
+    pb.advance(6); // A → B walk (t = 5..11) is recorded
+    pb.animate = false;
+    pb.run.runUntil(28); // walked back B → A at t = 20..26, now at A
+    pb.animate = true;
+    const pose = pb.techs.at(28)[0]!;
+    expect(pose.state).toBe('standing');
+    expect([pose.x, pose.z]).toEqual([center(a.id).x, center(a.id).z]);
+  });
+
+  it('AC1: after Animate is toggled off and on mid-run, a walking tech is drawn mid-walk', () => {
+    const { pose, a, b, center } = toggled(8); // 3 s into the 6 s walk
+    expect(pose.state).toBe('walking');
+    expect(pose.x).toBeCloseTo((center(a.id).x + center(b.id).x) / 2, 9);
+  });
+
+  it('AC2: after Run to end → Reset → Animate on, techs start from their home stations', () => {
+    const { project, a, tech, center } = setup();
+    const r = createRunSession(project, { seed: 1, warmUp: 0, runLength: 600 });
+    if (!r.ok) throw new Error('compile');
+    const s = r.session;
+    s.runToEnd();
+    for (let i = 0; i < 10000 && !s.done; i++) s.frame(1);
+    s.reset();
+    s.setAnimate(true);
+    const p = s.techPoses(0)[0]!;
+    expect(p.techId).toBe(tech.id);
+    expect([p.x, p.z]).toEqual([center(a.id).x, center(a.id).z]);
+    expect(p.state).toBe('standing');
   });
 });
