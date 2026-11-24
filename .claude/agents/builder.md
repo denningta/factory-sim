@@ -19,6 +19,15 @@ Start with `/implement-story <ID>` when prompted. Read `CLAUDE.md` first.
 - When review feedback arrives, address every point (fix it or reply with a reason), push, and report back in one short message.
 - Finish by printing: `PR READY: #<number> <url>` so the lead can find it.
 
+## UI work (product owner, 2026-11-24)
+
+For any story that changes what `apps/web` renders (epic `UI polish`, or any screen, panel or 3D-scene change):
+
+- **Load the `frontend-design` skill before you design or write UI code**, and follow its process: a short design plan (palette, type, layout, principles) reviewed against the brief, then build, then critique with screenshots. The brief is the story, its wireframes, `docs/wireframes/prototype/` and the visual reference named in the story Notes. Where the brief pins down a look, it wins over the skill's general cautions.
+- **Load the `dataviz` skill** before building any chart, stat tile, meter, legend or utilization bar.
+- Use the tokens and base components (ADR-0016); don't hard-code colours, fonts or spacing.
+- In the PR body, add a **Design** section: which skills you loaded, the design plan in a few lines, and what you changed after critique.
+
 ## Token budget
 
 Every line you read or print stays in your context for the rest of the story. Keep it lean.
