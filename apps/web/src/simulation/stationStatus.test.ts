@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LineEvent } from '@factory-sim/sim-engine';
-import { createStationStates, findBottleneck, STATE_COLORS } from './stationStatus';
+import { createStationStates, findBottleneck, plateColor, STATE_COLORS } from './stationStatus';
 import { createRunSession } from './runSession';
 import { realLine } from './testLine';
 
@@ -43,12 +43,15 @@ describe('AN-3 AC1: live colors: working green, starved yellow, blocked red, idl
     for (const st of seen) expect(Object.keys(STATE_COLORS)).toContain(st);
   });
 
-  it('is empty after a reset', () => {
+  it('goes back to the t=0 states after a reset, once stations were working', () => {
     const r = createRunSession(realLine().project, { seed: 1, warmUp: 0, runLength: 1000 });
     if (!r.ok) throw new Error('compile');
-    r.session.step();
+    const at0 = new Map(r.session.stationStates());
+    for (let i = 0; i < 200 && ![...r.session.stationStates().values()].includes('working'); i++)
+      r.session.step();
+    expect([...r.session.stationStates().values()]).toContain('working');
     r.session.reset();
-    for (const st of r.session.stationStates().values()) expect(st).not.toBe('working');
+    expect(r.session.stationStates()).toEqual(at0);
   });
 });
 
@@ -63,7 +66,7 @@ describe('AN-3 AC2: the station with the highest working % is the bottleneck', (
     ).toBe('b');
   });
 
-  it('breaks ties by layout order', () => {
+  it('breaks ties by placement order', () => {
     expect(
       findBottleneck([
         { id: 'a', working: 50 },
@@ -75,5 +78,14 @@ describe('AN-3 AC2: the station with the highest working % is the bottleneck', (
   it('flags nothing before any station has worked, or with no stations', () => {
     expect(findBottleneck([{ id: 'a', working: 0 }])).toBeNull();
     expect(findBottleneck([])).toBeNull();
+  });
+});
+
+describe('plateColor', () => {
+  it('maps each state to its color and unknown to neutral', () => {
+    expect(plateColor('working')).toBe(STATE_COLORS.working);
+    expect(plateColor('blocked')).toBe(STATE_COLORS.blocked);
+    expect(plateColor(undefined)).toBe('#e5e7eb');
+    expect(plateColor(undefined)).not.toBe(STATE_COLORS.idle);
   });
 });

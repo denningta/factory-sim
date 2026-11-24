@@ -8,6 +8,7 @@ import { KpiPanel } from './KpiPanel';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { StationLayer } from './StationLayer';
+import { BottleneckTile } from './BottleneckTile';
 import { UtilizationPanel } from './UtilizationPanel';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
@@ -66,6 +67,7 @@ export function SimulateScreen({
         {result.ok && (
           <>
             <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
+            <BottleneckTile session={result.session} stations={stations} />
             <UtilizationPanel session={result.session} stations={stations} techs={technicians} />
           </>
         )}

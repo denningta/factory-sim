@@ -4,14 +4,14 @@ import * as THREE from 'three';
 import type { Equipment } from '@factory-sim/schema';
 import { TextLabel } from '../layout/FloorScene';
 import type { RunSession } from './runSession';
-import { findBottleneck, STATE_COLORS } from './stationStatus';
+import { findBottleneck, NO_STATE_COLOR, plateColor } from './stationStatus';
 import { stationUtilization } from './utilization';
 
 /** Lifted off the machine top so the plate never z-fights with it. */
 const LIFT = 0.04;
 const PLATE_THICKNESS = 0.12;
-const NO_STATE = '#e5e7eb';
-const BOTTLENECK_COLOR = '#dc2626';
+// Dark, not red: red is the blocked plate color.
+const BOTTLENECK_COLOR = '#1f2937';
 /** The flag is a text figure like the KPIs: a few updates a second, not per frame. */
 const FLAG_INTERVAL_MS = 200;
 
@@ -63,11 +63,11 @@ function StationMarker({
   flagged: boolean;
 }) {
   const { width, length } = station.footprint;
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: NO_STATE }), []);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: NO_STATE_COLOR }), []);
   useEffect(() => () => material.dispose(), [material]);
   useFrame(() => {
     const state = session.stationStates().get(station.id);
-    material.color.set(state ? STATE_COLORS[state] : NO_STATE);
+    material.color.set(plateColor(state));
   });
   const top = station.height;
   return (

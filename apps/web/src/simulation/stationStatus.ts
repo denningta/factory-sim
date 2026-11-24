@@ -8,6 +8,12 @@ export const STATE_COLORS: Record<StationState, string> = {
   idle: '#cfd4dc',
 };
 
+/** Neutral until the engine has reported a state for the station. */
+export const NO_STATE_COLOR = '#e5e7eb';
+
+export const plateColor = (state: StationState | undefined): string =>
+  state ? STATE_COLORS[state] : NO_STATE_COLOR;
+
 export interface StationStates {
   /** Appends engine events (time order); only `stationState` events matter. */
   ingest(events: readonly LineEvent[]): void;
@@ -27,7 +33,7 @@ export function createStationStates(): StationStates {
 
 /**
  * The constraint: the station with the highest working %. Ties go to the first in `rows`
- * (layout order); null while nobody has worked yet, so nothing is flagged during warm-up.
+ * (placement order); null while nobody has worked yet, so nothing is flagged during warm-up.
  */
 export function findBottleneck(rows: readonly { id: string; working: number }[]): string | null {
   let best: string | null = null;
@@ -39,4 +45,13 @@ export function findBottleneck(rows: readonly { id: string; working: number }[])
     }
   }
   return best;
+}
+
+/** The tile text: the bottleneck's name and working %, or null while none is flagged. */
+export function bottleneckSummary(
+  rows: readonly { id: string; name: string; working: number }[],
+): { name: string; working: number } | null {
+  const id = findBottleneck(rows);
+  const row = rows.find((r) => r.id === id);
+  return row ? { name: row.name, working: row.working } : null;
 }
