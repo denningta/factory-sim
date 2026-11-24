@@ -5,8 +5,8 @@ import type { RunSession } from './runSession';
 
 /** Parts beyond this are not drawn; a 5-station line holds a few dozen. */
 const MAX_PARTS = 2000;
-// Small enough to sit in the models' queue slots (0.35 m pitch).
-const PART_SIZE = 0.3;
+// Small enough to sit in the models' queue slots (≥ 0.3 m apart) with a gap between them.
+const PART_SIZE = 0.27;
 // Parts being processed sit on top of the machine so they aren't hidden inside it.
 const PART_Y = 0.5;
 const PROCESSING_Y = 2.4;

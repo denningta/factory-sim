@@ -11,6 +11,9 @@ import type { ModelAnchors, ModelDefinition, ModelSize, Vec3 } from './types';
 const EPS = 1e-9;
 const MAX_FULL_TRIANGLES = 1500;
 const MAX_LOW_TRIANGLES = 200;
+/** Parts are drawn 0.27 m wide; slots closer than this would overlap them. */
+const MIN_SLOT_GAP = 0.3;
+const DEFAULT_QUEUE_CHECK = 4;
 
 function sizesFor(m: ModelDefinition): Record<string, ModelSize> {
   const base = BASE_EQUIPMENT_TYPES.find((t) => t.behavior === m.behaviors[0])!;
@@ -108,6 +111,19 @@ describe.each(MODELS.map((m) => [m.id, m] as const))('UI-7 AC7: model %s', (_id,
       }
     },
   );
+
+  it('at default size, a full queue shows every part: the first slots are ≥ 0.3 m apart', () => {
+    // Capacity for buffers; other behaviors have no queue limit, so check a short queue.
+    const cap = (params as { capacity?: unknown }).capacity;
+    const n = typeof cap === 'number' ? cap : DEFAULT_QUEUE_CHECK;
+    const { anchors } = m.build(sizes.default!, params);
+    const slots = Array.from({ length: n }, (_, i) => anchors.queueSlot(i));
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++) {
+        const d = Math.hypot(...slots[i]!.map((v, k) => v - slots[j]![k]!));
+        expect(d, `queueSlot(${i}) to queueSlot(${j})`).toBeGreaterThanOrEqual(MIN_SLOT_GAP - EPS);
+      }
+  });
 
   it('the same input builds the same parts and anchors', () => {
     for (const s of Object.values(sizes)) {
