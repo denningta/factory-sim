@@ -27,9 +27,9 @@ export interface TechInfo {
 
 interface Track {
   info: TechInfo;
-  /** Walks in time order; between them the tech stands where the last one ended. */
   /** Station it stands at before its first recorded walk; changed by `seed`. */
   baseId: string | undefined;
+  /** Walks in time order; between them the tech stands where the last one ended. */
   walks: { t: number; t1: number; from: Pt; to: Pt }[];
   cursor: number;
 }

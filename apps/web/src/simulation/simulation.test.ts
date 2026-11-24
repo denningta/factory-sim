@@ -634,6 +634,20 @@ describe('TE-3: tech markers stay correct when animation is turned back on', () 
     expect([pose.x, pose.z]).toEqual([center(b.id).x, center(b.id).z]);
   });
 
+  it('AC1: a walk recorded before Animate went off does not outlive the re-seed', () => {
+    const { project, geometry, a, tech, center } = setup();
+    const pb = createPlayback(newRun(project), geometry, new Map(), {
+      techs: [{ id: tech.id, name: tech.name, homeId: tech.stationIds[0] }],
+    });
+    pb.advance(6); // A → B walk (t = 5..11) is recorded
+    pb.animate = false;
+    pb.run.runUntil(28); // walked back B → A at t = 20..26, now at A
+    pb.animate = true;
+    const pose = pb.techs.at(28)[0]!;
+    expect(pose.state).toBe('standing');
+    expect([pose.x, pose.z]).toEqual([center(a.id).x, center(a.id).z]);
+  });
+
   it('AC1: after Animate is toggled off and on mid-run, a walking tech is drawn mid-walk', () => {
     const { pose, a, b, center } = toggled(8); // 3 s into the 6 s walk
     expect(pose.state).toBe('walking');
