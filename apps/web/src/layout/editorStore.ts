@@ -9,6 +9,7 @@ import {
   technicianSchema,
   instantiate,
   type Connection,
+  type EquipmentType,
   type CycleTime,
   type Duration,
   durationSchema,
@@ -192,6 +193,11 @@ export interface EditorState extends Prefs {
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
   placeEquipment: (typeId: string, point: Point) => Equipment | null;
+  /** My library types (EQ-3); session state loaded from the API, not part of the project. */
+  userTypes: EquipmentType[];
+  setUserTypes: (types: EquipmentType[]) => void;
+  /** Copies the type's settings onto its placed instances (one undo step); returns how many. */
+  syncInstancesToType: (type: EquipmentType) => number;
   selectEquipment: (id: string, additive: boolean) => void;
   /** Selects equipment whose center lies in the rectangle (meters, any corner order). */
   selectInRect: (a: Point, b: Point, additive: boolean) => void;
@@ -741,6 +747,13 @@ export function createEditorStore() {
         );
       },
       selectedIds: [],
+      userTypes: [],
+      setUserTypes: () => {
+        throw new Error('EQ-3: not implemented');
+      },
+      syncInstancesToType: () => {
+        throw new Error('EQ-3: not implemented');
+      },
       placeEquipment: (typeId, point) => {
         const type = BASE_EQUIPMENT_TYPES.find((t) => t.id === typeId);
         const { floor, snapEnabled, equipment } = get();

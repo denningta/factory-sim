@@ -1,4 +1,4 @@
-import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { BASE_EQUIPMENT_TYPES, type EquipmentType } from '@factory-sim/schema';
 import { TYPE_DESCRIPTIONS } from './descriptions';
 import { formatNumber, toDisplay, type DisplayUnit } from '../layout/units';
 
@@ -9,6 +9,10 @@ interface Props {
   unit: DisplayUnit;
   selectedId: string | null;
   onSelect: (typeId: string) => void;
+  /** My library types (EQ-3), listed after the built-ins. */
+  userTypes?: EquipmentType[];
+  onEdit?: (type: EquipmentType) => void;
+  onDelete?: (type: EquipmentType) => void;
 }
 
 /** Built-ins are code constants until the library table arrives with EQ-3. */

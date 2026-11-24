@@ -30,4 +30,15 @@ describe('OpenAPI', () => {
       expect.arrayContaining(['get', 'patch', 'delete']),
     );
   });
+
+  it('EQ-3: the generated document describes the equipment library routes', async () => {
+    const t = await testApp();
+    const doc = (await t.call('GET', '/api/openapi.json')).json();
+    expect(Object.keys(doc.paths['/api/equipment-types'])).toEqual(
+      expect.arrayContaining(['get', 'post']),
+    );
+    expect(Object.keys(doc.paths['/api/equipment-types/{id}'])).toEqual(
+      expect.arrayContaining(['put', 'delete']),
+    );
+  });
 });
