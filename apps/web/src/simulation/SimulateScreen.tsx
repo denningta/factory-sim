@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
-import type { Equipment } from '@factory-sim/schema';
+import type { Equipment, Product } from '@factory-sim/schema';
 import type { ModelIssue } from '@factory-sim/sim-engine';
 import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
@@ -7,6 +7,8 @@ import { currentProject } from './currentProject';
 import { KpiPanel } from './KpiPanel';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
+import { Legend } from './Legend';
+import { RunConnections } from './RunConnections';
 import { StationLayer } from './StationLayer';
 import { BottleneckTile } from './BottleneckTile';
 import { UtilizationPanel } from './UtilizationPanel';
@@ -63,7 +65,7 @@ export function SimulateScreen({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
       {result.ok ? (
-        <Running session={result.session} stations={stations} />
+        <Running session={result.session} stations={stations} products={products} />
       ) : (
         <Issues issues={result.issues} onNavigate={onNavigate} />
       )}
@@ -91,10 +93,14 @@ export function SimulateScreen({
 function Running({
   session,
   stations,
+  products,
 }: {
   session: Extract<RunSessionResult, { ok: true }>['session'];
   stations: readonly Equipment[];
+  products: readonly Product[];
 }) {
+  const equipment = useEditorStore((s) => s.equipment);
+  const connections = useEditorStore((s) => s.connections);
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [now, setNow] = useState(0);
   useEffect(() => session.subscribe(rerender), [session]);
@@ -165,11 +171,15 @@ function Running({
           </span>
         </span>
       </div>
-      <FloorScene interactive={false}>
-        <StationLayer session={session} stations={stations} />
-        <PartLayer session={session} />
-        <TechLayer session={session} />
-      </FloorScene>
+      <div style={{ position: 'relative', minHeight: 0 }}>
+        <FloorScene interactive={false}>
+          <RunConnections session={session} equipment={equipment} connections={connections} />
+          <StationLayer session={session} stations={stations} />
+          <PartLayer session={session} />
+          <TechLayer session={session} />
+        </FloorScene>
+        <Legend products={products} />
+      </div>
     </div>
   );
 }

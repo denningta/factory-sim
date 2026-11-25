@@ -145,9 +145,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     stats: () => pb.run.stats(),
     stationStates: () => pb.stationStates.current(),
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
-    queueLengths: () => {
-      throw new Error('not implemented');
-    },
+    queueLengths: () => (animate ? pb.tracks.queueLengths() : new Map()),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {
       listeners.add(listener);

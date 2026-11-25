@@ -11,4 +11,4 @@ Low-fidelity screens from the design mockups. They show layout and content, not 
 
 Shared shell: top bar with project name, tabs (Layout · Products & routings · Simulate · Results), save state and a primary "Run simulation" button. Left panel = library/list, centre = viewport or main content, right panel = properties/settings.
 
-Colours used for meaning (keep them consistent; the values live in `apps/web/src/ui/tokens.ts`): station state working = green, starved = yellow, blocked = red, idle = gray; tech walking = purple; products get user-chosen colours (blue/orange in mocks).
+Colours used for meaning (keep them consistent; the values live in `apps/web/src/ui/tokens.ts`): station state working = green, starved = yellow, blocked = red, idle (shown as "Waiting for tech") = gray; tech walking = purple; products get user-chosen colours (blue/orange in mocks).

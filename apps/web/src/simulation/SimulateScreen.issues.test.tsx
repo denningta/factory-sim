@@ -10,6 +10,7 @@ vi.mock('../layout/FloorScene', () => ({
 }));
 vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('./StationLayer', () => ({ StationLayer: () => <div /> }));
+vi.mock('./RunConnections', () => ({ RunConnections: () => <div /> }));
 vi.mock('./PartLayer', () => ({ PartLayer: () => <div /> }));
 
 let wsId: string;

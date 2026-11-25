@@ -3,7 +3,7 @@ import type { RunSession } from './runSession';
 import { Legend } from '../ui/Legend';
 import { useTheme } from '../ui/themeStore';
 import type { Theme } from '../ui/tokens';
-import { findBottleneck } from './stationStatus';
+import { findBottleneck, stateLabel } from './stationStatus';
 import {
   sortRows,
   stationUtilization,
@@ -29,6 +29,8 @@ const LABELS: Record<string, string> = {
   walking: 'Walking',
   idle: 'Idle',
 };
+// The engine's station `idle` is "Waiting for tech"; techs are just idle.
+const STATION_LABELS = { ...LABELS, idle: stateLabel('idle') };
 
 const pct = (v: number) => `${v.toFixed(1)}%`;
 const cell = { padding: '2px 3px', textAlign: 'right' as const };
@@ -72,6 +74,7 @@ export function UtilizationPanel({
         rows={data.st}
         started={data.started}
         keys={['working', 'starved', 'blocked', 'idle']}
+        labels={STATION_LABELS}
         bottleneckId={findBottleneck(data.st)}
       />
       <UtilTable
@@ -92,7 +95,9 @@ function UtilTable<K extends string>({
   keys,
   started,
   bottleneckId,
+  labels = LABELS,
 }: {
+  labels?: Record<string, string>;
   label: string;
   first: string;
   rows: UtilRow<K>[];
@@ -133,7 +138,7 @@ function UtilTable<K extends string>({
     <>
       <Legend
         label={`${label} legend`}
-        items={keys.map((k) => ({ key: k, label: LABELS[k]!, color: COLORS[k]! }))}
+        items={keys.map((k) => ({ key: k, label: labels[k]!, color: COLORS[k]! }))}
       />
       <table
         aria-label={label}
@@ -147,7 +152,7 @@ function UtilTable<K extends string>({
         <thead>
           <tr>
             {head('name', first, 'left')}
-            {keys.map((k) => head(k, LABELS[k]!, 'right'))}
+            {keys.map((k) => head(k, labels[k]!, 'right'))}
           </tr>
         </thead>
         <tbody>
@@ -156,6 +161,7 @@ function UtilTable<K extends string>({
               key={r.id}
               row={r}
               keys={keys}
+              labels={labels}
               started={started}
               bottleneck={r.id === bottleneckId}
             />
@@ -171,7 +177,9 @@ function Row<K extends string>({
   keys,
   started,
   bottleneck,
+  labels,
 }: {
+  labels: Record<string, string>;
   row: UtilRow<K>;
   keys: K[];
   started: boolean;
@@ -196,7 +204,7 @@ function Row<K extends string>({
         <td colSpan={keys.length + 1} style={{ padding: '0 3px 6px' }}>
           {bottleneck && (
             // In the bar row so the name cell stays just the name (sorting, labels).
-            <span style={{ color: theme.color.danger, fontWeight: 600, fontSize: 11 }}>
+            <span style={{ color: theme.color.accent, fontWeight: 600, fontSize: 11 }}>
               ▲ Bottleneck
             </span>
           )}
@@ -212,7 +220,7 @@ function Row<K extends string>({
             {keys.map((k) => (
               <span
                 key={k}
-                title={`${LABELS[k]} ${pct(row[k])}`}
+                title={`${labels[k]} ${pct(row[k])}`}
                 style={{ width: `${row[k]}%`, background: COLORS[k] }}
               />
             ))}

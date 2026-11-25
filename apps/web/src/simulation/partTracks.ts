@@ -50,6 +50,8 @@ export interface PartTracks {
   /** Replaces the tracks with the parts in the line now (animation turned back on). */
   seed(wip: readonly PartInLine[]): void;
   at(t: number): PartPose[];
+  /** Parts waiting at each station's input as of the last `at()` call. */
+  queueLengths(): ReadonlyMap<string, number>;
   clear(): void;
 }
 
@@ -187,6 +189,7 @@ export function createPartTracks(
     }
   };
 
+  let lengths: ReadonlyMap<string, number> = new Map();
   const at = (t: number): PartPose[] => {
     const poses: PartPose[] = [];
     // Waiting parts per station, in arrival order, to assign queue slots.
@@ -237,6 +240,7 @@ export function createPartTracks(
       q.sort((a, b) => a.since - b.since || a.pose.partId - b.pose.partId);
       q.forEach(({ pose: p }, slot) => Object.assign(p, slotAt(slot)));
     }
+    lengths = new Map([...queues].map(([id, q]) => [id, q.length]));
     return poses;
   };
 
@@ -244,6 +248,7 @@ export function createPartTracks(
     ingest,
     seed,
     at,
+    queueLengths: () => lengths,
     clear: () => parts.clear(),
   };
 }
