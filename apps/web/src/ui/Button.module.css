@@ -9,11 +9,13 @@
 }
 .button:hover:not(:disabled) {
   border-color: var(--color-accent);
+  box-shadow: 0 0 10px var(--color-glow);
 }
 .primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-accent-ink);
+  box-shadow: 0 0 12px var(--color-glow);
 }
 .danger {
   color: var(--color-danger);
