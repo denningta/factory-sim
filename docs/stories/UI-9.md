@@ -7,7 +7,7 @@ sprint: 8
 depends_on: [UI-1]
 builder_model: sonnet
 owner: builder
-issue:
+issue: 159
 ---
 
 # UI-9: Dark control-room theme, with a light toggle
