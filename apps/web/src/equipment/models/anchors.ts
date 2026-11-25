@@ -1,7 +1,9 @@
 import type { Vec3 } from './types';
 
-/** Spacing of queue slots (m): a part plus a small gap. Parts are drawn 0.3 m wide. */
-export const SLOT_PITCH = 0.35;
+/** Least spacing of queue slots (m): a part plus a small gap. Parts are drawn 0.27 m wide. */
+export const SLOT_PITCH = 0.3;
+/** Lets a side of exactly n pitches hold n slots despite rounding (0.6 / 0.3 < 2 in floats). */
+const FIT_EPS = 1e-9;
 
 interface SlotArea {
   x0: number;
@@ -20,8 +22,8 @@ interface SlotArea {
  * on the equipment rather than spilling across the floor.
  */
 export function gridSlots(a: SlotArea): (i: number) => Vec3 {
-  const cols = Math.max(1, Math.floor((a.x1 - a.x0) / SLOT_PITCH));
-  const rows = Math.max(1, Math.floor((a.z1 - a.z0) / SLOT_PITCH));
+  const cols = Math.max(1, Math.floor((a.x1 - a.x0) / SLOT_PITCH + FIT_EPS));
+  const rows = Math.max(1, Math.floor((a.z1 - a.z0) / SLOT_PITCH + FIT_EPS));
   const perLevel = cols * rows;
   const dx = (a.x1 - a.x0) / cols;
   const dz = (a.z1 - a.z0) / rows;
