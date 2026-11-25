@@ -76,7 +76,7 @@ export const stateLabel = (state: StationState): string => LABELS[state];
 /** Stack-light segments, bottom to top; exactly one is lit per state. */
 export type LightSegment = 'working' | 'starved' | 'blocked' | 'waiting';
 export const LIGHT_ORDER: readonly LightSegment[] = ['blocked', 'starved', 'working', 'waiting'];
-const SEGMENT_OF: Record<StationState, LightSegment> = {
+export const SEGMENT_OF: Record<StationState, LightSegment> = {
   working: 'working',
   starved: 'starved',
   blocked: 'blocked',

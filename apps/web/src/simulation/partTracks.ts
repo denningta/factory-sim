@@ -3,6 +3,7 @@ import type { LineEvent, PartInLine } from '@factory-sim/sim-engine';
 import { localToPlan, portWorldPosition } from '../layout/ports';
 import { buildModel } from '../equipment/models/registry';
 import type { Vec3 } from '../equipment/models/types';
+import { getTheme } from '../ui/themeStore';
 
 export interface Pt {
   x: number;
@@ -168,7 +169,7 @@ export function createPartTracks(
   const addPart = (partId: number, productId: string, first: Key) =>
     parts.set(partId, {
       id: partId,
-      color: colors.get(productId) ?? '#9ca3af',
+      color: colors.get(productId) ?? getTheme().color.muted,
       keys: [first],
       cursor: 0,
     });

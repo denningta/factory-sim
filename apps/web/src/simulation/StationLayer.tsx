@@ -5,7 +5,13 @@ import type { Equipment } from '@factory-sim/schema';
 import { buildModel } from '../equipment/models/registry';
 import { StationCallouts } from './StationCallouts';
 import type { RunSession } from './runSession';
-import { LIGHT_ORDER, findBottleneck, lightSegments, noStateColor } from './stationStatus';
+import {
+  LIGHT_ORDER,
+  SEGMENT_OF,
+  findBottleneck,
+  lightSegments,
+  noStateColor,
+} from './stationStatus';
 import type { LightSegment } from './stationStatus';
 import { stationUtilization } from './utilization';
 import { getTheme, useTheme } from '../ui/themeStore';
@@ -20,10 +26,19 @@ const SEGMENT_H = 0.16;
 const SEGMENT_R = 0.13;
 
 type LightMaterials = Record<LightSegment, THREE.MeshStandardMaterial>;
-const registry = new Map<string, LightMaterials>();
+interface Mounted {
+  lights: LightMaterials;
+  outline: THREE.MeshBasicMaterial;
+  halo: THREE.MeshBasicMaterial;
+  /** Whether the halo mesh is currently rendered (the station is the bottleneck). */
+  flagged: boolean;
+}
+const registry = new Map<string, Mounted>();
 /** Test hook: the stack-light materials of a mounted station, by segment. */
 export const lightMaterials = (stationId: string): LightMaterials | undefined =>
-  registry.get(stationId);
+  registry.get(stationId)?.lights;
+/** Test hook: outline and halo materials, and whether the halo is drawn. */
+export const markerMaterials = (stationId: string) => registry.get(stationId);
 
 /**
  * Each workstation gets a stack light, a floor outline in its state colour and, if it is the
@@ -103,8 +118,8 @@ function StationMarker({
       new THREE.MeshBasicMaterial({
         color: theme.color.accent,
         transparent: true,
-        opacity: 0.45,
-        blending: THREE.AdditiveBlending,
+        // Normal blending: additive washes out on the light floor.
+        opacity: 0.4,
         depthWrite: false,
       }),
     [theme.color.accent],
@@ -118,12 +133,17 @@ function StationMarker({
     [width, length],
   );
   useEffect(() => {
-    registry.set(station.id, materials);
+    const entry = { lights: materials, outline, halo, flagged: false };
+    registry.set(station.id, entry);
     return () => {
       registry.delete(station.id);
       Object.values(materials).forEach((m) => m.dispose());
     };
-  }, [station.id, materials]);
+  }, [station.id, materials, outline, halo]);
+  useEffect(() => {
+    const entry = registry.get(station.id);
+    if (entry) entry.flagged = flagged;
+  }, [station.id, flagged]);
   useEffect(() => () => outline.dispose(), [outline]);
   useEffect(() => () => halo.dispose(), [halo]);
   useEffect(() => () => outlineGeometry.dispose(), [outlineGeometry]);
@@ -140,9 +160,7 @@ function StationMarker({
       else m.emissive.setScalar(0);
       m.emissiveIntensity = s.lit ? 1.4 : 0;
     }
-    outline.color.set(
-      state ? t.state[lightSegments(state, t).find((s) => s.lit)!.segment].strong : noStateColor(t),
-    );
+    outline.color.set(state ? t.state[SEGMENT_OF[state]].strong : noStateColor(t));
   });
 
   return (

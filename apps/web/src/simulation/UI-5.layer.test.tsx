@@ -19,7 +19,7 @@ vi.mock('@react-three/fiber', () => ({
   useThree: (sel: (s: unknown) => unknown) => sel(fakeState),
 }));
 
-import { StationLayer, lightMaterials } from './StationLayer';
+import { StationLayer, lightMaterials, markerMaterials } from './StationLayer';
 import { Legend } from './Legend';
 
 describe('UI-5 AC8: per-frame colour writes go through refs, not React state', () => {
@@ -46,6 +46,33 @@ describe('UI-5 AC8: per-frame colour writes go through refs, not React state', (
       new THREE.Color(dark.state.working.strong).getHexString(),
     );
     expect(commits).toBe(before);
+  });
+});
+
+describe('UI-5 AC3/AC6: floor outline and bottleneck halo', () => {
+  it('outline takes the strong state colour; the flagged station gets an accent halo and no ring', () => {
+    const { project } = realLine();
+    const r = createRunSession(project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!r.ok) throw new Error('compile');
+    const station = project.equipment.find((e) => e.behavior === 'workstation')!;
+    spyConsole();
+    const { container } = render(<StationLayer session={r.session} stations={[station]} />);
+    expect(markerMaterials(station.id)!.flagged).toBe(false);
+    act(() => {
+      // Past the first job, so the station has worked for a while and is the constraint.
+      for (let i = 0; i < 400 && r.session.now < 20; i++) r.session.step();
+    });
+    act(() => frames.forEach((cb) => cb(fakeState, 0.016)));
+    const m = markerMaterials(station.id)!;
+    const state = r.session.stationStates().get(station.id)!;
+    const name = state === 'idle' ? 'waiting' : state;
+    expect(m.outline.color.getHexString()).toBe(
+      new THREE.Color(dark.state[name].strong).getHexString(),
+    );
+    expect(m.flagged).toBe(true); // it worked, so it is the constraint
+    expect(m.halo.color.getHexString()).toBe(new THREE.Color(dark.color.accent).getHexString());
+    expect(m.halo.blending).toBe(THREE.NormalBlending);
+    expect(container.querySelector('ringgeometry')).toBeNull();
   });
 });
 

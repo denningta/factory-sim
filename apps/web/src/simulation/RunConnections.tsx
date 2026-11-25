@@ -8,6 +8,14 @@ import type { RunSession } from './runSession';
 import { getTheme } from '../ui/themeStore';
 
 const Y = 0.1;
+type Mats = {
+  flow: THREE.MeshBasicMaterial;
+  glow: THREE.MeshBasicMaterial;
+  core: THREE.MeshBasicMaterial;
+};
+const registry = new Map<string, Mats>();
+/** Test hook: the materials of a mounted connection line. */
+export const connectionMaterials = (connectionId: string) => registry.get(connectionId);
 const WIDTH = 0.16;
 const GLOW_WIDTH = 0.5;
 /** Pattern length (m) and flow speed (m/s). */
@@ -38,11 +46,13 @@ function Line({
   from,
   to,
   fromId,
+  id,
 }: {
   session: RunSession;
   from: { x: number; y: number };
   to: { x: number; y: number };
   fromId: string;
+  id: string;
 }) {
   const dx = to.x - from.x;
   const dz = to.y - from.y;
@@ -53,13 +63,11 @@ function Line({
     const flow = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
-      blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
     const glow = new THREE.MeshBasicMaterial({
       transparent: true,
-      opacity: 0.22,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.3,
       depthWrite: false,
     });
     const core = new THREE.MeshBasicMaterial();
@@ -74,6 +82,10 @@ function Line({
       glowG: plane(GLOW_WIDTH),
     };
   }, [len]);
+  useEffect(() => {
+    registry.set(id, parts);
+    return () => void registry.delete(id);
+  }, [id, parts]);
   useEffect(
     () => () => {
       parts.texture.dispose();
@@ -127,7 +139,14 @@ export function RunConnections({
         const a = point(c.from);
         const b = point(c.to);
         return a && b ? (
-          <Line key={c.id} session={session} from={a} to={b} fromId={c.from.equipmentId} />
+          <Line
+            key={c.id}
+            session={session}
+            from={a}
+            to={b}
+            fromId={c.from.equipmentId}
+            id={c.id}
+          />
         ) : null;
       })}
     </>

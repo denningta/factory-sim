@@ -85,7 +85,12 @@ export function StationCallouts({
         const texture = new THREE.CanvasTexture(canvas);
         texture.colorSpace = THREE.SRGBColorSpace;
         const sprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }),
+          new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false,
+            toneMapped: false,
+          }),
         );
         sprite.renderOrder = 10;
         sprite.frustumCulled = false;
@@ -135,6 +140,7 @@ export function StationCallouts({
         if (key === card.key) continue;
         card.key = key;
         const t = getTheme();
+        (card.leader.material as THREE.LineBasicMaterial).color.set(t.color.panelBorder);
         const lit = lightSegments(state, t).find((s) => s.lit);
         draw(card, text, lit?.color ?? t.color.muted, id === bottleneckId);
       }
