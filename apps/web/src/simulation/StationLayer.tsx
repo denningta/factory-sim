@@ -93,3 +93,9 @@ function StationMarker({
     </group>
   );
 }
+
+/** Test hook: the stack-light materials of a mounted station, by segment. */
+export const lightMaterials = (
+  _stationId: string,
+): Record<'working' | 'starved' | 'blocked' | 'waiting', THREE.MeshStandardMaterial> | undefined =>
+  undefined;

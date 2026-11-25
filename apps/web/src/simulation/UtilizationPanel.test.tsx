@@ -102,7 +102,12 @@ describe('AN-2 polish', () => {
       within(screen.getByRole('list', { name: n }))
         .getAllByRole('listitem')
         .map((x) => x.textContent);
-    expect(li('Station utilization legend')).toEqual(['Working', 'Starved', 'Blocked', 'Idle']);
+    expect(li('Station utilization legend')).toEqual([
+      'Working',
+      'Starved',
+      'Blocked',
+      'Waiting for tech',
+    ]);
     expect(li('Technician utilization legend')).toEqual(['Working', 'Walking', 'Idle']);
   });
 

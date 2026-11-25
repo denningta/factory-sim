@@ -63,3 +63,17 @@ export function bottleneckSummary(
   const row = rows.find((r) => r.id === id);
   return row ? { name: row.name, working: row.working } : null;
 }
+
+/** What the user sees for an engine state: the engine's `idle` is "Waiting for tech". */
+export const stateLabel = (_state: StationState): string => {
+  throw new Error('not implemented');
+};
+
+/** Stack-light segments, bottom to top; exactly one is lit per state. */
+export type LightSegment = 'working' | 'starved' | 'blocked' | 'waiting';
+export const lightSegments = (
+  _state: StationState | undefined,
+  _t: Theme = getTheme(),
+): { segment: LightSegment; color: string; lit: boolean }[] => {
+  throw new Error('not implemented');
+};
