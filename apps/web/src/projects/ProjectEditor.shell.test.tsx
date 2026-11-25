@@ -58,7 +58,8 @@ describe('UI-2 AC1: top bar', () => {
   it('shows the mark, projects link, name, tabs in order, status and a primary Run button', async () => {
     render(<ProjectEditor id="p1" onClose={() => {}} />);
     const t = await tabs();
-    expect(t.getAllByRole('tab').map((x) => x.textContent)).toEqual([
+    // An empty project has one open problem (no products), so that tab also carries a badge.
+    expect(t.getAllByRole('tab').map((x) => x.firstChild?.textContent?.trim())).toEqual([
       'Layout',
       'Products & routings',
       'Simulate',
@@ -77,7 +78,8 @@ describe('UI-2 AC2: Run simulation', () => {
     render(<ProjectEditor id="p1" onClose={() => {}} />);
     const run = await screen.findByRole('button', { name: 'Run simulation' });
     expect(run).toHaveProperty('disabled', true);
-    expect(run).toHaveProperty('description', expect.stringContaining('at least one product'));
+    const desc = document.getElementById(run.getAttribute('aria-describedby') ?? '');
+    expect(desc?.textContent).toContain('at least one product');
   });
   it('opens Simulate and starts playback when there are no issues', async () => {
     render(<ProjectEditor id="p1" onClose={() => {}} />);

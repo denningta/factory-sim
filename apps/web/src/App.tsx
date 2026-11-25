@@ -4,6 +4,7 @@ import { api } from './api/client';
 import { AccountPage } from './auth/AccountPage';
 import { SignIn } from './auth/SignIn';
 import { ProjectEditor } from './projects/ProjectEditor';
+import { parseHash } from './projects/shell';
 import { ProjectList, type ProjectsApi } from './projects/ProjectList';
 
 const projectsApi: ProjectsApi = {
@@ -13,7 +14,7 @@ const projectsApi: ProjectsApi = {
   deleteProject: api.deleteProject,
 };
 
-const idFromHash = () => /^#\/p\/([\w-]+)$/.exec(location.hash)?.[1] ?? null;
+const idFromHash = () => parseHash(location.hash)?.id ?? null;
 
 /** Shell: sign in → project list → editor. The open project lives in the URL hash so reload keeps it. */
 export function App() {

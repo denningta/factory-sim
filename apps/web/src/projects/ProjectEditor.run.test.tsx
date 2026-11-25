@@ -16,6 +16,7 @@ vi.mock('../simulation/TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('../simulation/PartLayer', () => ({ PartLayer: () => <div /> }));
 
 beforeEach(() => {
+  location.hash = ''; // the open tab is kept in the hash, so don't leak it between tests
   useEditorStore.setState(useEditorStore.getInitialState(), true);
   vi.spyOn(api, 'getProject').mockResolvedValue({
     id: 'p1',
