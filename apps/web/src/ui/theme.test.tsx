@@ -123,6 +123,41 @@ const dist = (a: string, b: string) => {
   return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
 };
 
+describe('UI-9 AC3: scene components carry no colour literals and the canvas is never keyed', () => {
+  const scene = import.meta.glob<string>(
+    [
+      '../layout/FloorScene.tsx',
+      '../layout/EquipmentLayer.tsx',
+      '../layout/ConnectionLayer.tsx',
+      '../layout/instanceTint.ts',
+      '../simulation/*Layer.tsx',
+      '../equipment/EquipmentModel.tsx',
+      '../simulation/stationStatus.ts',
+    ],
+    { as: 'raw', eager: true },
+  );
+  it('reads every colour from the theme', () => {
+    expect(Object.keys(scene).length).toBeGreaterThanOrEqual(7);
+    const hits = Object.entries(scene).flatMap(([f, text]) =>
+      text
+        .split('\n')
+        // ROLE_SPECS keeps the fixed colours of roles the theme doesn't own (glass, screen).
+        .filter(
+          (l) =>
+            /['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(/.test(l) &&
+            !/ROLE_SPECS|^\s*(frame|body|accent|dark|glass|screen):/.test(l),
+        )
+        .map((l) => `${f}: ${l.trim()}`),
+    );
+    expect(hits).toEqual([]);
+  });
+  it('never gives <Canvas> a key, so a theme switch cannot remount it', () => {
+    const floor = scene['../layout/FloorScene.tsx']!;
+    expect(floor).toMatch(/<Canvas[\s>]/);
+    expect(/<Canvas[^>]*\bkey=/.test(floor)).toBe(false);
+  });
+});
+
 describe.each(Object.entries(themes) as [string, Theme][])('UI-9 AC4: contrast in %s', (_n, t) => {
   const surfaces = [t.color.bg, t.color.surface, t.color.surface2, t.color.raised];
   it('text and muted text are ≥ 4.5:1 on every surface', () => {
@@ -166,7 +201,7 @@ describe('UI-9 AC5: no hard-coded colour in the migrated screens', () => {
     const hits = files.flatMap(([f, text]) =>
       text
         .split('\n')
-        .filter((l) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(l) && !l.includes('var(--'))
+        .filter((l) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(l.replace(/var\([^)]*\)/g, '')))
         .map((l) => `${f}: ${l.trim()}`),
     );
     expect(hits).toEqual([]);

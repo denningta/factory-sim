@@ -147,7 +147,10 @@ export function cssVariables(theme: Theme = tokens): Record<string, string> {
   const vars: Record<string, string> = {};
   const kebab = (k: string) => k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
   for (const [k, v] of Object.entries(theme.color)) vars[`--color-${kebab(k)}`] = v;
-  for (const [k, v] of Object.entries(theme.scene)) vars[`--scene-${kebab(k)}`] = String(v);
+  // Colours only: light intensities are numbers for three.js, and parts is nested.
+  for (const [k, v] of Object.entries(theme.scene))
+    if (typeof v === 'string') vars[`--scene-${kebab(k)}`] = v;
+  for (const [k, v] of Object.entries(theme.scene.parts)) vars[`--scene-part-${k}`] = v;
   for (const [k, v] of Object.entries(theme.space)) vars[`--space-${k}`] = px(v);
   for (const [k, v] of Object.entries(theme.radius)) vars[`--radius-${k}`] = px(v);
   for (const [k, v] of Object.entries(theme.font.size)) vars[`--font-size-${k}`] = px(v);

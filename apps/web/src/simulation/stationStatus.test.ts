@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LineEvent } from '@factory-sim/sim-engine';
-import { tokens } from '../ui/tokens';
+import { dark } from '../ui/tokens';
 import {
   createStationStates,
   findBottleneck,
@@ -16,13 +16,13 @@ const ev = (t: number, stationId: string, state: 'working' | 'starved' | 'blocke
 
 describe('AN-3 AC1: live colors: working green, starved yellow, blocked red, idle gray', () => {
   it('takes the colors from the design tokens (UI-1)', () => {
-    expect(stateColors()).toEqual({
-      working: tokens.state.working.tint,
-      starved: tokens.state.starved.tint,
-      blocked: tokens.state.blocked.tint,
-      idle: tokens.state.waiting.tint,
+    expect(stateColors(dark)).toEqual({
+      working: dark.state.working.tint,
+      starved: dark.state.starved.tint,
+      blocked: dark.state.blocked.tint,
+      idle: dark.state.waiting.tint,
     });
-    expect(noStateColor()).toBe(tokens.color.border);
+    expect(noStateColor()).toBe(dark.color.border);
   });
 
   it('tracks the latest state of each station from the engine events', () => {
