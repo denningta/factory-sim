@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   BASE_EQUIPMENT_TYPES,
@@ -8,7 +8,7 @@ import {
   instantiate,
   type Equipment,
 } from '@factory-sim/schema';
-import { api } from '../api/client';
+import { api, ApiRequestError } from '../api/client';
 import { useEditorStore } from '../layout/editorStore';
 import { ProjectEditor } from './ProjectEditor';
 
@@ -130,6 +130,23 @@ describe('UI-2 AC4: tab in the URL', () => {
   });
 });
 
+describe('UI-2 AC4: Back keeps the screen', () => {
+  it('follows the hash when it changes after mount', async () => {
+    render(<ProjectEditor id="p1" onClose={() => {}} />);
+    expect(await screen.findByText('layout screen')).toBeTruthy();
+    act(() => {
+      location.hash = '#/p/p1/results';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(await screen.findByText('Run a simulation to see results')).toBeTruthy();
+    act(() => {
+      location.hash = '#/p/p1';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    expect(await screen.findByText('layout screen')).toBeTruthy();
+  });
+});
+
 describe('UI-2 AC5: Results tab', () => {
   it('shows an empty state until UI-6', async () => {
     render(<ProjectEditor id="p1" onClose={() => {}} />);
@@ -143,5 +160,20 @@ describe('UI-2 AC6: save status uses Badge tones', () => {
     render(<ProjectEditor id="p1" onClose={() => {}} />);
     const status = await screen.findByRole('status');
     expect(status.className).toMatch(/badge/);
+    expect(status.className).toMatch(/muted/); // saved
+  });
+  it('unsaved is neutral, a conflict is danger', async () => {
+    vi.spyOn(api, 'updateProject').mockRejectedValue(new ApiRequestError('conflict', 'Changed'));
+    render(<ProjectEditor id="p1" onClose={() => {}} />);
+    await screen.findByRole('status');
+    useEditorStore.getState().setClearance(0.5);
+    await waitFor(() => expect(screen.getByRole('status').className).toMatch(/neutral/));
+    await waitFor(() => expect(screen.getByRole('status').className).toMatch(/danger/), {
+      timeout: 5000,
+    });
+  });
+  it('the theme toggle is in the top bar', async () => {
+    render(<ProjectEditor id="p1" onClose={() => {}} />);
+    expect(await screen.findByRole('button', { name: /theme/i })).toBeTruthy();
   });
 });

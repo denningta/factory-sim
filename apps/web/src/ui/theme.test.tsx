@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ProjectList } from '../projects/ProjectList';
+import { ThemeToggle } from './ThemeToggle';
 import { roleColor } from '../equipment/models/materials';
 import { plateColor } from '../simulation/stationStatus';
 import { dark, light, themes, type StateName, type Theme } from './tokens';
@@ -44,13 +44,6 @@ describe('UI-9 AC1: dark and light themes with the same keys', () => {
 });
 
 describe('UI-9 AC2: theme toggle', () => {
-  const api = {
-    listProjects: async () => [],
-    createProject: vi.fn(),
-    renameProject: vi.fn(),
-    deleteProject: vi.fn(),
-  };
-
   it('a new browser starts dark', () => {
     expect(useThemeStore.getState().mode).toBe('dark');
     expect(getTheme()).toBe(dark);
@@ -58,7 +51,7 @@ describe('UI-9 AC2: theme toggle', () => {
 
   it('switches the whole app without a reload and remembers the choice', async () => {
     const stop = startThemeSync(document.documentElement);
-    render(<ProjectList api={api} onOpen={() => {}} onAccount={() => {}} />);
+    render(<ThemeToggle />);
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(document.documentElement.style.getPropertyValue('--color-bg')).toBe(dark.color.bg);
     await userEvent.click(screen.getByRole('button', { name: /light theme/i }));
@@ -141,12 +134,7 @@ describe('UI-9 AC3: scene components carry no colour literals and the canvas is 
     const hits = Object.entries(scene).flatMap(([f, text]) =>
       text
         .split('\n')
-        // ROLE_SPECS keeps the fixed colours of roles the theme doesn't own (glass, screen).
-        .filter(
-          (l) =>
-            /['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(/.test(l) &&
-            !/ROLE_SPECS|^\s*(frame|body|accent|dark|glass|screen):/.test(l),
-        )
+        .filter((l) => /['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(|0x[0-9a-fA-F]{6}/.test(l))
         .map((l) => `${f}: ${l.trim()}`),
     );
     expect(hits).toEqual([]);

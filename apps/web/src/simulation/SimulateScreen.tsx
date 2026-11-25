@@ -61,6 +61,10 @@ export function SimulateScreen({
     () => createRunSession(currentProject(), applied.options),
     [applied],
   );
+  // A run that can't start never consumes the request; clear it so playback doesn't start unasked later.
+  useEffect(() => {
+    if (!result.ok && playRequest) onPlayRequestHandled?.();
+  }, [result.ok, playRequest, onPlayRequestHandled]);
   const apply = (next: RunSettings, shiftLength: number) => {
     useEditorStore.getState().applyRun(toProjectRun(next), shiftLength);
     setApplied(toRunOptions(next, shiftLength));

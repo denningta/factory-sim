@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from 'react';
 import styles from './Badge.module.css';
 
-export type BadgeTone = 'neutral' | 'accent' | 'danger' | 'warning';
+export type BadgeTone = 'muted' | 'neutral' | 'accent' | 'danger' | 'warning';
 
 export function Badge({
   tone = 'neutral',

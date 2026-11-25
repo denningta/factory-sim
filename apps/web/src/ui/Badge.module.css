@@ -7,6 +7,14 @@
   border: 1px solid var(--color-border);
   color: var(--color-muted);
 }
+/* Same look as the base: quiet; neutral is the stronger of the two. */
+.muted {
+  color: var(--color-muted);
+}
+.neutral {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
 .accent {
   color: var(--color-accent);
   border-color: var(--color-accent);

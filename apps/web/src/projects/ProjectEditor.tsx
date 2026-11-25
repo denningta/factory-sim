@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
 import { SignIn } from '../auth/SignIn';
-import { Badge, Button, EmptyState, Tabs, type BadgeTone } from '../ui';
+import { Badge, Button, EmptyState, Tabs, ThemeToggle, type BadgeTone } from '../ui';
 import { preRunIssues } from '../products/preRunIssues';
 import { Editor } from '../Editor';
 import { SimulateScreen } from '../simulation/SimulateScreen';
@@ -28,7 +28,7 @@ const LABEL: Record<Exclude<SaveStatus, 'stopped'>, string> = {
 
 const TONE: Record<SaveStatus, BadgeTone> = {
   signin: 'danger',
-  saved: 'neutral',
+  saved: 'muted',
   unsaved: 'neutral',
   saving: 'neutral',
   error: 'danger',
@@ -191,6 +191,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           <span className={styles.projectName}>{name}</span>
           <Tabs
             label="Screens"
+            idPrefix="screens"
             className={styles.tabs}
             value={tab}
             onChange={setTab}
@@ -202,6 +203,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             ]}
           />
           <div className={styles.right}>
+            <ThemeToggle />
             <Badge role="status" tone={TONE[status]}>
               {status === 'stopped'
                 ? `Not saved: ${stop?.message ?? 'saving stopped'}`
@@ -229,7 +231,13 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           </div>
         </header>
         {/* After saving has stopped, further edits could never be saved, so lock the editor. */}
-        <div inert={locked} className={locked ? styles.bodyLocked : styles.body}>
+        <div
+          inert={locked}
+          role="tabpanel"
+          id="screens-panel"
+          aria-labelledby={`screens-tab-${tab}`}
+          className={locked ? styles.bodyLocked : styles.body}
+        >
           {tab === 'layout' ? (
             <Editor readOnly={locked} />
           ) : tab === 'products' ? (

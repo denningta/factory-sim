@@ -86,6 +86,31 @@ describe('UI-1 AC2: base components expose an accessible role and name', () => {
     expect(screen.getByText('body', { selector: 'p' }).parentElement!.hidden).toBe(true);
   });
 
+  it('Tabs: arrow keys move selection and focus; only the selected tab is tabbable; aria-controls set', async () => {
+    const onChange = vi.fn();
+    render(
+      <Tabs
+        label="T"
+        idPrefix="t"
+        value="a"
+        onChange={onChange}
+        items={[
+          { id: 'a', label: 'A' },
+          { id: 'b', label: 'B' },
+        ]}
+      />,
+    );
+    const [a, b] = screen.getAllByRole('tab');
+    expect(a!.getAttribute('tabindex')).toBe('0');
+    expect(b!.getAttribute('tabindex')).toBe('-1');
+    expect(a!.getAttribute('aria-controls')).toBe('t-panel');
+    a!.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenCalledWith('b');
+    expect(document.activeElement).toBe(b);
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenLastCalledWith('b'); // value prop is controlled and still "a"
+  });
   it('Tabs: a tablist of tabs, the selected one flagged, onChange on click', async () => {
     const onChange = vi.fn();
     render(
