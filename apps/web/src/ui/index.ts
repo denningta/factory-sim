@@ -6,3 +6,4 @@ export { StatTile } from './StatTile';
 export { Legend } from './Legend';
 export { Badge } from './Badge';
 export { EmptyState } from './EmptyState';
+export { ThemeToggle } from './ThemeToggle';

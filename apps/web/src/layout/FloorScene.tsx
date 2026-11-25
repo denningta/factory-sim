@@ -9,20 +9,22 @@ import { EquipmentLayer, FloorInteraction, LibraryDropTarget } from './Equipment
 import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout } from './cameraFit';
 import { controlSettings } from './viewControls';
 import { formatLength } from './units';
+import { useTheme } from '../ui/themeStore';
 
 /** Floor plan (x, y) maps to three's ground plane (x, z); y is up. */
 function GridLines() {
   const floor = useEditorStore((s) => s.floor);
+  const scene = useTheme().scene;
   const geometry = useMemo(() => buildGridGeometry(floor), [floor]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[floor.width / 2, -0.01, floor.length / 2]}>
         <planeGeometry args={[floor.width, floor.length]} />
-        <meshBasicMaterial color="#f4f5f7" />
+        <meshBasicMaterial color={scene.floor} />
       </mesh>
       <lineSegments geometry={geometry}>
-        <lineBasicMaterial color="#c3c8d0" />
+        <lineBasicMaterial color={scene.grid} />
       </lineSegments>
     </>
   );
@@ -41,6 +43,7 @@ export function TextLabel({
   position: Vec3;
   height: number;
 }) {
+  const ink = useTheme().scene.label;
   const { texture, aspect } = useMemo(() => {
     const canvas = document.createElement('canvas');
     const px = 48;
@@ -50,13 +53,13 @@ export function TextLabel({
     canvas.width = Math.ceil(ctx.measureText(text).width) + 8;
     canvas.height = px + 12;
     ctx.font = `${px}px sans-serif`; // resizing the canvas resets the context
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = ink;
     ctx.textBaseline = 'middle';
     ctx.fillText(text, 4, canvas.height / 2);
     const t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     return { texture: t, aspect: canvas.width / canvas.height };
-  }, [text]);
+  }, [text, ink]);
   useEffect(() => () => texture?.dispose(), [texture]);
   if (!texture) return null;
   return (
@@ -159,16 +162,18 @@ export function FloorScene({
   interactive?: boolean;
 }) {
   const viewMode = useEditorStore((s) => s.viewMode);
+  const scene = useTheme().scene;
   return (
     <Canvas>
+      <color attach="background" args={[scene.background]} />
       {viewMode === '3d' ? (
         <PerspectiveCamera makeDefault fov={45} far={5000} />
       ) : (
         // up = -z so plan +y runs down the screen, as in the 3D plan orientation.
         <OrthographicCamera makeDefault up={[0, 0, -1]} near={0.1} far={5000} />
       )}
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[10, 20, 8]} intensity={2} />
+      <ambientLight intensity={scene.ambient} />
+      <directionalLight position={[10, 20, 8]} intensity={scene.key} />
       <GridLines />
       <DimensionLabels />
       <EquipmentLayer />

@@ -4,14 +4,13 @@ import * as THREE from 'three';
 import type { Equipment } from '@factory-sim/schema';
 import { TextLabel } from '../layout/FloorScene';
 import type { RunSession } from './runSession';
-import { findBottleneck, NO_STATE_COLOR, plateColor } from './stationStatus';
+import { findBottleneck, noStateColor, plateColor } from './stationStatus';
 import { stationUtilization } from './utilization';
+import { useTheme } from '../ui/themeStore';
 
 /** Lifted off the machine top so the plate never z-fights with it. */
 const LIFT = 0.04;
 const PLATE_THICKNESS = 0.12;
-// Dark, not red: red is the blocked plate color.
-const BOTTLENECK_COLOR = '#1f2937';
 /** The flag is a text figure like the KPIs: a few updates a second, not per frame. */
 const FLAG_INTERVAL_MS = 200;
 
@@ -63,7 +62,9 @@ function StationMarker({
   flagged: boolean;
 }) {
   const { width, length } = station.footprint;
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: NO_STATE_COLOR }), []);
+  // The accent ring, not red: red is the blocked plate colour.
+  const accent = useTheme().color.accent;
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: noStateColor() }), []);
   useEffect(() => () => material.dispose(), [material]);
   useFrame(() => {
     const state = session.stationStates().get(station.id);
@@ -84,7 +85,7 @@ function StationMarker({
             <ringGeometry
               args={[Math.hypot(width, length) / 2 + 0.1, Math.hypot(width, length) / 2 + 0.3, 48]}
             />
-            <meshBasicMaterial color={BOTTLENECK_COLOR} side={THREE.DoubleSide} />
+            <meshBasicMaterial color={accent} side={THREE.DoubleSide} />
           </mesh>
           <TextLabel text="BOTTLENECK" position={[0, top + 1.6, 0]} height={0.7} />
         </>

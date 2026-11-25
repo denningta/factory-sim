@@ -8,6 +8,7 @@ import { dragTargets } from './selection';
 import { instanceTint } from './instanceTint';
 import { findIssues } from './overlaps';
 import type { Equipment } from '@factory-sim/schema';
+import { useTheme, useThemeStore } from '../ui/themeStore';
 import { roleColor, roleMaterial } from '../equipment/models/materials';
 import { writePartMatrix } from '../equipment/models/instances';
 import { UnitGeometry } from '../equipment/EquipmentModel';
@@ -62,6 +63,7 @@ const sameSplit = (a: number[][] | undefined, b: number[][]) =>
  * changes LOD, so no React state changes per frame or pointer move.
  */
 export function EquipmentLayer() {
+  const mode = useThemeStore((s) => s.mode);
   const equipment = useEditorStore((s) => s.equipment);
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const gl = useThree((s) => s.gl);
@@ -137,7 +139,7 @@ export function EquipmentLayer() {
     splits.current.clear();
     updateSplits();
     write();
-  }, [groups, selectedIds, issues]);
+  }, [groups, selectedIds, issues, mode]);
   useFrame(() => {
     if (updateSplits()) write();
   });
@@ -229,6 +231,7 @@ export function EquipmentLayer() {
 
 /** Drag on empty floor draws a selection box; a plain click clears the selection. */
 export function FloorInteraction() {
+  const accent = useTheme().color.accent;
   const gl = useThree((s) => s.gl);
   const getThree = useThree((s) => s.get);
   const box = useRef<THREE.Mesh>(null);
@@ -281,7 +284,7 @@ export function FloorInteraction() {
       </mesh>
       <mesh ref={box} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={2}>
         <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color="#2563eb" transparent opacity={0.2} depthTest={false} />
+        <meshBasicMaterial color={accent} transparent opacity={0.2} depthTest={false} />
       </mesh>
     </>
   );

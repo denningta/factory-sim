@@ -3,13 +3,11 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { TextLabel } from '../layout/FloorScene';
 import type { RunSession } from './runSession';
-import { tokens } from '../ui/tokens';
+import { getTheme } from '../ui/themeStore';
 
 const BODY_HEIGHT = 1.7;
 const BODY_RADIUS = 0.3;
 const LABEL_HEIGHT = 1.1;
-const WALKING_COLOR = tokens.state.walking.strong;
-const STANDING_COLOR = '#475569';
 
 /**
  * A tech is a capsule with its name floating above, drawn at the sim clock's pose (like parts,
@@ -29,7 +27,10 @@ export function TechLayer({ session }: { session: RunSession }) {
 
 function TechMarker({ session, id, name }: { session: RunSession; id: string; name: string }) {
   const group = useRef<THREE.Group>(null);
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: STANDING_COLOR }), []);
+  const material = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: getTheme().state.waiting.strong }),
+    [],
+  );
   useEffect(() => () => material.dispose(), [material]);
   useFrame(() => {
     const pose = session.techPoses(session.now).find((p) => p.techId === id);
@@ -37,7 +38,8 @@ function TechMarker({ session, id, name }: { session: RunSession; id: string; na
     group.current.visible = !!pose;
     if (!pose) return;
     group.current.position.set(pose.x, 0, pose.z);
-    material.color.set(pose.state === 'walking' ? WALKING_COLOR : STANDING_COLOR);
+    const { state } = getTheme();
+    material.color.set(pose.state === 'walking' ? state.walking.strong : state.waiting.strong);
   });
   return (
     <group ref={group}>

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { EquipmentType } from '@factory-sim/schema';
 import { unitGeometryArgs } from '../layout/equipmentGroups';
 import { writePartMatrix } from './models/instances';
+import { useTheme, useThemeStore } from '../ui/themeStore';
 import { roleColor, roleMaterial } from './models/materials';
 import { buildModel, type ModelSource } from './models/registry';
 import type { ModelPart } from './models/types';
@@ -21,6 +22,7 @@ export type PreviewType = ModelSource & Pick<EquipmentType, 'color'>;
 /** One part drawn the way the floor draws it: a one-slot instanced mesh, shared role material. */
 function PreviewPart({ part, color }: { part: ModelPart; color: string }) {
   const ref = useRef<THREE.InstancedMesh>(null);
+  const mode = useThemeStore((s) => s.mode);
   useLayoutEffect(() => {
     const m = ref.current;
     if (!m) return;
@@ -29,7 +31,7 @@ function PreviewPart({ part, color }: { part: ModelPart; color: string }) {
     m.instanceMatrix.needsUpdate = true;
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.computeBoundingSphere();
-  }, [part, color]);
+  }, [part, color, mode]);
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, 1]} material={roleMaterial(part.role)}>
       <UnitGeometry part={part} />
@@ -53,9 +55,10 @@ export function EquipmentModel({ type }: { type: PreviewType }) {
 export function ModelPreview({ type, label }: { type: PreviewType; label?: string }) {
   const reach = Math.max(type.footprint.width, type.footprint.length, type.height);
   const id = buildModel(type).model.id;
+  const floor = useTheme().scene.floor;
   return (
     <div
-      style={{ height: 200, background: '#f4f5f7' }}
+      style={{ height: 200, background: floor }}
       aria-label={label ?? '3D preview'}
       data-model={id}
     >
