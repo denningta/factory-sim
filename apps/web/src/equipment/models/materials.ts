@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { MaterialRole } from './types';
+import { getTheme } from '../../ui/themeStore';
 
 export interface RoleSpec {
   /** Ignored for `body`, which takes the equipment's color. */
@@ -20,9 +21,14 @@ export const ROLE_SPECS: Record<MaterialRole, RoleSpec> = {
   screen: { color: '#1e3a5f', roughness: 0.3, metalness: 0, emissive: '#1d4ed8' },
 };
 
-/** A part's base color: the equipment's for `body`, the role's own otherwise. */
+/** A part's base color: the equipment's for `body`, the active theme's or the role's own otherwise. */
 export function roleColor(role: MaterialRole, bodyColor: string): string {
-  return role === 'body' ? bodyColor : ROLE_SPECS[role].color;
+  if (role === 'body') return bodyColor;
+  // Theme-owned roles follow the active theme; the rest keep their fixed colour.
+  const parts = getTheme().scene.parts;
+  return role === 'frame' || role === 'accent' || role === 'dark'
+    ? parts[role]
+    : ROLE_SPECS[role].color;
 }
 
 const cache = new Map<MaterialRole, THREE.MeshStandardMaterial>();

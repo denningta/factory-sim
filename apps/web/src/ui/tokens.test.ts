@@ -32,7 +32,7 @@ describe('UI-1 AC1: one token module', () => {
 
   it('uses the wireframe palette for the light strong state colours', () => {
     expect(light.state.working.strong).toBe('#1d9a55');
-    expect(light.state.starved.strong).toBe('#d9a21b');
+    expect(light.state.starved.strong).toBe('#a87500');
     expect(light.state.blocked.strong).toBe('#d43a3a');
     expect(light.state.waiting.strong).toBe('#8a94a3');
     expect(light.state.walking.strong).toBe('#7b2fbf');

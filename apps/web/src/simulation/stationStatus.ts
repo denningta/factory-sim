@@ -1,19 +1,20 @@
 import type { LineEvent, StationState } from '@factory-sim/sim-engine';
-import { tokens } from '../ui/tokens';
+import { getTheme } from '../ui/themeStore';
+import type { Theme } from '../ui/tokens';
 
 /** Station-state fills (tints) from the design tokens: working green, starved yellow, blocked red, idle gray. */
-export const STATE_COLORS: Record<StationState, string> = {
-  working: tokens.state.working.tint,
-  starved: tokens.state.starved.tint,
-  blocked: tokens.state.blocked.tint,
-  idle: tokens.state.waiting.tint,
-};
+export const stateColors = (t: Theme = getTheme()): Record<StationState, string> => ({
+  working: t.state.working.tint,
+  starved: t.state.starved.tint,
+  blocked: t.state.blocked.tint,
+  idle: t.state.waiting.tint,
+});
 
 /** Neutral until the engine has reported a state for the station. */
-export const NO_STATE_COLOR = tokens.color.border;
+export const noStateColor = (t: Theme = getTheme()): string => t.color.border;
 
 export const plateColor = (state: StationState | undefined): string =>
-  state ? STATE_COLORS[state] : NO_STATE_COLOR;
+  state ? stateColors()[state] : noStateColor();
 
 export interface StationStates {
   /** Appends engine events (time order); only `stationState` events matter. */

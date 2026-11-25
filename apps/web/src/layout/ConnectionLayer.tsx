@@ -3,11 +3,9 @@ import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Equipment, PortRef } from '@factory-sim/schema';
 import { useEditorStore } from './editorStore';
+import { useTheme } from '../ui/themeStore';
 import { hideDragged, portWorldPosition } from './ports';
 
-const FLOW = '#475569';
-const SELECTED = '#2563eb';
-const PENDING = '#f59e0b';
 const ARROW_Y = 0.08;
 const PORT_LIFT = 0.1;
 
@@ -74,6 +72,7 @@ export function ConnectionLayer() {
   );
   const selectedId = useEditorStore((s) => s.selectedConnectionId);
   const pending = useEditorStore((s) => s.pendingFrom);
+  const theme = useTheme();
 
   const onPort = (ref: PortRef) => (e: ThreeEvent<PointerEvent>) => {
     if (e.button !== 0) return;
@@ -92,7 +91,7 @@ export function ConnectionLayer() {
             key={c.id}
             from={a}
             to={b}
-            color={c.id === selectedId ? SELECTED : FLOW}
+            color={c.id === selectedId ? theme.color.accent : theme.scene.flow}
             onPick={(e) => {
               if (e.button !== 0) return;
               e.stopPropagation();
@@ -118,7 +117,13 @@ export function ConnectionLayer() {
               <sphereGeometry args={[0.28, 16, 12]} />
               <meshBasicMaterial
                 depthTest={false}
-                color={active ? PENDING : p.kind === 'output' ? '#16a34a' : '#dc2626'}
+                color={
+                  active
+                    ? theme.color.warning
+                    : p.kind === 'output'
+                      ? theme.state.working.strong
+                      : theme.state.blocked.strong
+                }
               />
             </mesh>
           );

@@ -4,9 +4,9 @@ import { tokens } from '../ui/tokens';
 import {
   createStationStates,
   findBottleneck,
-  NO_STATE_COLOR,
+  noStateColor,
   plateColor,
-  STATE_COLORS,
+  stateColors,
 } from './stationStatus';
 import { createRunSession } from './runSession';
 import { realLine } from './testLine';
@@ -16,13 +16,13 @@ const ev = (t: number, stationId: string, state: 'working' | 'starved' | 'blocke
 
 describe('AN-3 AC1: live colors: working green, starved yellow, blocked red, idle gray', () => {
   it('takes the colors from the design tokens (UI-1)', () => {
-    expect(STATE_COLORS).toEqual({
+    expect(stateColors()).toEqual({
       working: tokens.state.working.tint,
       starved: tokens.state.starved.tint,
       blocked: tokens.state.blocked.tint,
       idle: tokens.state.waiting.tint,
     });
-    expect(NO_STATE_COLOR).toBe(tokens.color.border);
+    expect(noStateColor()).toBe(tokens.color.border);
   });
 
   it('tracks the latest state of each station from the engine events', () => {
@@ -48,7 +48,7 @@ describe('AN-3 AC1: live colors: working green, starved yellow, blocked red, idl
     }
     expect(r.session.stationStates().size).toBeGreaterThan(0);
     expect(seen.has('working')).toBe(true);
-    for (const st of seen) expect(Object.keys(STATE_COLORS)).toContain(st);
+    for (const st of seen) expect(Object.keys(stateColors())).toContain(st);
   });
 
   it('goes back to the t=0 states after a reset, once stations were working', () => {
@@ -91,10 +91,10 @@ describe('AN-3 AC2: the station with the highest working % is the bottleneck', (
 
 describe('plateColor', () => {
   it('maps each state to its color and unknown to neutral', () => {
-    expect(plateColor('working')).toBe(STATE_COLORS.working);
-    expect(plateColor('blocked')).toBe(STATE_COLORS.blocked);
-    expect(plateColor(undefined)).toBe(NO_STATE_COLOR);
-    expect(plateColor(undefined)).not.toBe(STATE_COLORS.idle);
+    expect(plateColor('working')).toBe(stateColors().working);
+    expect(plateColor('blocked')).toBe(stateColors().blocked);
+    expect(plateColor(undefined)).toBe(noStateColor());
+    expect(plateColor(undefined)).not.toBe(stateColors().idle);
   });
 });
 

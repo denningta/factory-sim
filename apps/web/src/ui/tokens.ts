@@ -34,6 +34,8 @@ export interface Theme {
     grid: string;
     label: string;
     flow: string;
+    /** Equipment parts that aren't the equipment's own colour (materials roles frame, accent, dark). */
+    parts: { frame: string; accent: string; dark: string };
     /** Light intensities. */
     ambient: number;
     key: number;
@@ -74,6 +76,7 @@ export const light: Theme = {
     grid: '#c3c8d0',
     label: '#374151',
     flow: '#475569',
+    parts: { frame: '#8a929c', accent: '#d7dbe0', dark: '#2b2f36' },
     ambient: 1.2,
     key: 2,
   },
@@ -86,14 +89,52 @@ export const light: Theme = {
   },
   state: {
     working: { strong: '#1d9a55', tint: '#86d9a0' },
-    starved: { strong: '#d9a21b', tint: '#f6d860' },
+    starved: { strong: '#a87500', tint: '#f6d860' },
     blocked: { strong: '#d43a3a', tint: '#ee8c8c' },
     waiting: { strong: '#8a94a3', tint: '#cfd4dc' },
     walking: { strong: '#7b2fbf', tint: '#c9a6ec' },
   },
 };
-// TODO(UI-9): stub, replaced by the control-room palette.
-export const dark: Theme = light;
+/**
+ * Control-room dark theme (product owner reference): near-black ground, thin teal-tinted panel
+ * borders, one teal accent that also drives the glow. State colours are bright enough to read
+ * as lights on the dark panel; tints are mid-tone fills for bars and plates.
+ */
+export const dark: Theme = {
+  ...light,
+  color: {
+    bg: '#080d0e',
+    surface: '#0f1719',
+    surface2: '#141f21',
+    text: '#e3eeed',
+    muted: '#8ea5a6',
+    border: '#213033',
+    accent: '#2fd3b1',
+    accentInk: '#04130f',
+    danger: '#ff7a73',
+    warning: '#f0b429',
+    raised: '#1a272a',
+    panelBorder: '#2c4246',
+    glow: 'rgba(47, 211, 177, 0.35)',
+  },
+  scene: {
+    background: '#070b0c',
+    floor: '#0d1416',
+    grid: '#1c2d30',
+    label: '#b9cecf',
+    flow: '#2f9d8a',
+    parts: { frame: '#6f7f88', accent: '#b9c6cb', dark: '#161d21' },
+    ambient: 0.9,
+    key: 1.6,
+  },
+  state: {
+    working: { strong: '#6fdc5b', tint: '#2e8f4a' },
+    starved: { strong: '#f2c744', tint: '#b8901d' },
+    blocked: { strong: '#f0605a', tint: '#b8433f' },
+    waiting: { strong: '#8a97a8', tint: '#566272' },
+    walking: { strong: '#b58cff', tint: '#7a52c7' },
+  },
+};
 export const themes = { dark, light } as const;
 export type ThemeMode = keyof typeof themes;
 /** Static default for code outside React; reactive code uses `getTheme`/`useTheme` (themeStore). */

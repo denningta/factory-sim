@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { RunSession } from './runSession';
 import { Legend } from '../ui/Legend';
-import { tokens } from '../ui/tokens';
+import { useTheme } from '../ui/themeStore';
+import type { Theme } from '../ui/tokens';
 import { findBottleneck } from './stationStatus';
 import {
   sortRows,
@@ -14,13 +15,13 @@ import {
 type Named = { id: string; name: string };
 
 // Bar fills are the state tints (ADR-0016); idle is the waiting gray.
-const COLORS: Record<string, string> = {
-  working: tokens.state.working.tint,
-  starved: tokens.state.starved.tint,
-  blocked: tokens.state.blocked.tint,
-  walking: tokens.state.walking.tint,
-  idle: tokens.state.waiting.tint,
-};
+const barColors = (t: Theme): Record<string, string> => ({
+  working: t.state.working.tint,
+  starved: t.state.starved.tint,
+  blocked: t.state.blocked.tint,
+  walking: t.state.walking.tint,
+  idle: t.state.waiting.tint,
+});
 const LABELS: Record<string, string> = {
   working: 'Working',
   starved: 'Starved',
@@ -29,7 +30,6 @@ const LABELS: Record<string, string> = {
   idle: 'Idle',
 };
 
-const TRACK = tokens.color.bg;
 const pct = (v: number) => `${v.toFixed(1)}%`;
 const cell = { padding: '2px 3px', textAlign: 'right' as const };
 
@@ -101,6 +101,8 @@ function UtilTable<K extends string>({
   /** AN-3: the station with the highest working %, flagged in its row. */
   bottleneckId?: string | null;
 }) {
+  const theme = useTheme();
+  const COLORS = barColors(theme);
   const [sort, setSort] = useState<SortState<K> | null>(null);
   const shown = sort ? sortRows(rows, sort) : rows;
   // First click: biggest share first (names: A–Z); a second click reverses.
@@ -175,6 +177,8 @@ function Row<K extends string>({
   started: boolean;
   bottleneck: boolean;
 }) {
+  const theme = useTheme();
+  const COLORS = barColors(theme);
   const summary = keys.map((k) => `${k} ${pct(row[k])}`).join(', ');
   return (
     <>
@@ -192,14 +196,18 @@ function Row<K extends string>({
         <td colSpan={keys.length + 1} style={{ padding: '0 3px 6px' }}>
           {bottleneck && (
             // In the bar row so the name cell stays just the name (sorting, labels).
-            <span style={{ color: tokens.color.danger, fontWeight: 600, fontSize: 11 }}>
+            <span style={{ color: theme.color.danger, fontWeight: 600, fontSize: 11 }}>
               ▲ Bottleneck
             </span>
           )}
           <div
             role="img"
             aria-label={`${row.name}: ${summary}`}
-            style={{ display: 'flex', height: 10, background: started ? COLORS.idle : TRACK }}
+            style={{
+              display: 'flex',
+              height: 10,
+              background: started ? COLORS.idle : theme.color.bg,
+            }}
           >
             {keys.map((k) => (
               <span

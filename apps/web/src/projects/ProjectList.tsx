@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProjectDetail, ProjectSummary } from '@factory-sim/schema';
-import { Button, EmptyState, Field } from '../ui';
+import { Button, EmptyState, Field, ThemeToggle } from '../ui';
 import styles from './projects.module.css';
 
 export interface ProjectsApi {
@@ -68,6 +68,7 @@ export function ProjectList({
       <header className={styles.pageHeader}>
         <h1 className={styles.title}>Projects</h1>
         <span className={styles.actions}>
+          <ThemeToggle />
           {onAccount && <Button onClick={onAccount}>Account</Button>}
           {onSignOut && <Button onClick={onSignOut}>Sign out</Button>}
         </span>
