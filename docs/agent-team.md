@@ -11,7 +11,7 @@ How the Factory Flow Simulator is built by Claude Code agents in herdr. Backgrou
 | `builder-1..3`        | own worktree, branch `story/<ID>` | `.claude/agents/builder.md`  | Sonnet (Opus for SE-1, PR-2) | One story, tests first, opens a PR                                                 | Touches lead-owned areas, pushes main, merges |
 | `reviewer`            | main checkout, tab "control"      | `.claude/agents/reviewer.md` | Opus, Edit/Write disabled    | Reviews PRs vs acceptance criteria, ADRs, DoD; runs tests                          | Edits code, merges                            |
 
-**Max concurrent builders:** Sprint 1 = **2** (raised by the product owner on 2026-11-21 so SE-1 can run in parallel). Sprint 2 = **2**. Raise to 3 only when CI and your review time keep up (product owner decides; update this line).
+**Max concurrent builders:** Sprint 1 = **2** (raised by the product owner on 2026-11-21 so SE-1 can run in parallel). Sprint 2 = **2**. Sprint 9 = **2** (product owner, 2026-11-26). Raise to 3 only when CI and your review time keep up (product owner decides; update this line).
 
 ## Start of day
 
