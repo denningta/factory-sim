@@ -26,3 +26,5 @@ issue: 1
 - Engine already exposes `Run.stats()` (warm-up-free window); AN-1 is a web panel (`KpiPanel`, `kpis.ts`) polled every 200 ms and on session events, so the final values are exact.
 - Throughput/shift = units/hr × the project's shift length. Lead time shown in minutes; "–" until a part exits.
 - Not shown yet: the Bottleneck tile (AN-3).
+
+- _UI-4 (2026-11-25):_ the live Throughput tile shows units/hr only; units/shift now appears on Results (`ResultsScreen`), not on the Simulate screen. Don't restore it there.

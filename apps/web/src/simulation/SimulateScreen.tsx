@@ -5,12 +5,14 @@ import { FloorScene } from '../layout/FloorScene';
 import { useEditorStore } from '../layout/editorStore';
 import { currentProject } from './currentProject';
 import { KpiPanel } from './KpiPanel';
+import { Button, Section } from '../ui';
+import { ModelCheckBanner } from './ModelCheckBanner';
+import styles from './SimulateScreen.module.css';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { Legend } from './Legend';
 import { RunConnections } from './RunConnections';
 import { StationLayer } from './StationLayer';
-import { BottleneckTile } from './BottleneckTile';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
 import type { RunSessionResult } from './runSession';
@@ -33,11 +35,14 @@ const clock = (t: number) => {
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
 export function SimulateScreen({
   onNavigate,
+  onOpenResults,
   playRequest,
   onPlayRequestHandled,
 }: {
   /** Switches the editor screen when a clicked issue points at an object on another one. */
   onNavigate?: (screen: 'layout' | 'products') => void;
+  /** Opens the Results screen. */
+  onOpenResults?: () => void;
   /** Set by the top bar's Run simulation: start playback, then call `onPlayRequestHandled`. */
   playRequest?: boolean;
   onPlayRequestHandled?: () => void;
@@ -54,6 +59,7 @@ export function SimulateScreen({
   // The run lives in the session store so it outlives this tab; a changed model starts a new one.
   const current = useSessionStore((s) => s.current);
   useEffect(() => useSessionStore.getState().ensureFreshRun(), []);
+  const [applied, setApplied] = useState(0);
   const result: RunSessionResult | undefined = current?.result;
   // A run that can't start never consumes the request; clear it so playback doesn't start unasked later.
   const failed = result !== undefined && !result.ok;
@@ -65,35 +71,55 @@ export function SimulateScreen({
     useEditorStore.getState().applyRun(toProjectRun(next), shiftLength);
     const { options, seed } = toRunOptions(next, shiftLength);
     useSessionStore.getState().startRunWith(options, seed);
+    // Remounting the section is how it closes: it starts collapsed once settings were applied.
+    setApplied((n) => n + 1);
+  };
+  const select = (issue: ModelIssue) => {
+    const target = issueTarget(currentProject(), issue);
+    if (!target) return;
+    if (target.screen === 'layout')
+      useEditorStore.getState().selectEquipment(target.equipmentId, false);
+    else useEditorStore.getState().selectProduct(target.productId);
+    onNavigate?.(target.screen);
   };
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
+    <div className={styles.screen}>
       {result.ok ? (
         <Running
           session={result.session}
           stations={stations}
           products={products}
+          shiftLength={shiftLength}
           playRequest={playRequest}
           onPlayRequestHandled={onPlayRequestHandled}
         />
       ) : (
-        <Issues issues={result.issues} onNavigate={onNavigate} />
+        <div className={styles.viewport}>
+          <FloorScene interactive={false} />
+        </div>
       )}
-      <div style={{ overflowY: 'auto' }}>
+      <div className={result.ok ? `${styles.side} ${styles.belowTiles}` : styles.side}>
+        <ModelCheckBanner issues={result.ok ? [] : result.issues} onSelect={select} />
+        <div className={styles.panel}>
+          <Section key={applied} heading="Run settings" collapsible defaultOpen={applied === 0}>
+            <RunSettingsPanel
+              // Remounts on undo or load so the fields follow the saved values.
+              key={JSON.stringify([run, shiftLength])}
+              initial={fromProjectRun(run)}
+              shiftLength={shiftLength}
+              onApply={apply}
+            />
+          </Section>
+          {/* Outside the section so a random draw stays visible while the settings are collapsed. */}
+          <p role="status" aria-label="Seed used" className={styles.seed}>
+            Seed used: {current.settings.seed}
+          </p>
+        </div>
         {result.ok && (
-          <>
-            <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
-            <BottleneckTile session={result.session} stations={stations} />
-          </>
+          <Button className={styles.results} onClick={() => onOpenResults?.()}>
+            See full results →
+          </Button>
         )}
-        <RunSettingsPanel
-          // Remounts on undo or load so the fields follow the saved values.
-          key={JSON.stringify([run, shiftLength])}
-          initial={fromProjectRun(run)}
-          shiftLength={shiftLength}
-          seedUsed={current.settings.seed}
-          onApply={apply}
-        />
       </div>
     </div>
   );
@@ -103,12 +129,14 @@ function Running({
   session,
   stations,
   products,
+  shiftLength,
   playRequest,
   onPlayRequestHandled,
 }: {
   session: Extract<RunSessionResult, { ok: true }>['session'];
   stations: readonly Equipment[];
   products: readonly Product[];
+  shiftLength: number;
   playRequest?: boolean;
   onPlayRequestHandled?: () => void;
 }) {
@@ -129,123 +157,71 @@ function Running({
     return () => clearInterval(id);
   }, [session]);
   return (
-    <div style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', height: '100%' }}>
-      <div
-        role="toolbar"
-        aria-label="Playback"
-        style={{
-          display: 'flex',
-          gap: 12,
-          alignItems: 'center',
-          padding: 8,
-          font: '14px sans-serif',
-        }}
-      >
-        <button onClick={() => session.play()} disabled={session.playing}>
-          Play
-        </button>
-        <button onClick={() => session.pause()} disabled={!session.playing}>
-          Pause
-        </button>
-        <button onClick={() => session.step()} disabled={session.done}>
-          Step
-        </button>
-        <button
-          onClick={() => {
-            useSessionStore.getState().resetRun();
-            setNow(0);
-          }}
-        >
-          Reset
-        </button>
-        <button onClick={() => session.runToEnd()} disabled={session.done}>
-          Run to end
-        </button>
-        <label>
-          Speed{' '}
-          <input
-            type="range"
-            min={MIN_SPEED}
-            max={MAX_SPEED}
-            step={1}
-            value={session.speed}
-            onChange={(e) => session.setSpeed(Number(e.target.value))}
-          />{' '}
-          <output>{session.speed}×</output>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={session.animate}
-            onChange={(e) => session.setAnimate(e.target.checked)}
-          />{' '}
-          Animate
-        </label>
-        <span>
-          Sim clock ·{' '}
-          <span role="timer" aria-label="Simulation clock">
-            {clock(now)}
-            {session.done ? ' (finished)' : ''}
+    <div className={styles.viewport}>
+      <FloorScene interactive={false}>
+        <RunConnections session={session} equipment={equipment} connections={connections} />
+        <StationLayer session={session} stations={stations} />
+        <PartLayer session={session} />
+        <TechLayer session={session} />
+      </FloorScene>
+      <div className={styles.overlay}>
+        <KpiPanel
+          session={session}
+          products={products}
+          shiftLength={shiftLength}
+          stations={stations}
+        />
+        <div role="toolbar" aria-label="Playback" className={styles.hud}>
+          <Button onClick={() => session.play()} disabled={session.playing}>
+            Play
+          </Button>
+          <Button onClick={() => session.pause()} disabled={!session.playing}>
+            Pause
+          </Button>
+          <Button onClick={() => session.step()} disabled={session.done}>
+            Step
+          </Button>
+          <Button
+            onClick={() => {
+              useSessionStore.getState().resetRun();
+              setNow(0);
+            }}
+          >
+            Reset
+          </Button>
+          <Button onClick={() => session.runToEnd()} disabled={session.done}>
+            Run to end
+          </Button>
+          <label className={styles.speed}>
+            Speed{' '}
+            <input
+              type="range"
+              min={MIN_SPEED}
+              max={MAX_SPEED}
+              step={1}
+              value={session.speed}
+              onChange={(e) => session.setSpeed(Number(e.target.value))}
+            />{' '}
+            <output>{session.speed}×</output>
+          </label>
+          <label className={styles.animate}>
+            <input
+              type="checkbox"
+              checked={session.animate}
+              onChange={(e) => session.setAnimate(e.target.checked)}
+            />{' '}
+            Animate
+          </label>
+          <span className={styles.clock}>
+            Sim clock ·{' '}
+            <span role="timer" aria-label="Simulation clock">
+              {clock(now)}
+              {session.done ? ' (finished)' : ''}
+            </span>
           </span>
-        </span>
+        </div>
       </div>
-      <div style={{ position: 'relative', minHeight: 0 }}>
-        <FloorScene interactive={false}>
-          <RunConnections session={session} equipment={equipment} connections={connections} />
-          <StationLayer session={session} stations={stations} />
-          <PartLayer session={session} />
-          <TechLayer session={session} />
-        </FloorScene>
-        <Legend products={products} />
-      </div>
-    </div>
-  );
-}
-
-function Issues({
-  issues,
-  onNavigate,
-}: {
-  issues: ModelIssue[];
-  onNavigate?: (screen: 'layout' | 'products') => void;
-}) {
-  const select = (issue: ModelIssue) => {
-    const target = issueTarget(currentProject(), issue);
-    if (!target) return;
-    if (target.screen === 'layout')
-      useEditorStore.getState().selectEquipment(target.equipmentId, false);
-    else useEditorStore.getState().selectProduct(target.productId);
-    onNavigate?.(target.screen);
-  };
-  return (
-    <div role="alert" style={{ padding: 16, font: '14px sans-serif' }}>
-      <p>The line can't run yet:</p>
-      <ul>
-        {issues.map((i, k) => (
-          <li key={k}>
-            {i.objectId ? (
-              <button
-                onClick={() => select(i)}
-                // Not `all: unset`: that would also remove the browser's focus outline.
-                style={{
-                  background: 'none',
-                  border: 0,
-                  padding: 0,
-                  font: 'inherit',
-                  color: 'inherit',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                {i.message}
-              </button>
-            ) : (
-              i.message
-            )}
-          </li>
-        ))}
-      </ul>
+      <Legend products={products} />
     </div>
   );
 }

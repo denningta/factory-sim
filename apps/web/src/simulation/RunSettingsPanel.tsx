@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Button } from '../ui';
+import styles from './RunSettingsPanel.module.css';
 import { validateRunSettings, type RunSettings } from './runSettings';
 
 interface Props {
   initial: RunSettings;
   /** Shift length in seconds, as stored in the project. */
   shiftLength: number;
-  /** The seed the current run uses (a random draw shows up here). */
-  seedUsed: number;
   onApply: (settings: RunSettings, shiftLength: number) => void;
 }
 
-const box = { display: 'grid', gap: 2, font: '12px sans-serif' } as const;
-
 /** Wireframe 3 "Run settings" (SE-4). Edits apply together and start a fresh run. */
-export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Props) {
+export function RunSettingsPanel({ initial, shiftLength, onApply }: Props) {
   const [warmUp, setWarmUp] = useState(String(initial.warmUpHours));
   const [length, setLength] = useState(String(initial.runLength));
   const [unit, setUnit] = useState(initial.runUnit);
@@ -41,12 +39,8 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
   };
 
   return (
-    <section
-      aria-label="Run settings"
-      style={{ display: 'grid', gap: 8, padding: 12, alignContent: 'start' }}
-    >
-      <h2 style={{ font: '600 12px sans-serif', margin: 0 }}>RUN SETTINGS</h2>
-      <label style={box}>
+    <section aria-label="Run settings" className={styles.panel}>
+      <label className={styles.field}>
         Shift length (hr)
         <input
           type="number"
@@ -56,7 +50,7 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
           onChange={(e) => setShiftHours(e.target.value)}
         />
       </label>
-      <label style={box}>
+      <label className={styles.field}>
         Warm-up (hr)
         <input
           type="number"
@@ -66,7 +60,7 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
           onChange={(e) => setWarmUp(e.target.value)}
         />
       </label>
-      <label style={box}>
+      <label className={styles.field}>
         Run length
         <input
           type="number"
@@ -76,14 +70,14 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
           onChange={(e) => setLength(e.target.value)}
         />
       </label>
-      <label style={box}>
+      <label className={styles.field}>
         Run length unit
         <select value={unit} onChange={(e) => setUnit(e.target.value as RunSettings['runUnit'])}>
           <option value="shifts">shifts</option>
           <option value="hours">hours</option>
         </select>
       </label>
-      <label style={box}>
+      <label className={styles.field}>
         Seed mode
         <select
           value={seedMode}
@@ -93,15 +87,18 @@ export function RunSettingsPanel({ initial, shiftLength, seedUsed, onApply }: Pr
           <option value="random">Random each run</option>
         </select>
       </label>
-      <label style={box}>
+      <label className={styles.field}>
         Seed
         <input type="number" step="1" value={seed} onChange={(e) => setSeed(e.target.value)} />
       </label>
-      <button onClick={apply}>Apply</button>
-      {error && <p style={{ margin: 0, color: '#b91c1c', font: '12px sans-serif' }}>{error}</p>}
-      <p role="status" aria-label="Seed used" style={{ margin: 0, font: '12px sans-serif' }}>
-        Seed used: {seedUsed}
-      </p>
+      <Button variant="primary" onClick={apply}>
+        Apply
+      </Button>
+      {error && (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      )}
     </section>
   );
 }

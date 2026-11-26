@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEditorStore } from '../layout/editorStore';
 import { useSessionStore } from './sessionStore';
@@ -45,6 +45,15 @@ afterEach(cleanup);
 
 const clock = () => screen.getByRole('timer').textContent ?? '';
 const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement;
+// UI-4: the run settings collapse after Apply, so reopen them when a test applies again.
+const openSettings = async () => {
+  const toggle = screen.getByRole('button', { name: /Run settings/ });
+  if (toggle.getAttribute('aria-expanded') === 'false') await userEvent.click(toggle);
+};
+const clickApply = async () => {
+  await openSettings();
+  await userEvent.click(button('Apply'));
+};
 
 describe('SE-2: SimulateScreen playback controls', () => {
   it('Step moves the clock past 0:00:00 and the button still reads Play', async () => {
@@ -78,6 +87,7 @@ describe('SE-2: SimulateScreen playback controls', () => {
 describe('SE-4: run settings panel', () => {
   const field = (name: string) => screen.getByLabelText(name) as HTMLInputElement;
   const set = async (name: string, value: string) => {
+    await openSettings();
     await userEvent.clear(field(name));
     await userEvent.type(field(name), value);
   };
@@ -87,7 +97,7 @@ describe('SE-4: run settings panel', () => {
     await set('Shift length (hr)', '1');
     await set('Warm-up (hr)', '1');
     await set('Run length', '2');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toBe('Day 1, 03:00:00 (finished)'), { timeout: 5000 });
     expect(useEditorStore.getState().shiftLength).toBe(3600);
@@ -97,7 +107,7 @@ describe('SE-4: run settings panel', () => {
     render(<SimulateScreen />);
     await userEvent.selectOptions(screen.getByLabelText('Run length unit'), 'hours');
     await set('Run length', '2');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toBe('Day 1, 02:00:00 (finished)'), { timeout: 5000 });
   }, 15_000);
@@ -106,12 +116,12 @@ describe('SE-4: run settings panel', () => {
     render(<SimulateScreen />);
     expect(field('Seed').value).toBe('1');
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     const drawn = screen.getByRole('status', { name: 'Seed used' }).textContent ?? '';
     expect(drawn).toMatch(/\d+/);
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
     await set('Seed', '42');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
   });
 });
@@ -119,45 +129,43 @@ describe('SE-4: run settings panel', () => {
 describe('AN-1: live KPI panel', () => {
   const panel = () => screen.getByRole('region', { name: 'Live KPIs' });
 
-  it('shows throughput per hour and per shift, WIP and lead time per product and in total, warm-up excluded', () => {
+  it('shows throughput per hour, WIP and lead time per product and in total, warm-up excluded', () => {
     render(<SimulateScreen />);
     const text = panel().textContent ?? '';
     expect(text).toContain('Warm-up excluded');
     expect(text).toMatch(/Throughput/);
     expect(text).toMatch(/units\/hr/);
-    expect(text).toMatch(/units\/shift/);
     expect(text).toMatch(/WIP/);
     expect(text).toMatch(/Lead time/);
-    expect(screen.getByRole('row', { name: /Total/ })).toBeTruthy();
     const name = useEditorStore.getState().products[0]!.name;
-    expect(screen.getByRole('row', { name: new RegExp(name) })).toBeTruthy();
+    expect(text).toContain(`${name} 0.0`);
   });
 
-  const cells = (row: HTMLElement) =>
-    within(row)
-      .getAllByRole('cell')
-      .map((c) => c.textContent);
-  const total = () => screen.getByRole('row', { name: /Total/ });
+  // The three numeric tiles: the totals and the per-product sub-lines.
+  const total = () => ['Throughput', 'WIP', 'Lead time'].map((n) => tile(n).textContent).join('|');
+  const tile = (n: string) => screen.getByRole('group', { name: n });
+  const value = (n: string) =>
+    tile(n).querySelector(':scope > div > div:nth-child(2)')!.firstChild!.textContent;
   const playAt1000 = async () => {
     fireEvent.change(screen.getByLabelText('Speed'), { target: { value: '1000' } });
     await userEvent.click(button('Play'));
   };
 
-  it('updates while the run plays: the Total row changes before the run is finished', async () => {
+  it('updates while the run plays: the totals change before the run is finished', async () => {
     render(<SimulateScreen />);
-    const before = total().textContent;
+    const before = total();
     await playAt1000();
-    await waitFor(() => expect(total().textContent).not.toBe(before), { timeout: 5000 });
+    await waitFor(() => expect(total()).not.toBe(before), { timeout: 5000 });
     expect(clock()).not.toContain('(finished)');
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 8000 });
-    const final = total().textContent;
+    const final = total();
     expect(final).toMatch(/[1-9]/);
     await new Promise((r) => setTimeout(r, 400));
-    expect(total().textContent).toBe(final);
+    expect(total()).toBe(final);
   }, 15_000);
 
-  it('excludes the warm-up: the whole row is zero during it, but not without a warm-up', async () => {
+  it('excludes the warm-up: every total is zero during it, but not without a warm-up', async () => {
     const upTo = async (min: number) => {
       await playAt1000();
       await waitFor(() => expect(Number(clock().split(':')[1])).toBeGreaterThanOrEqual(min), {
@@ -169,18 +177,17 @@ describe('AN-1: live KPI panel', () => {
     render(<SimulateScreen />);
     await userEvent.clear(field('Warm-up (hr)'));
     await userEvent.type(field('Warm-up (hr)'), '2');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     await upTo(1);
-    expect(cells(total())).toEqual(['0.0', '0', '0.0', '–']);
+    expect([value('Throughput'), value('WIP'), value('Lead time')]).toEqual(['0.0', '0.0', '–']);
     cleanup();
     // The warm-up is saved with the project (SE-7), so clear it for the no-warm-up run.
     useEditorStore.setState({ run: { ...useEditorStore.getState().run, warmUp: 0 } });
 
     render(<SimulateScreen />);
     await upTo(1);
-    const [perHour, , wip] = cells(total());
-    expect(Number(perHour)).toBeGreaterThan(0);
-    expect(Number(wip)).toBeGreaterThan(0);
+    expect(Number(value('Throughput'))).toBeGreaterThan(0);
+    expect(Number(value('WIP'))).toBeGreaterThan(0);
   }, 15_000);
 });
 
@@ -206,12 +213,12 @@ describe('SE-7: run settings panel', () => {
     render(<SimulateScreen />);
     await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
     await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '8');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     expect(screen.getByText(/shorter/)).toBeTruthy();
     expect(useEditorStore.getState().run.warmUp).toBe(0);
     await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
     await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '2');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     expect(useEditorStore.getState().run.warmUp).toBe(7200);
     useEditorStore.getState().undo();
     await waitFor(() =>
@@ -224,7 +231,7 @@ describe('SE-7: run settings panel', () => {
     await userEvent.clear(screen.getByLabelText('Seed'));
     await userEvent.type(screen.getByLabelText('Seed'), '77');
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     expect(useEditorStore.getState().run.seed).toEqual({ mode: 'random', value: 77 });
     expect(screen.getByRole('status', { name: 'Seed used' }).textContent).not.toBe('Seed used: 77');
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'fixed');
@@ -236,7 +243,7 @@ describe('SE-7: run settings panel', () => {
     await userEvent.selectOptions(screen.getByLabelText('Seed mode'), 'random');
     await userEvent.clear(screen.getByLabelText('Seed'));
     await userEvent.type(screen.getByLabelText('Seed'), '1.5');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     expect(screen.getByText(/Seed must be a whole number/)).toBeTruthy();
     expect(useEditorStore.getState().run.seed.value).toBe(1);
   });
@@ -272,7 +279,7 @@ describe('SE-8: playback toolbar matches the wireframe', () => {
     await userEvent.selectOptions(screen.getByLabelText('Run length unit'), 'hours');
     await userEvent.clear(screen.getByLabelText('Run length'));
     await userEvent.type(screen.getByLabelText('Run length'), '30');
-    await userEvent.click(button('Apply'));
+    await clickApply();
     await userEvent.click(button('Run to end'));
     await waitFor(() => expect(clock()).toMatch(/^Day 2, 06:00:00 \(finished\)/), {
       timeout: 8000,
