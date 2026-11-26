@@ -16,12 +16,12 @@ describe('LibraryPanel', () => {
     }
   });
 
-  it('lists workstation, buffer/rack, conveyor, source and sink', () => {
+  it('lists workstation, buffer/rack, conveyor, source, sink and autoclave', () => {
     render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} />);
     const items = screen.getAllByRole('listitem');
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(6);
     const text = items.map((i) => i.textContent ?? '').join('|');
-    for (const name of [/workstation/i, /buffer/i, /conveyor/i, /source/i, /sink/i]) {
+    for (const name of [/workstation/i, /buffer/i, /conveyor/i, /source/i, /sink/i, /autoclave/i]) {
       expect(text).toMatch(name);
     }
   });
@@ -80,8 +80,8 @@ describe('LibraryPanel with user types (EQ-3)', () => {
   it('AC2: my types are listed after the built-ins and can be dragged onto the canvas', () => {
     render(<LibraryPanel unit="m" selectedId={null} onSelect={() => {}} userTypes={[mine]} />);
     const items = screen.getAllByRole('listitem');
-    expect(items).toHaveLength(6);
-    const button = within(items[5]!).getByRole('button', { name: /^5-axis CNC/ });
+    expect(items).toHaveLength(7);
+    const button = within(items[6]!).getByRole('button', { name: /^5-axis CNC/ });
     const data: Record<string, string> = {};
     fireEvent.dragStart(button, {
       dataTransfer: { setData: (k: string, v: string) => (data[k] = v), effectAllowed: '' },

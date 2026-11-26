@@ -1,4 +1,5 @@
 import type { Equipment, EquipmentBehavior } from '@factory-sim/schema';
+import { ascAutoclave } from './asc-autoclave';
 import { bench } from './bench';
 import { bufferRack } from './buffer-rack';
 import { conveyorBelt } from './conveyor-belt';
@@ -17,6 +18,7 @@ export const MODELS: readonly ModelDefinition[] = [
   conveyorBelt,
   sourceHopper,
   sinkContainer,
+  ascAutoclave,
 ];
 
 /** What each behavior looks like when its `model` is absent or unusable (ADR-0015). */

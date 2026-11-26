@@ -1,4 +1,4 @@
-import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { BUILT_IN_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { LibrarySection } from './equipment/LibrarySection';
 import { api } from './api/client';
 import { LibraryPreview } from './equipment/EquipmentModel';
@@ -21,7 +21,7 @@ export function Editor({
   const unit = useEditorStore((s) => s.unit);
   const selectedId = useEditorStore((s) => s.selectedTypeId);
   const userTypes = useEditorStore((s) => s.userTypes);
-  const selected = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === selectedId);
+  const selected = [...BUILT_IN_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === selectedId);
   useEditorShortcuts(readOnly);
   return (
     <div className={styles.editor}>

@@ -4,9 +4,10 @@ import styles from './panels.module.css';
 import { useEditorStore as defaultStore } from './editorStore';
 import { Field, parseNumber } from './Field';
 import { DurationEditor } from '../products/DurationEditor';
+import { CycleEditor } from './CycleEditor';
 import { LaborEditor, StaffingEditor } from '../technicians/LaborEditor';
 import { resolveModel } from '../equipment/models/registry';
-import { BASE_EQUIPMENT_TYPES, type Connection, type Equipment } from '@factory-sim/schema';
+import { BUILT_IN_EQUIPMENT_TYPES, type Connection, type Equipment } from '@factory-sim/schema';
 import { portWorldPosition } from './ports';
 import {
   formatLength,
@@ -250,7 +251,7 @@ export function PropertiesPanel({
   const single = selected.length === 1;
   const same = selected.every((e) => e.rotation === first.rotation);
   const pos = (m: number) => formatNumber(toDisplay(m, unit));
-  const type = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === first.typeId);
+  const type = [...BUILT_IN_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === first.typeId);
   // Keyed by selection so the field re-reads when the selection changes.
   const rotation = (
     <>
@@ -368,7 +369,10 @@ export function PropertiesPanel({
       <Section heading="Process" collapsible memoryKey="props-process">
         {/* Numeric params only; labor (TE-1) has its own editor below. */}
         {Object.entries(first.params)
-          .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
+          // maxWait is optional and shown in minutes by the cycle editor.
+          .flatMap(([key, v]) =>
+            typeof v === 'number' && key !== 'maxWait' ? [[key, v] as const] : [],
+          )
           .map(([key, v]) => {
             const isSpeed = key === 'speed';
             const techLimited =
@@ -414,11 +418,15 @@ export function PropertiesPanel({
         {first.behavior === 'workstation' && (
           <>
             <LaborEditor equipmentId={first.id} useStore={useStore} />
-            <CycleTimeSummary
-              stationId={first.id}
-              useStore={useStore}
-              {...(onOpenProducts ? { onOpenProducts } : {})}
-            />
+            <CycleEditor equipmentId={first.id} useStore={useStore} />
+            {/* A per-batch cure ignores the per-product cycle times (SF-0). */}
+            {first.params.cycle?.mode !== 'perBatch' && (
+              <CycleTimeSummary
+                stationId={first.id}
+                useStore={useStore}
+                {...(onOpenProducts ? { onOpenProducts } : {})}
+              />
+            )}
           </>
         )}
       </Section>

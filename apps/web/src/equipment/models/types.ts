@@ -30,6 +30,11 @@ export type ModelPart = PartBase &
         height: number;
         /** Radial segments; fewer at lower LODs. */
         segments: number;
+        /**
+         * `'z'`: lying along the length axis (a pressure vessel), `position` at its center,
+         * `radiusBottom` at the -z end and `radiusTop` at the +z end. Absent: standing upright.
+         */
+        axis?: 'z';
       }
   );
 
