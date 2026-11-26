@@ -7,6 +7,7 @@ sprint: 9
 depends_on: []
 builder_model: sonnet
 owner: lead
+issue: 171
 ---
 
 # SF-0: Batch cure contract: schema v8 and engine events

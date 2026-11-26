@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-1, SF-2, SF-3, SF-4, SF-5, SF-7]
 builder_model: sonnet
 owner: builder
+issue: 179
 ---
 
 # SF-8: Shop-floor scene and performance

@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-3]
 builder_model: sonnet
 owner: builder
+issue: 175
 ---
 
 # SF-4: Clear, quiet in/out ports

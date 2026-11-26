@@ -7,6 +7,7 @@ sprint: 9
 depends_on: []
 builder_model: sonnet
 owner: builder
+issue: 172
 ---
 
 # SF-1: Industrial workbench and machine models

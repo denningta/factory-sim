@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-0]
 builder_model: sonnet
 owner: builder
+issue: 177
 ---
 
 # SF-6: Autoclave cure cycle in the engine

@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-1]
 builder_model: sonnet
 owner: builder
+issue: 173
 ---
 
 # SF-2: Technician figure at the bench

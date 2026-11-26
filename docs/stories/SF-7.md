@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-0, SF-1]
 builder_model: sonnet
 owner: builder
+issue: 178
 ---
 
 # SF-7: ASC autoclave model and equipment type

@@ -7,6 +7,7 @@ sprint: 9
 depends_on: [SF-0, SF-1, SF-6, SF-7]
 builder_model: sonnet
 owner: builder
+issue: 176
 ---
 
 # SF-5: Every part visible, carried between benches
