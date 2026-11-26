@@ -21,6 +21,13 @@ export interface StationSpec {
   capacity?: number;
   batchSize?: number;
   labor?: Labor;
+  /**
+   * SF-6: `cycle.mode = 'perBatch'` with this cure time. The station then gets no
+   * `cycleTimes` entries; `cycle` only says which products are routed here.
+   */
+  cure?: Duration;
+  /** SF-6: start a partial batch after the first waiting part has waited this long (s). */
+  maxWait?: number;
 }
 
 export interface LineSpec {
@@ -79,6 +86,8 @@ export function lineProject(spec: LineSpec): Project {
         capacity: s.capacity ?? 1,
         batchSize: s.batchSize ?? 1,
         labor: s.labor ?? { mode: 'manual' },
+        ...(s.cure && { cycle: { mode: 'perBatch' as const, time: s.cure } }),
+        ...(s.maxWait !== undefined && { maxWait: s.maxWait }),
       };
     add(e);
     insert(i);
@@ -103,7 +112,9 @@ export function lineProject(spec: LineSpec): Project {
       .map((s) => ({ id: `${id}-${s.id}`, stationId: s.id })),
   }));
   p.cycleTimes = spec.stations.flatMap((s) =>
-    Object.entries(s.cycle).map(([productId, time]) => ({ productId, stationId: s.id, time })),
+    s.cure
+      ? []
+      : Object.entries(s.cycle).map(([productId, time]) => ({ productId, stationId: s.id, time })),
   );
   p.release = {
     interval: spec.interval ?? { kind: 'fixed', value: 60 },
