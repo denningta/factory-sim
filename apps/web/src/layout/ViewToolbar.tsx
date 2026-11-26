@@ -73,7 +73,7 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
       </div>
       <div role="group" aria-label="Connect" className={styles.group}>
         <span className={styles.hint}>
-          {pending ? 'Now click an input port' : 'Click an output port, then an input port'}
+          {pending ? 'Now click an input port' : 'Click an output, then an input'}
         </span>
         {pending && (
           <Button onClick={clearSelection} title="Cancel connecting (Esc)">

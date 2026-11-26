@@ -41,5 +41,6 @@
   font-size: var(--font-size-sm);
 }
 .clearance {
-  width: 6rem;
+  width: 10rem;
+  white-space: nowrap;
 }

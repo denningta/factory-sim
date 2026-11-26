@@ -1,11 +1,13 @@
 /* Shared by the right-hand panels of the layout screen. Tokens only (ADR-0016). */
 .panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-content: start;
 }
 .stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 .row {
@@ -84,7 +86,7 @@
 }
 .techRow {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: var(--space-2);
   align-items: end;
 }
