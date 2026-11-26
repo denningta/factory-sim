@@ -27,6 +27,7 @@ For any story that changes what `apps/web` renders (epic `UI polish`, or any scr
 - **Load the `frontend-design` skill before you design or write UI code**, and follow its process: a short design plan (palette, type, layout, principles) reviewed against the brief, then build, then critique with screenshots. The brief is the story, its wireframes, `docs/wireframes/prototype/` and the visual reference named in the story Notes. Where the brief pins down a look, it wins over the skill's general cautions.
 - **Load the `dataviz` skill** before building any chart, stat tile, meter, legend or utilization bar.
 - Use the tokens and base components (ADR-0016); don't hard-code colours, fonts or spacing.
+- **Screenshots: use `pnpm screenshot docs/screenshots/<ID>/shots.json`** (see the header of `scripts/screenshot.mjs`). Don't build your own harness, fake API or dev server: the tool mocks the API in the browser with the reference model, captures dark and light at 1280×800 and stops its server. Follow the screenshot item in `docs/definition-of-done.md`. If the tool can't reach a state you need, add actions to your `shots.json`. If it really can't do it, tell the lead.
 - In the PR body, add a **Design** section: which skills you loaded, the design plan in a few lines, and what you changed after critique.
 
 ## Token budget

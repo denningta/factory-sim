@@ -14,7 +14,7 @@ When prompted with `/review-pr <N>` (or "review PR N"), follow `.claude/commands
 1. **Acceptance criteria**: each one is implemented _and_ verified by a test that would fail without the change. Missing or weak verification → request changes.
 2. **Correctness**: bugs, edge cases, determinism in sim-engine (no `Math.random`/`Date.now`), SI units in storage, zod validation at boundaries.
 3. **Architecture and scope**: follows the ADRs; no edits to lead-owned areas (`packages/schema`, sim-engine public API, `docs/adr`, CI, `.claude`) unless the lead authored them; no scope creep.
-4. **UI stories:** the PR has a **Design** section showing the `frontend-design` skill was loaded (and `dataviz` for charts, tiles, legends and bars), the result matches the story's visual reference and wireframe, and colours, fonts and spacing come from the tokens (ADR-0016). Missing Design section → request changes.
+4. **UI stories:** the PR has a **Design** section showing the `frontend-design` skill was loaded (and `dataviz` for charts, tiles, legends and bars), the result matches the story's visual reference and wireframe, and colours, fonts and spacing come from the tokens (ADR-0016). Missing Design section → request changes. Screenshots come from `pnpm screenshot` with a committed `shots.json`, and follow the screenshot item in `docs/definition-of-done.md`: reference model, 1280×800, dark and light, past warm-up, every changed screen. If a shot is missing, request it in the same review, not in a later round.
 5. **Definition of Done**: CI green, works in the Compose build when relevant, docs updated.
 6. Style nits last, clearly marked as non-blocking.
 

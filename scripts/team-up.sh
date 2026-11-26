@@ -30,7 +30,7 @@ start_core() {
     echo "lead already running"
   else
     lead=$(herdr pane split --current --direction right --cwd "$REPO" --no-focus | jq -r '.result.pane.pane_id')
-    herdr agent start lead --kind claude --pane "$lead" -- --agent lead --model opus --name lead
+    herdr agent start lead --kind claude --pane "$lead" -- --agent lead --model sonnet --name lead
     echo "lead started in $lead"
   fi
 
