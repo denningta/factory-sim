@@ -1,40 +1,40 @@
 {
- "project": "docs/screenshots/SF-7/line.json",
- "shots": [
-  {
-   "name": "library",
-   "screen": "layout",
-   "settle": 1500,
-   "actions": [
+  "project": "docs/screenshots/SF-7/line.json",
+  "shots": [
     {
-     "click": "text=Autoclave (ASC)"
+      "name": "library",
+      "screen": "layout",
+      "settle": 1500,
+      "actions": [
+        {
+          "click": "text=Autoclave (ASC)"
+        },
+        {
+          "wait": 1500
+        },
+        {
+          "eval": "document.querySelector('[aria-label=\"3D model preview\"], canvas:last-of-type')?.scrollIntoView({block:'end'})"
+        }
+      ]
     },
     {
-     "wait": 1500
-    },
-    {
-     "eval": "document.querySelector('[aria-label=\"3D model preview\"], canvas:last-of-type')?.scrollIntoView({block:'end'})"
+      "name": "placed",
+      "screen": "layout",
+      "settle": 1500,
+      "actions": [
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); const o = { clientX: 678, clientY: 378, button: 0, bubbles: true, pointerId: 1 }; c.dispatchEvent(new PointerEvent('pointermove', o)); c.dispatchEvent(new PointerEvent('pointerdown', o)); c.dispatchEvent(new PointerEvent('pointerup', o)); })()"
+        },
+        {
+          "wait": 800
+        },
+        {
+          "eval": "Array.from(document.querySelectorAll('label')).find(l=>/Cure time/.test(l.textContent))?.scrollIntoView({block:'center'})"
+        },
+        {
+          "wait": 400
+        }
+      ]
     }
-   ]
-  },
-  {
-   "name": "placed",
-   "screen": "layout",
-   "settle": 1500,
-   "actions": [
-    {
-     "eval": "(() => { const c = document.querySelector('canvas'); const o = { clientX: 678, clientY: 378, button: 0, bubbles: true, pointerId: 1 }; c.dispatchEvent(new PointerEvent('pointermove', o)); c.dispatchEvent(new PointerEvent('pointerdown', o)); c.dispatchEvent(new PointerEvent('pointerup', o)); })()"
-    },
-    {
-     "wait": 800
-    },
-    {
-     "eval": "Array.from(document.querySelectorAll('label')).find(l=>/Cure time/.test(l.textContent))?.scrollIntoView({block:'center'})"
-    },
-    {
-     "wait": 400
-    }
-   ]
-  }
- ]
+  ]
 }
