@@ -40,6 +40,8 @@ export interface RunSession {
   stats(): RunStats;
   /** Latest state of each workstation (empty while animation is off: no events are recorded). */
   stationStates(): ReadonlyMap<string, StationState>;
+  /** Parts waiting at each station's input as of the last `poses` call (empty while animation is off). */
+  queueLengths(): ReadonlyMap<string, number>;
   /** Parts on the floor at sim time `t` (none while animation is off). */
   poses(t: number): PartPose[];
   /** Techs at sim time `t`, standing or walking (none while animation is off, like parts). */
@@ -143,6 +145,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     stats: () => pb.run.stats(),
     stationStates: () => pb.stationStates.current(),
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
+    queueLengths: () => (animate ? pb.tracks.queueLengths() : new Map()),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
     subscribe(listener) {
       listeners.add(listener);

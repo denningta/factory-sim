@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ViewToolbar } from './ViewToolbar';
+import { StatusBar } from './StatusBar';
 import { BASE_EQUIPMENT_TYPES, instantiate } from '@factory-sim/schema';
 import { createEditorStore } from './editorStore';
 
@@ -36,10 +37,10 @@ describe('One click toggles an orthographic top-down view', () => {
   });
 });
 
-describe('A count of issues shows in the toolbar', () => {
+describe('A count of issues shows in the status bar (UI-3)', () => {
   it('shows the number of overlapping pairs and updates with clearance', async () => {
     const store = createEditorStore();
-    render(<ViewToolbar useStore={store} />);
+    render(<StatusBar useStore={store} />);
     expect(screen.getByText(/no layout issues/i)).toBeTruthy();
     const a = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 });
     const b = store.getState().placeEquipment('base-workstation', { x: 5.5, y: 5 });
@@ -49,7 +50,7 @@ describe('A count of issues shows in the toolbar', () => {
 
   it('a clearance setting flags items that are too close', async () => {
     const store = createEditorStore();
-    render(<ViewToolbar useStore={store} />);
+    render(<StatusBar useStore={store} />);
     const t = BASE_EQUIPMENT_TYPES.find((x) => x.id === 'base-workstation')!;
     const at = (id: string, x: number) => instantiate(t, { id, name: id, position: { x, y: 5 } });
     store.setState({ equipment: [at('a', 5), at('b', 5 + t.footprint.width + 0.5)] });
@@ -68,7 +69,12 @@ describe('Clearance input keeps typed text', () => {
     const t = BASE_EQUIPMENT_TYPES.find((x) => x.id === 'base-workstation')!;
     const at = (id: string, x: number) => instantiate(t, { id, name: id, position: { x, y: 5 } });
     store.setState({ equipment: [at('a', 5), at('b', 5 + t.footprint.width + 0.3)] });
-    render(<ViewToolbar useStore={store} />);
+    render(
+      <>
+        <ViewToolbar useStore={store} />
+        <StatusBar useStore={store} />
+      </>,
+    );
     const input = screen.getByLabelText(/minimum clearance/i) as HTMLInputElement;
     await userEvent.setup().type(input, '0.5');
     expect(input.value).toBe('0.5');

@@ -177,7 +177,8 @@ export function FloorScene({
       <GridLines />
       <DimensionLabels />
       <EquipmentLayer />
-      <ConnectionLayer />
+      {/* The simulation draws its own glowing connections (RunConnections). */}
+      {interactive && <ConnectionLayer />}
       {interactive && <FloorInteraction />}
       {interactive && <LibraryDropTarget />}
       {children}

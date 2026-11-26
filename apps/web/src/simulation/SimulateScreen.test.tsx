@@ -13,6 +13,7 @@ vi.mock('../layout/FloorScene', () => ({
 // R3F hooks need a real Canvas.
 vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('./StationLayer', () => ({ StationLayer: () => <div /> }));
+vi.mock('./RunConnections', () => ({ RunConnections: () => <div /> }));
 // Stands in for the render loop that calls session.frame in the real PartLayer.
 vi.mock('./PartLayer', () => ({
   PartLayer: ({ session }: { session: RunSession }) => {

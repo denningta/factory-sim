@@ -16,6 +16,7 @@ Start with `/implement-story <ID>` when prompted. Read `CLAUDE.md` first.
 - Push only `story/<ID>`. Never push to main, force-push, or merge PRs. Once the branch is pushed, update it with `git merge origin/main`, never a rebase. If history goes wrong, recover on a new local branch: `git switch -c fix origin/story/<ID>`, `git cherry-pick <your commits>`, `git merge origin/main`, then `git push origin HEAD:story/<ID>` (fast-forward). Never use `reset --hard`.
 - If something is ambiguous, pick the simplest reading that satisfies the acceptance criteria and note it in the PR.
 - Don't tick the acceptance-criteria checkboxes in `docs/stories/*.md`. Status lives in the GitHub issue, and the PR's criterion → test table is the evidence. Do write design decisions in the story's Notes section.
+- Delete files only by a literal absolute path inside your worktree (e.g. `rm /home/…/story-<id>/docs/screenshots/<ID>/*.png`), never via a variable (`rm $D/*`) or after a `cd` in the same command. Claude Code flags those as dangerous and stops at a permission prompt, which stalls you until the lead answers.
 - When review feedback arrives, address every point (fix it or reply with a reason), push, and report back in one short message.
 - Finish by printing: `PR READY: #<number> <url>` so the lead can find it.
 

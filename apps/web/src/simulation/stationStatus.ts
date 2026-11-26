@@ -63,3 +63,31 @@ export function bottleneckSummary(
   const row = rows.find((r) => r.id === id);
   return row ? { name: row.name, working: row.working } : null;
 }
+
+/** What the user sees for an engine state: the engine's `idle` is "Waiting for tech". */
+const LABELS: Record<StationState, string> = {
+  working: 'Working',
+  starved: 'Starved',
+  blocked: 'Blocked',
+  idle: 'Waiting for tech',
+};
+export const stateLabel = (state: StationState): string => LABELS[state];
+
+/** Stack-light segments, bottom to top; exactly one is lit per state. */
+export type LightSegment = 'working' | 'starved' | 'blocked' | 'waiting';
+export const LIGHT_ORDER: readonly LightSegment[] = ['blocked', 'starved', 'working', 'waiting'];
+export const SEGMENT_OF: Record<StationState, LightSegment> = {
+  working: 'working',
+  starved: 'starved',
+  blocked: 'blocked',
+  idle: 'waiting',
+};
+export const lightSegments = (
+  state: StationState | undefined,
+  t: Theme = getTheme(),
+): { segment: LightSegment; color: string; lit: boolean }[] =>
+  LIGHT_ORDER.map((segment) => ({
+    segment,
+    color: t.state[segment].strong,
+    lit: state !== undefined && SEGMENT_OF[state] === segment,
+  }));

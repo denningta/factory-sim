@@ -18,6 +18,7 @@ vi.mock('../products/ProductsPanel', () => ({ ProductsPanel: () => <div /> }));
 vi.mock('../simulation/TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('../simulation/PartLayer', () => ({ PartLayer: () => <div /> }));
 vi.mock('../simulation/StationLayer', () => ({ StationLayer: () => <div /> }));
+vi.mock('../simulation/RunConnections', () => ({ RunConnections: () => <div /> }));
 
 const document = projectSchema.parse(modelJson);
 const mockProject = (id: string, doc = document) =>

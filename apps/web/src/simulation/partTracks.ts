@@ -3,6 +3,7 @@ import type { LineEvent, PartInLine } from '@factory-sim/sim-engine';
 import { localToPlan, portWorldPosition } from '../layout/ports';
 import { buildModel } from '../equipment/models/registry';
 import type { Vec3 } from '../equipment/models/types';
+import { getTheme } from '../ui/themeStore';
 
 export interface Pt {
   x: number;
@@ -50,6 +51,8 @@ export interface PartTracks {
   /** Replaces the tracks with the parts in the line now (animation turned back on). */
   seed(wip: readonly PartInLine[]): void;
   at(t: number): PartPose[];
+  /** Parts waiting at each station's input as of the last `at()` call. */
+  queueLengths(): ReadonlyMap<string, number>;
   clear(): void;
 }
 
@@ -166,7 +169,7 @@ export function createPartTracks(
   const addPart = (partId: number, productId: string, first: Key) =>
     parts.set(partId, {
       id: partId,
-      color: colors.get(productId) ?? '#9ca3af',
+      color: colors.get(productId) ?? getTheme().color.muted,
       keys: [first],
       cursor: 0,
     });
@@ -187,6 +190,7 @@ export function createPartTracks(
     }
   };
 
+  let lengths: ReadonlyMap<string, number> = new Map();
   const at = (t: number): PartPose[] => {
     const poses: PartPose[] = [];
     // Waiting parts per station, in arrival order, to assign queue slots.
@@ -237,6 +241,7 @@ export function createPartTracks(
       q.sort((a, b) => a.since - b.since || a.pose.partId - b.pose.partId);
       q.forEach(({ pose: p }, slot) => Object.assign(p, slotAt(slot)));
     }
+    lengths = new Map([...queues].map(([id, q]) => [id, q.length]));
     return poses;
   };
 
@@ -244,6 +249,7 @@ export function createPartTracks(
     ingest,
     seed,
     at,
+    queueLengths: () => lengths,
     clear: () => parts.clear(),
   };
 }

@@ -111,7 +111,9 @@ export default tseslint.config(
     // ADR-0016: migrated directories style through tokens and CSS Modules. Computed geometry (bar
     // widths, product colour swatches) may keep `style` with a disable comment saying why. Each
     // sprint 8 screen story adds its directory here.
-    files: ['apps/web/src/{ui,auth,projects,products,results}/**/*.tsx'],
+    files: [
+      'apps/web/src/{ui,auth,projects,products,layout,equipment,technicians,results}/**/*.tsx',
+    ],
     rules: {
       'no-restricted-syntax': [
         'error',

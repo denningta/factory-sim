@@ -2,50 +2,47 @@ import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { LibrarySection } from './equipment/LibrarySection';
 import { api } from './api/client';
 import { LibraryPreview } from './equipment/EquipmentModel';
-import { FloorPanel } from './layout/FloorPanel';
+import { FloorEmptyHint } from './layout/FloorEmptyHint';
 import { FloorScene } from './layout/FloorScene';
-import { PropertiesPanel } from './layout/PropertiesPanel';
+import { RightPanel } from './layout/RightPanel';
+import { StatusBar } from './layout/StatusBar';
 import { ViewToolbar } from './layout/ViewToolbar';
-import { TechniciansPanel } from './technicians/TechniciansPanel';
 import { useEditorStore } from './layout/editorStore';
 import { useEditorShortcuts } from './layout/shortcuts';
+import styles from './Editor.module.css';
 
-export function Editor({ readOnly = false }: { readOnly?: boolean }) {
+export function Editor({
+  readOnly = false,
+  onOpenProducts,
+}: {
+  readOnly?: boolean;
+  onOpenProducts?: () => void;
+}) {
   const unit = useEditorStore((s) => s.unit);
-  const snap = useEditorStore((s) => s.snapEnabled);
   const selectedId = useEditorStore((s) => s.selectedTypeId);
   const userTypes = useEditorStore((s) => s.userTypes);
   const selected = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === selectedId);
   useEditorShortcuts(readOnly);
-  // Wireframe 1: library left, viewport centre, properties right.
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '260px 1fr 280px',
-        height: '100%',
-        minHeight: 0,
-      }}
-    >
-      <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
+    <div className={styles.editor}>
+      <aside className={styles.side} aria-label="Library">
         <LibrarySection api={api} unit={unit} />
         {selected ? (
           <LibraryPreview type={selected} />
         ) : (
-          <p style={{ color: '#6b7280' }}>Select a type to preview it in 3D.</p>
+          <p className={styles.previewHint}>Select a type to preview it in 3D.</p>
         )}
       </aside>
-      <main style={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr) auto', minHeight: 0 }}>
+      <main className={styles.main}>
         <ViewToolbar />
-        <FloorScene />
-        <footer style={{ padding: 8, font: '13px sans-serif' }}>
-          Units: {unit} · Snap to grid: {snap ? 'on' : 'off'}
-        </footer>
+        <div className={styles.viewport}>
+          <FloorScene />
+          <FloorEmptyHint />
+        </div>
+        <StatusBar />
       </main>
-      <aside style={{ padding: 16, font: '14px sans-serif', overflowY: 'auto', minHeight: 0 }}>
-        <PropertiesPanel />
-        <FloorPanel />
-        <TechniciansPanel />
+      <aside className={styles.side} aria-label="Properties">
+        <RightPanel {...(onOpenProducts ? { onOpenProducts } : {})} />
       </aside>
     </div>
   );

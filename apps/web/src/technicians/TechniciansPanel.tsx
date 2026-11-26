@@ -1,6 +1,8 @@
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { Field, parseNumber } from '../layout/Field';
+import styles from '../layout/panels.module.css';
 import { formatNumber, speedFromDisplay, speedToDisplay } from '../layout/units';
+import { Button, EmptyState, Section } from '../ui';
 
 type Store = typeof defaultStore;
 
@@ -16,10 +18,10 @@ export function TechniciansPanel({ useStore = defaultStore }: { useStore?: Store
     endEdit,
   } = useStore();
   return (
-    <section aria-label="Technicians" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Technicians</h2>
+    <Section heading="Technicians" collapsible memoryKey="technicians">
+      {technicians.length === 0 && <EmptyState title="Add a technician, then assign stations" />}
       {technicians.map((t) => (
-        <div key={t.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <div key={t.id} className={styles.techRow}>
           <Field
             beginEdit={beginEdit}
             endEdit={endEdit}
@@ -42,12 +44,16 @@ export function TechniciansPanel({ useStore = defaultStore }: { useStore?: Store
               return r.ok ? null : r.error;
             }}
           />
-          <button onClick={() => deleteTechnician(t.id)} aria-label={`Delete ${t.name}`}>
+          <Button
+            variant="danger"
+            onClick={() => deleteTechnician(t.id)}
+            aria-label={`Delete ${t.name}`}
+          >
             Delete
-          </button>
+          </Button>
         </div>
       ))}
-      <button onClick={() => addTechnician()}>Add technician</button>
-    </section>
+      <Button onClick={() => addTechnician()}>Add technician</Button>
+    </Section>
   );
 }

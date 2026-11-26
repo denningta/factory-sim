@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { useEditorStore } from './editorStore';
 import { useEditorStore as defaultStore } from './editorStore';
+import { Field as UiField, Section } from '../ui';
+import styles from './panels.module.css';
 import { formatNumber, fromDisplay, toDisplay, type DisplayUnit } from './units';
 
 type Store = typeof useEditorStore;
@@ -27,37 +29,33 @@ function LengthField({ label, meters, unit, onCommit, beginEdit, endEdit }: Fiel
   const end = () => endEdit(session.current);
   useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {label} ({unit})
-      <input
-        type="text"
-        inputMode="decimal"
-        value={draft ?? formatNumber(toDisplay(meters, unit))}
-        onFocus={begin}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter') return;
-          end();
-          begin();
-        }}
-        onChange={(e) => {
-          const text = e.target.value;
-          setDraft(text);
-          const n = Number(text);
-          setError(
-            text.trim() === '' || !Number.isFinite(n)
-              ? 'Enter a positive number'
-              : onCommit(fromDisplay(n, unit)),
-          );
-        }}
-        onBlur={() => {
-          end();
-          setDraft(null);
-          setError(null);
-        }}
-        aria-invalid={error !== null}
-      />
-      {error && <span role="alert">{error}</span>}
-    </label>
+    <UiField
+      label={`${label} (${unit})`}
+      type="text"
+      inputMode="decimal"
+      value={draft ?? formatNumber(toDisplay(meters, unit))}
+      error={error}
+      onFocus={begin}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter') return;
+        end();
+        begin();
+      }}
+      onChange={(text) => {
+        setDraft(text);
+        const n = Number(text);
+        setError(
+          text.trim() === '' || !Number.isFinite(n)
+            ? 'Enter a positive number'
+            : onCommit(fromDisplay(n, unit)),
+        );
+      }}
+      onBlur={() => {
+        end();
+        setDraft(null);
+        setError(null);
+      }}
+    />
   );
 }
 
@@ -69,43 +67,60 @@ export function FloorPanel({ useStore = defaultStore }: { useStore?: Store }) {
     return r.ok ? null : r.error;
   };
   return (
-    <section aria-label="Floor" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Floor</h2>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        Units
-        <select value={unit} onChange={(e) => setUnit(e.target.value as DisplayUnit)}>
-          <option value="ft">ft</option>
-          <option value="m">m</option>
-        </select>
-      </label>
-      <LengthField
-        beginEdit={beginEdit}
-        endEdit={endEdit}
-        label="Floor width"
-        meters={floor.width}
-        unit={unit}
-        onCommit={commit('width')}
-      />
-      <LengthField
-        beginEdit={beginEdit}
-        endEdit={endEdit}
-        label="Floor length"
-        meters={floor.length}
-        unit={unit}
-        onCommit={commit('length')}
-      />
-      <LengthField
-        beginEdit={beginEdit}
-        endEdit={endEdit}
-        label="Grid spacing"
-        meters={floor.gridSpacing}
-        unit={unit}
-        onCommit={commit('gridSpacing')}
-      />
-      <label>
-        <input type="checkbox" checked={snapEnabled} onChange={toggleSnap} />
-        Snap to grid
-      </label>
-    </section>
+    <Section heading="Floor" collapsible memoryKey="floor">
+      <div className={styles.stack}>
+        <UiFieldSelect unit={unit} setUnit={setUnit} />
+        <LengthField
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+          label="Floor width"
+          meters={floor.width}
+          unit={unit}
+          onCommit={commit('width')}
+        />
+        <LengthField
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+          label="Floor length"
+          meters={floor.length}
+          unit={unit}
+          onCommit={commit('length')}
+        />
+        <LengthField
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+          label="Grid spacing"
+          meters={floor.gridSpacing}
+          unit={unit}
+          onCommit={commit('gridSpacing')}
+        />
+        <label className={styles.choice}>
+          <input type="checkbox" checked={snapEnabled} onChange={toggleSnap} />
+          Snap to grid
+        </label>
+      </div>
+    </Section>
+  );
+}
+
+function UiFieldSelect({
+  unit,
+  setUnit,
+}: {
+  unit: DisplayUnit;
+  setUnit: (u: DisplayUnit) => void;
+}) {
+  return (
+    <label className={styles.labelCol}>
+      Units
+      <select
+        className={styles.select}
+        value={unit}
+        onChange={(e) => setUnit(e.target.value as DisplayUnit)}
+      >
+        <option value="ft">ft</option>
+        <option value="m">m</option>
+      </select>
+    </label>
   );
 }

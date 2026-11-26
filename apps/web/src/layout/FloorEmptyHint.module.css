@@ -1,0 +1,11 @@
+.hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* The floor underneath stays draggable-onto and clickable. */
+  pointer-events: none;
+}
+.hint > * {
+  background: var(--color-surface);
+}

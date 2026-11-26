@@ -1,4 +1,5 @@
 import type { RunStats } from '@factory-sim/sim-engine';
+import { stateLabel } from '../simulation/stationStatus';
 import { Legend } from '../ui/Legend';
 import {
   stationUtilization,
@@ -19,7 +20,7 @@ const STATION_SEGMENTS: Segment<StationKey>[] = [
   { key: 'blocked', label: 'Blocked', color: 'var(--state-blocked-tint)', className: 'blocked' },
   {
     key: 'idle',
-    label: 'Waiting for tech',
+    label: stateLabel('idle'),
     color: 'var(--state-waiting-tint)',
     className: 'waiting',
   },
