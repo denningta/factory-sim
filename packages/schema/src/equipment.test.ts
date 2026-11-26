@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BUILT_IN_EQUIPMENT_TYPES,
   BASE_EQUIPMENT_TYPES,
   CURRENT_SCHEMA_VERSION,
   EQUIPMENT_BEHAVIORS,
@@ -301,5 +302,19 @@ describe('schema v7: equipment `model` key (ADR-0015)', () => {
     const project = createProject();
     project.equipment = [e];
     expect(validateProject(project).ok).toBe(true);
+  });
+});
+
+describe('SF-7: built-in autoclave type', () => {
+  const autoclave = BUILT_IN_EQUIPMENT_TYPES.find((t) => t.id === 'base-autoclave');
+
+  it('is a valid automatic perBatch workstation drawn as asc-autoclave', () => {
+    expect(equipmentTypeSchema.safeParse(autoclave).success).toBe(true);
+    expect(autoclave?.behavior).toBe('workstation');
+    expect(autoclave?.model).toBe('asc-autoclave');
+    if (autoclave?.behavior !== 'workstation') throw new Error('expected a workstation');
+    expect(autoclave.params.labor.mode).toBe('automatic');
+    expect(autoclave.params.cycle?.mode).toBe('perBatch');
+    expect(autoclave.params.maxWait).toBeGreaterThan(0);
   });
 });
