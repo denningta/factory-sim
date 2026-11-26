@@ -5,7 +5,7 @@ points: 5
 priority: Must
 sprint: 9
 depends_on: [SF-0]
-builder_model: sonnet
+builder_model: opus
 owner: builder
 issue: 177
 ---
@@ -26,4 +26,4 @@ issue: 177
 
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
-- _Lead (2026-11-26):_ files: `packages/sim-engine/src/line-run.ts` (`tryStart`, `startJob`), `line-compile.ts` (`StationDef`, `missing_cycle_time`). Don't change the public API beyond the SF-0 types; report to the lead if you need to.
+- _Lead (2026-11-26):_ files: `packages/sim-engine/src/line-run.ts` (`tryStart`, `startJob`), `line-compile.ts` (`StationDef`, `missing_cycle_time`). Don't change the public API beyond the SF-0 types; report to the lead if you need to. Contract: ADR-0017 (`cycle`, `maxWait` optional; absent = today's behavior). Opus builder (product owner, 2026-11-26).
