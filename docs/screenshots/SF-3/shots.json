@@ -1,0 +1,33 @@
+{
+  "shots": [
+    { "name": "editor-on", "screen": "layout", "settle": 1200 },
+    {
+      "name": "editor-off",
+      "screen": "layout",
+      "settle": 800,
+      "actions": [
+        { "click": "role=button[name='Layers']" },
+        { "click": "role=menuitemcheckbox[name='Connections']" },
+        { "press": "Escape" },
+        { "wait": 500 }
+      ]
+    },
+    {
+      "name": "simulate-on",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [{ "click": "text=Run to end" }, { "wait": 1500 }]
+    },
+    {
+      "name": "simulate-off",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [
+        { "click": "text=Run to end" },
+        { "click": "role=button[name='Layers']" },
+        { "click": "role=menuitemcheckbox[name='Connections']" },
+        { "wait": 800 }
+      ]
+    }
+  ]
+}

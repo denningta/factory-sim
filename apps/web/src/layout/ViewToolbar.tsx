@@ -3,6 +3,7 @@ import { useEditorStore as defaultStore } from './editorStore';
 import { formatNumber, fromDisplay, toDisplay } from './units';
 import type { ViewMode } from './viewControls';
 import { Button } from '../ui';
+import { LayersMenu } from './LayersMenu';
 import styles from './ViewToolbar.module.css';
 
 const SEGMENTS: { mode: ViewMode; label: string }[] = [
@@ -54,6 +55,7 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
         <Button onClick={requestFit} title="Zoom to fit the whole floor">
           Zoom to fit
         </Button>
+        <LayersMenu />
       </div>
       <div role="group" aria-label="Edit" className={styles.group}>
         <Button disabled={!canUndo} onClick={undo} title="Undo (Ctrl+Z)">
@@ -73,7 +75,7 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
       </div>
       <div role="group" aria-label="Connect" className={styles.group}>
         <span className={styles.hint} title="Click an output port, then an input port">
-          {pending ? 'Now click an input' : 'Click ports to link'}
+          {pending ? 'Now click an input' : 'Link ports'}
         </span>
         {pending && (
           <Button onClick={clearSelection} title="Cancel connecting (Esc)">

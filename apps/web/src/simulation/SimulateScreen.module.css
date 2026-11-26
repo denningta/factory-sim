@@ -88,3 +88,6 @@
   top: 112px;
   max-height: calc(100% - 112px - var(--space-3));
 }
+.viewTools {
+  display: flex;
+}
