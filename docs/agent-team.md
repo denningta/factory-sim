@@ -39,6 +39,12 @@ The lead reads the docs, runs `/next-story` and **dispatches ready stories in sp
 - **Builders:** a fresh session per story, narrow reads, quiet command output, small screenshots looked at once, and short reports (`.claude/agents/builder.md`).
 - **Lead:** no reviewer pass for docs-only lead PRs. Notes for in-flight stories go on their issue.
 
+Changes after the sprint 8 token review (product owner, 2026-11-25). Over Nov 24–25 the lead used about 39 % of tokens, Sonnet builders 42 %, one Opus builder story 10 % and the reviewer 6 %.
+
+- **Models:** builders use Sonnet. Use Opus for a builder only with the product owner's OK (`builder_model` in the story). The lead runs on Sonnet for routine routing. The product owner switches it to Opus (`/model opus`) for sprint planning, ADRs and schema or engine-API design. The reviewer stays on Opus.
+- **Lead wake-ups:** the lead's watcher wakes it only when a builder is blocked, when a review has finished (the watcher starts reviews itself as soon as an unreviewed PR head has green CI), or when a builder has sat idle for 15 minutes. The lead compacts its context at each sprint boundary.
+- **Screenshots:** UI stories use the shared `pnpm screenshot` tool (`scripts/screenshot.mjs`), under the screenshot rule in the Definition of Done. This replaces per-builder harnesses, which also cut down on screenshot-only review rounds.
+
 ## Answering agents
 
 - herdr shows each agent as **working / idle / blocked / done**. _Blocked_ = waiting on a permission prompt or question.
