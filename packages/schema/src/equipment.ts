@@ -9,6 +9,7 @@ import { durationSchema } from './duration';
  *
  * Ports (v3) are the input/output points connections attach to (FL-1, EQ-4).
  * `model` (v7) names the 3D model the renderer draws (ADR-0015).
+ * `cycle` and `maxWait` (v8) let a workstation cure a batch for a fixed time (SF-0, ADR-0010).
  */
 
 export const idSchema = z.string().min(1);
@@ -32,6 +33,17 @@ export const laborSchema = z.discriminatedUnion('mode', [
   }),
 ]);
 
+/**
+ * How long one job on a workstation takes (SF-0). `perProduct`: the cycle time from
+ * `project.cycleTimes` for (product, station), the lead part's product for a batch.
+ * `perBatch`: one fixed cure of `time` per batch, whatever the number or mix of parts (an
+ * autoclave or oven); such a station needs no `cycleTimes` entries.
+ */
+export const workstationCycleSchema = z.discriminatedUnion('mode', [
+  z.strictObject({ mode: z.literal('perProduct') }),
+  z.strictObject({ mode: z.literal('perBatch'), time: durationSchema }),
+]);
+
 /** Simulation parameters per behavior. SI units. */
 export const behaviorParamsSchemas = {
   workstation: z
@@ -41,6 +53,16 @@ export const behaviorParamsSchemas = {
       /** Units that must accumulate before processing starts (WS-3); processed together. */
       batchSize: positiveInt,
       labor: laborSchema,
+      /**
+       * Absent means `perProduct`. Optional rather than upgraded in, so equipment types
+       * already stored in the library (EQ-3, outside the project document) stay valid.
+       */
+      cycle: workstationCycleSchema.optional(),
+      /**
+       * Seconds. Start a partial batch once the first waiting part has waited this long
+       * (SF-0). Absent: wait for a full batch, as before.
+       */
+      maxWait: z.number().positive().optional(),
     })
     .refine((p) => p.batchSize <= p.capacity, {
       message: 'Batch size cannot exceed capacity: a batch is processed together',
@@ -214,6 +236,7 @@ export type Equipment = z.infer<typeof equipmentSchema>;
 export type EquipmentBehavior = Equipment['behavior'];
 export type Port = z.infer<typeof portSchema>;
 export type Labor = z.infer<typeof laborSchema>;
+export type WorkstationCycle = z.infer<typeof workstationCycleSchema>;
 export type BehaviorParams<B extends EquipmentBehavior> = z.infer<
   (typeof behaviorParamsSchemas)[B]
 >;

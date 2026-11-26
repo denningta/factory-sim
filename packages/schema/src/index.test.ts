@@ -506,3 +506,50 @@ describe('schema v7: optional equipment model key (ADR-0015)', () => {
     expect(result.ok && result.project.equipment[1]?.model).toBe('cnc-enclosure');
   });
 });
+
+describe('schema v8: batch cure cycle and max wait (SF-0)', () => {
+  const stationIndex = (p: Project) => p.equipment.findIndex((e) => e.behavior === 'workstation');
+
+  it('upgrades a v7 document unchanged apart from the version', () => {
+    const current = sampleProject();
+    const v7 = JSON.parse(JSON.stringify({ ...current, schemaVersion: 7 }));
+    expect(loadProject(v7)).toEqual({ ok: true, project: current });
+  });
+
+  it('keeps a perBatch cycle and maxWait through save and load', () => {
+    const p = sampleProject();
+    const i = stationIndex(p);
+    const e = p.equipment[i]!;
+    if (e.behavior !== 'workstation') throw new Error('sample needs a workstation');
+    p.equipment[i] = {
+      ...e,
+      params: {
+        ...e.params,
+        cycle: { mode: 'perBatch', time: { kind: 'fixed', value: 3600 } },
+        maxWait: 600,
+      },
+    };
+    const result = loadProject(JSON.parse(JSON.stringify(p)));
+    expect(result.ok && result.project.equipment[i]).toEqual(p.equipment[i]);
+  });
+
+  it('rejects a maxWait of zero or less', () => {
+    for (const maxWait of [0, -5]) {
+      const p = sampleProject();
+      const i = stationIndex(p);
+      const e = p.equipment[i]!;
+      if (e.behavior !== 'workstation') throw new Error('sample needs a workstation');
+      p.equipment[i] = { ...e, params: { ...e.params, maxWait } };
+      expectInvalid(p, `equipment[${i}].params.maxWait`);
+    }
+  });
+
+  it('rejects a perBatch cycle without a time', () => {
+    const p = sampleProject();
+    const i = stationIndex(p);
+    const e = p.equipment[i]!;
+    if (e.behavior !== 'workstation') throw new Error('sample needs a workstation');
+    (e.params as Record<string, unknown>).cycle = { mode: 'perBatch' };
+    expectInvalid(p, `equipment[${i}].params.cycle.time`);
+  });
+});

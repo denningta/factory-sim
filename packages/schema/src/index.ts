@@ -131,6 +131,9 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
   5: (doc) => ({ layout: { minClearance: null }, ...doc, schemaVersion: 6 }),
   // v6 → v7: the optional equipment `model` key; absent means the behavior's default model.
   6: (doc) => ({ ...doc, schemaVersion: 7 }),
+  // v7 → v8: optional workstation `cycle` and `maxWait` (SF-0); absent means per-product
+  // cycle times and full batches only, as before.
+  7: (doc) => ({ ...doc, schemaVersion: 8 }),
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({

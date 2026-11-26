@@ -117,6 +117,27 @@ export type LineEvent =
       equipmentId: string;
       endsAt?: SimTime;
     }
+  /**
+   * Processing has ended and the part waits at the station for downstream room (SF-0). It
+   * stays there until its next `partMoved` (or `partExited`); the renderer puts it in the
+   * station's out-tray. Emitted for every finished part, blocked or not.
+   */
+  | { t: SimTime; type: 'partFinished'; partId: number; equipmentId: string }
+  /**
+   * A batch's cycle starts (SF-0): on an automatic station after the load, on a manual one
+   * when the tech is there, so `endsAt` is always known. Emitted only for batch stations
+   * (`batchSize` > 1 or `cycle.mode` = 'perBatch'); `partIds` may be fewer than `batchSize`
+   * when `maxWait` started a partial batch. Each part still gets its own `partStarted`.
+   */
+  | {
+      t: SimTime;
+      type: 'batchStarted';
+      equipmentId: string;
+      partIds: number[];
+      endsAt: SimTime;
+    }
+  /** The batch's cycle has ended (SF-0); its parts follow with `partFinished`. */
+  | { t: SimTime; type: 'batchFinished'; equipmentId: string; partIds: number[] }
   | { t: SimTime; type: 'partExited'; partId: number; sinkId: string }
   | { t: SimTime; type: 'stationState'; stationId: string; state: StationState }
   | {
@@ -135,7 +156,10 @@ export interface PartInLine {
   productId: string;
   releasedAt: SimTime;
   /** Latest positional event for this part, recorded even while events are disabled. */
-  last: Extract<LineEvent, { type: 'partReleased' | 'partMoved' | 'partEntered' | 'partStarted' }>;
+  last: Extract<
+    LineEvent,
+    { type: 'partReleased' | 'partMoved' | 'partEntered' | 'partStarted' | 'partFinished' }
+  >;
 }
 
 /** Where a technician is now (TE-3), tracked even while events are disabled. */
