@@ -42,6 +42,12 @@ export interface StationDef {
   position: { x: number; y: number };
   /** Technicians assigned to it, in document order. */
   techIds: string[];
+  /** `cycle.mode = 'perBatch'` (SF-6): one cure of this time per batch, any parts. */
+  cure?: Duration;
+  /** Seconds the first waiting part waits before a partial batch starts (SF-6). */
+  maxWait?: number;
+  /** Emits batch events (ADR-0017): `batchSize` > 1 or perBatch. */
+  batches: boolean;
 }
 
 export interface TechDef {
@@ -92,6 +98,8 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
   // Product owner decision (SE-6): only stations some routing uses need a technician.
   const routed = new Set(p.products.flatMap((pr) => pr.routing.map((s) => s.stationId)));
   const stations: StationDef[] = [];
+  /** perBatch stations take no cycleTimes, so their steps can't miss one. */
+  const perBatch = new Set<string>();
   for (const e of p.equipment) {
     if (e.behavior !== 'workstation') continue;
     if (e.params.labor.mode === 'manual' && routed.has(e.id) && !staffed.has(e.id))
@@ -100,6 +108,9 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
         `"${e.name || e.id}" is manual but no technician is assigned to it.`,
         e.id,
       );
+    const { cycle, maxWait } = e.params;
+    const cure = cycle?.mode === 'perBatch' ? cycle.time : undefined;
+    if (cure) perBatch.add(e.id);
     stations.push({
       id: e.id,
       capacity: e.params.capacity,
@@ -107,6 +118,9 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
       labor: e.params.labor,
       position: e.position,
       techIds: p.technicians.filter((t) => t.stationIds.includes(e.id)).map((t) => t.id),
+      ...(cure && { cure }),
+      ...(maxWait !== undefined && { maxWait }),
+      batches: e.params.batchSize > 1 || cure !== undefined,
     });
   }
 
@@ -180,7 +194,7 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
     let at = sources[0]?.id;
     for (const step of product.routing) {
       const cycle = cycleTimes.get(`${product.id}\n${step.stationId}`);
-      if (!cycle)
+      if (!cycle && !perBatch.has(step.stationId))
         error(
           'missing_cycle_time',
           `${product.name} has no cycle time at "${byId.get(step.stationId)?.name || step.stationId}".`,
