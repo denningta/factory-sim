@@ -11,7 +11,8 @@ import styles from './SimulateScreen.module.css';
 import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { Legend } from './Legend';
-import { RunConnections } from './RunConnections';
+import { ConnectionArcs } from '../layout/ConnectionArcs';
+import { LayersMenu } from '../layout/LayersMenu';
 import { StationLayer } from './StationLayer';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
@@ -159,7 +160,7 @@ function Running({
   return (
     <div className={styles.viewport}>
       <FloorScene interactive={false}>
-        <RunConnections session={session} equipment={equipment} connections={connections} />
+        <ConnectionArcs session={session} equipment={equipment} connections={connections} />
         <StationLayer session={session} stations={stations} />
         <PartLayer session={session} />
         <TechLayer session={session} />
@@ -171,6 +172,9 @@ function Running({
           shiftLength={shiftLength}
           stations={stations}
         />
+        <div role="toolbar" aria-label="View" className={styles.viewTools}>
+          <LayersMenu />
+        </div>
         <div role="toolbar" aria-label="Playback" className={styles.hud}>
           <Button onClick={() => session.play()} disabled={session.playing}>
             Play
