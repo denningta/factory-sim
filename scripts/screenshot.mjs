@@ -6,10 +6,12 @@
 // It starts the web dev server, answers every /api call in the browser with a signed-in admin and
 // one project (the reference model by default), captures each shot at exactly 1280×800 in dark and
 // light, writes docs/screenshots/<ID>/<name>-<theme>.png and always stops the dev server.
+// Uses the newest cached Playwright Chromium (or CHROMIUM_PATH). None cached: pnpm exec playwright-core install chromium
 //
 // shots.json:
 // {
 //   "project": "docs/reference-model/model.json",   // optional; a schemaVersion-current document
+//   "projectName": "Reference line",                // optional; name shown in the top bar and list
 //   "shots": [
 //     { "name": "results", "screen": "results",      // layout | products | simulate | results | projects | signin
 //                                                     (Account: screen "projects" + { "click": "text=Account" })
@@ -18,7 +20,8 @@
 //         { "click": "text=Run to end" },              // any Playwright selector
 //         { "fill": ["#seed", "42"] }, { "press": "Escape" },
 //         { "waitFor": "role=timer" }, { "wait": 1500 }, { "eval": "window.scrollTo(0, 0)" }
-//       ] }
+//       ],
+//       "settle": 800 }                                // optional ms to let the 3D canvas draw before capture
 //   ]
 // }
 import { spawn } from 'node:child_process';
@@ -80,7 +83,8 @@ function browserPath() {
   if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
   const cache = join(homedir(), '.cache', 'ms-playwright');
   if (!existsSync(cache)) return undefined;
-  for (const d of readdirSync(cache).sort().reverse()) {
+  const rev = (d) => Number(d.match(/(\d+)$/)?.[1] ?? 0);
+  for (const d of readdirSync(cache).sort((a, b) => rev(b) - rev(a))) {
     for (const p of [
       join(cache, d, 'chrome-linux', 'chrome'),
       join(cache, d, 'chrome-linux64', 'chrome'),
@@ -97,7 +101,7 @@ async function startVite(port) {
     ['--filter', '@factory-sim/web', 'exec', 'vite', '--port', String(port), '--strictPort'],
     {
       cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'inherit'],
       detached: true, // own process group, so stop() takes esbuild down too
     },
   );
@@ -109,7 +113,8 @@ async function startVite(port) {
     }
   };
   process.on('exit', stop);
-  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130));
+  for (const sig of ['SIGINT', 'SIGTERM'])
+    process.on(sig, () => process.exit(sig === 'SIGINT' ? 130 : 143));
   await new Promise((ok, fail) => {
     const t = setTimeout(() => fail(new Error('vite did not start within 60 s')), 60_000);
     vite.stdout.on('data', (b) => String(b).includes('Local:') && (clearTimeout(t), ok()));
@@ -172,7 +177,14 @@ try {
       const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e)));
-      page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()));
+      // The mock decides every status (e.g. the signed-out 401), so Chromium's resource-load noise isn't an app error.
+      page.on(
+        'console',
+        (msg) =>
+          msg.type() === 'error' &&
+          !msg.text().startsWith('Failed to load resource') &&
+          errors.push(msg.text()),
+      );
       await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [THEME_KEY, theme]);
       await mockApi(page, shot.screen !== 'signin');
       await page.goto(`http://localhost:${port}/${hashFor(shot.screen)}`);
