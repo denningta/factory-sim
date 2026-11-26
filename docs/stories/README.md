@@ -104,11 +104,27 @@ GitHub Issues are the live status; these files are the spec. Acceptance criteria
 
 Order (lead, 2026-11-24): UI-1 ∥ UI-7 → UI-9 → UI-2 ∥ UI-5 → UI-6 ∥ UI-3 → UI-4. UI-3 waits for UI-7 (both change `layout/`), and UI-4 and UI-5 don't run together (both change `simulation/`). Styling approach: ADR-0016 (dark by default, light toggle). Visual target (product owner, 2026-11-24): [`docs/wireframes/reference/`](../wireframes/reference/README.md); UI stories load the `frontend-design` skill (and `dataviz` for charts). Prototype reference files: [`docs/wireframes/prototype/`](../wireframes/prototype/README.md). Decided in planning (product owner, 2026-11-23): per-type 3D models via the optional `model` key (ADR-0015, merged in #138); the engine's `idle` is shown as "Waiting for tech"; utilization moves from Simulate to Results.
 
-## Sprint 9: Control-room scene and trends (10 pts)
+## Sprint 9: Shop floor in 3D: workbenches, people, overhead flow, every part visible, autoclave (37 pts)
+
+| ID              | Epic       | Pts | Priority | Depends on                         |
+| --------------- | ---------- | --- | -------- | ---------------------------------- |
+| [SF-0](SF-0.md) | Shop floor | 3   | Must     | —                                  |
+| [SF-1](SF-1.md) | Shop floor | 5   | Must     | —                                  |
+| [SF-3](SF-3.md) | Shop floor | 5   | Must     | —                                  |
+| [SF-6](SF-6.md) | Shop floor | 5   | Must     | SF-0                               |
+| [SF-4](SF-4.md) | Shop floor | 3   | Must     | SF-3                               |
+| [SF-2](SF-2.md) | Shop floor | 3   | Must     | SF-1                               |
+| [SF-7](SF-7.md) | Shop floor | 5   | Must     | SF-0, SF-1                         |
+| [SF-5](SF-5.md) | Shop floor | 5   | Must     | SF-0, SF-1, SF-6, SF-7             |
+| [SF-8](SF-8.md) | Shop floor | 3   | Must     | SF-1, SF-2, SF-3, SF-4, SF-5, SF-7 |
+
+Planned 2026-11-26 (product owner): sprint 9 focuses on the 3D experience. UI-8 is closed and split into SF-1 (bench, machine), SF-2 (technicians) and SF-8 (scene); its other models go to UI-11. The autoclave gets a real cure cycle (fixed cure time per batch, partial batch after a max wait). Parts are carried at bench height, not along the overhead connections. Up to 2 builders. Order (lead): SF-0 (lead) → SF-1 ∥ SF-3 → SF-6 ∥ SF-4 → SF-2 ∥ SF-7 → SF-5 → SF-8. SF-7 stays in `equipment/` and SF-5 does the autoclave animation in `simulation/`, so SF-2 and SF-7 don't share a module.
+
+## Sprint 10 (tentative): Trends and more models (10 pts)
 
 | ID                | Epic      | Pts | Priority | Depends on |
 | ----------------- | --------- | --- | -------- | ---------- |
-| [UI-8](UI-8.md)   | UI polish | 5   | Should   | UI-7, UI-9 |
 | [UI-10](UI-10.md) | UI polish | 5   | Must     | UI-6, UI-9 |
+| [UI-11](UI-11.md) | UI polish | 5   | Could    | SF-1       |
 
-Moved or added on 2026-11-24 (product owner): UI-8 moves from sprint 8; UI-10 adds trend charts with uPlot.
+UI-10 (trend charts with uPlot, added 2026-11-24) moves from sprint 9 (product owner, 2026-11-26).
