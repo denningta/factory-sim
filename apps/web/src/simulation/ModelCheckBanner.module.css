@@ -24,6 +24,7 @@
 .issue {
   all: unset;
   cursor: pointer;
+  display: block;
   text-decoration: underline;
 }
 .issue:focus-visible {

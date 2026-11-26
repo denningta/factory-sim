@@ -3,16 +3,29 @@
     {
       "name": "simulate-done",
       "screen": "simulate",
-      "actions": [{ "click": "text=Run to end" }, { "waitFor": "text=(finished)" }],
+      "actions": [
+        {
+          "click": "text=Run to end"
+        },
+        {
+          "waitFor": "text=(finished)"
+        }
+      ],
       "settle": 1000
     },
     {
       "name": "simulate-settings-collapsed",
       "screen": "simulate",
       "actions": [
-        { "click": "text=Run to end" },
-        { "waitFor": "text=(finished)" },
-        { "click": "role=button[name=/Run settings/]" }
+        {
+          "click": "text=Run to end"
+        },
+        {
+          "waitFor": "text=(finished)"
+        },
+        {
+          "click": "role=button[name=/Run settings/]"
+        }
       ],
       "settle": 1000
     }

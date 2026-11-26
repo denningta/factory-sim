@@ -1,0 +1,11 @@
+{
+  "project": "docs/screenshots/UI-4/no-technicians.json",
+  "projectName": "Reference line (no technicians)",
+  "shots": [
+    {
+      "name": "simulate-model-check-failed",
+      "screen": "simulate",
+      "settle": 800
+    }
+  ]
+}

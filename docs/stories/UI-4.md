@@ -29,3 +29,5 @@ _Added by the lead or builder during the story: design decisions, open questions
 
 - _Lead (2026-11-24):_ files: `simulation/SimulateScreen.tsx`, `KpiPanel.tsx`, `BottleneckTile.tsx`, `RunSettingsPanel.tsx`. Prototype reference: `.hud` in [`docs/wireframes/prototype/prototype.css`](../wireframes/prototype/prototype.css) and [`layout.html`](../wireframes/prototype/layout.html). Depends on UI-6 because the utilization tables move there. Not run at the same time as UI-5: both change `simulation/`.
 - _Lead (2026-11-24):_ **redesign toward the control-room look** (product owner, 2026-11-24): see [`docs/wireframes/reference/`](../wireframes/reference/README.md). Load the `frontend-design` skill (and `dataviz` for charts, tiles, legends, bars) and add a Design section to the PR (builder role). Colours come from the active theme (UI-9).
+
+- _Builder (2026-11-25):_ layout: KPI strip spans the viewport; the right column (model check, Run settings, results link) starts below it. The danger-tone banner shows over a bare scene (screenshot `simulate-model-check-failed`); "See full results" is hidden then.

@@ -98,7 +98,7 @@ export function SimulateScreen({
           <FloorScene interactive={false} />
         </div>
       )}
-      <div className={styles.side}>
+      <div className={result.ok ? `${styles.side} ${styles.belowTiles}` : styles.side}>
         <ModelCheckBanner issues={result.ok ? [] : result.issues} onSelect={select} />
         <div className={styles.panel}>
           <Section key={applied} heading="Run settings" collapsible defaultOpen={applied === 0}>
@@ -115,9 +115,11 @@ export function SimulateScreen({
             Seed used: {current.settings.seed}
           </p>
         </div>
-        <Button className={styles.results} onClick={() => onOpenResults?.()}>
-          See full results →
-        </Button>
+        {result.ok && (
+          <Button className={styles.results} onClick={() => onOpenResults?.()}>
+            See full results →
+          </Button>
+        )}
       </div>
     </div>
   );

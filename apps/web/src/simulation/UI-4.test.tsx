@@ -139,6 +139,14 @@ describe('UI-4 AC4: run settings are a collapsible section below the tiles', () 
   });
 });
 
+describe('UI-4 AC3: no results link when the model check fails', () => {
+  it('hides "See full results →"', () => {
+    build(false);
+    render(<SimulateScreen />);
+    expect(screen.queryByRole('button', { name: 'See full results →' })).toBeNull();
+  });
+});
+
 describe('UI-4 AC5: utilization tables are gone; a link opens Results', () => {
   beforeEach(() => build(true));
   it('has no utilization tables or KPI table', () => {
