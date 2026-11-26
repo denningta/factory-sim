@@ -29,3 +29,4 @@ _Added by the lead or builder during the story: design decisions, open questions
 
 - _Lead (2026-11-26):_ sprint 9 "Shop floor in 3D" (product owner, 2026-11-26). Load the `frontend-design` skill and add a Design section to the PR. Colours come from the active theme (UI-9). ADR-0014 budget: draw calls in the low tens, ≤ 275k visible triangles.
 - _Lead:_ files: `simulation/partTracks.ts`, `simulation/PartLayer.tsx`, `simulation/playback.ts`, `simulation/StationLayer.tsx`. Uses anchors from SF-1 and SF-7 and events from SF-0/SF-6.
+- _Lead (2026-11-26):_ from the SF-1 review (#184): on `machine`, `workSurface` is inside the opaque cabinet (a part in process is hidden) and the queue/tray slots sit on the cabinet roof. Make parts in process on a machine visible (e.g. through the window) and place trays where they read naturally.

@@ -1,6 +1,6 @@
 # ADR-0017: Batch cure cycle on workstations
 
-- **Status:** Proposed (lead, 2026-11-26; needs product-owner sign-off)
+- **Status:** Accepted (product owner, 2026-11-26, merged in #183)
 - **Date:** 2026-11-26
 - **Amends:** ADR-0010 (workstation parameters), ADR-0008 (new state events)
 
