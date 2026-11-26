@@ -65,15 +65,18 @@ function Group<K extends string>({
               aria-label={`${r.name}: ${segments.map((s) => `${s.label.toLowerCase()} ${pct(r[s.key])}`).join(', ')}`}
               className={styles.bar}
             >
-              {segments.map((s) => (
-                <span
-                  key={s.key}
-                  title={`${s.label} ${pct(r[s.key])}`}
-                  className={styles[s.className]}
-                  // eslint-disable-next-line no-restricted-syntax -- the width is the measured share
-                  style={{ width: `${r[s.key]}%` }}
-                />
-              ))}
+              {segments
+                // Zero-width segments would still add a gap and stop a full bar short of the track.
+                .filter((s) => r[s.key] > 0)
+                .map((s) => (
+                  <span
+                    key={s.key}
+                    title={`${s.label} ${pct(r[s.key])}`}
+                    className={styles[s.className]}
+                    // eslint-disable-next-line no-restricted-syntax -- the width is the measured share
+                    style={{ width: `${r[s.key]}%` }}
+                  />
+                ))}
             </div>
           </li>
         ))}

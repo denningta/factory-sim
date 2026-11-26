@@ -28,7 +28,7 @@
   font-variant-numeric: tabular-nums;
 }
 .flag {
-  color: var(--color-danger);
+  color: var(--color-accent);
   font-weight: 600;
   font-size: var(--font-size-xs);
 }

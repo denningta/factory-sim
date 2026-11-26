@@ -104,6 +104,8 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
         let revision = p.revision;
         let base: Project = p.document;
         useEditorStore.getState().loadDocument(base);
+        // A run belongs to the project it was made from; don't show it in the next one.
+        useSessionStore.setState({ count: 0, current: null });
         setName(p.name);
         saver = saverRef.current = createAutosaver({
           delayMs: AUTOSAVE_MS,
