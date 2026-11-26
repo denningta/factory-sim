@@ -4,6 +4,6 @@ export { Section } from './Section';
 export { Tabs } from './Tabs';
 export { StatTile } from './StatTile';
 export { Legend } from './Legend';
-export { Badge } from './Badge';
+export { Badge, type BadgeTone } from './Badge';
 export { EmptyState } from './EmptyState';
 export { ThemeToggle } from './ThemeToggle';

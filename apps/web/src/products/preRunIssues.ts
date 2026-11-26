@@ -14,6 +14,22 @@ function listed(names: string[]): string {
   return names.slice(0, SHOWN).join(', ') + (rest > 0 ? `, and ${rest} more` : '');
 }
 
+/** Routed manual workstations nobody is assigned to. */
+export function unstaffedManualStations(
+  project: Pick<Project, 'products' | 'equipment' | 'technicians'>,
+) {
+  // A manual station needs a tech present for the whole cycle; an automatic one runs alone.
+  // Only stations some routing visits count: an unrouted one never runs, so staffing it is moot.
+  const routed = new Set(project.products.flatMap(stationsOf));
+  return project.equipment.filter(
+    (e) =>
+      e.behavior === 'workstation' &&
+      routed.has(e.id) &&
+      e.params.labor.mode === 'manual' &&
+      !project.technicians.some((t) => t.stationIds.includes(e.id)),
+  );
+}
+
 /** Reasons a run can't start yet. The run button (SIM) disables itself while this is non-empty. */
 export function preRunIssues(
   project: Pick<Project, 'products' | 'cycleTimes' | 'equipment' | 'technicians'>,
@@ -30,16 +46,7 @@ export function preRunIssues(
       message: `${missing.length} cycle time${missing.length === 1 ? '' : 's'} missing: ${listed(missing.map(label))}`,
     });
   }
-  // A manual station needs a tech present for the whole cycle; an automatic one runs alone.
-  // Only stations some routing visits count: an unrouted one never runs, so staffing it is moot.
-  const routed = new Set(project.products.flatMap(stationsOf));
-  const unstaffed = project.equipment.filter(
-    (e) =>
-      e.behavior === 'workstation' &&
-      routed.has(e.id) &&
-      e.params.labor.mode === 'manual' &&
-      !project.technicians.some((t) => t.stationIds.includes(e.id)),
-  );
+  const unstaffed = unstaffedManualStations(project);
   if (unstaffed.length > 0)
     issues.push({
       code: 'manual_station_without_tech',
