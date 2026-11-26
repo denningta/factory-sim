@@ -243,6 +243,7 @@ describe('events', () => {
       [0, 'partMoved'],
       [0, 'partEntered'],
       [0, 'partStarted'],
+      [30, 'partFinished'], // SF-6 (ADR-0017): every finished part
       [30, 'partMoved'],
       [30, 'partExited'],
     ]);

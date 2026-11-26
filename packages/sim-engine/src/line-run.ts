@@ -10,7 +10,7 @@
  * part that can move (a part blocked on its next place does not hold back later ones; each
  * place's waiters are FIFO).
  */
-import type { Entity, Resource, Simulation, TimeWeighted } from './api';
+import type { Entity, EventHandle, Resource, Simulation, TimeWeighted } from './api';
 import type { CompiledLine, Leg, ProductDef, StationDef } from './line-compile';
 import type {
   FlowStats,
@@ -68,7 +68,12 @@ interface TechRt {
 interface StationRt {
   readonly def: StationDef;
   readonly place: Place;
-  readonly waiting: { part: Part; cycle: () => number }[];
+  /** Parts waiting for their batch to start, with when they arrived. */
+  readonly waiting: Waiting[];
+  /** The `maxWait` timer and the part it is timing (always `waiting[0]`). */
+  timer?: { part: Part; handle: EventHandle };
+  /** perBatch cure sampler (SF-6); else each part's own cycle time. */
+  readonly cure?: () => number;
   /** Units processing (cycle, machine cycle, load or unload). */
   processing: number;
   /** Finished parts that can't move on yet. */
@@ -80,6 +85,12 @@ interface StationRt {
   techs: TechRt[];
   readonly load?: () => number;
   readonly unload?: () => number;
+}
+
+interface Waiting {
+  part: Part;
+  cycle: () => number;
+  since: number;
 }
 
 const STATION_STATES: readonly StationState[] = ['working', 'starved', 'blocked', 'idle'];
@@ -113,7 +124,8 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     else if (
       event.type === 'partMoved' ||
       event.type === 'partEntered' ||
-      event.type === 'partStarted'
+      event.type === 'partStarted' ||
+      event.type === 'partFinished'
     ) {
       const p = inLine.get(event.partId);
       if (p) p.last = event;
@@ -190,6 +202,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       state: 'starved',
       stateStats: indicators(STATION_STATES, 'starved'),
       techs: [],
+      ...(def.cure && { cure: durationSampler(rng.fork(`cure:${def.id}`), def.cure) }),
       ...(labor.mode === 'automatic' && {
         load: durationSampler(rng.fork(`load:${def.id}`), labor.loadTime),
         unload: durationSampler(rng.fork(`unload:${def.id}`), labor.unloadTime),
@@ -280,16 +293,39 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   };
 
   const tryStart = (st: StationRt) => {
-    const { batchSize } = st.def;
+    const { batchSize, maxWait } = st.def;
     while (st.waiting.length >= batchSize) startJob(st, st.waiting.splice(0, batchSize));
+    if (maxWait !== undefined) armTimer(st, maxWait);
     refresh(st);
   };
 
-  const startJob = (st: StationRt, batch: { part: Part; cycle: () => number }[]) => {
+  /**
+   * Keeps one `maxWait` timer on the first waiting part (SF-6). A full batch that takes that
+   * part cancels it; when it fires, every waiting part (fewer than a batch) starts.
+   */
+  const armTimer = (st: StationRt, maxWait: number) => {
+    const head = st.waiting[0];
+    if (st.timer?.part === head?.part) return;
+    st.timer?.handle.cancel();
+    st.timer = undefined;
+    if (!head) return;
+    const handle = sim.schedule(head.since + maxWait - sim.now, () => {
+      st.timer = undefined;
+      startJob(st, st.waiting.splice(0));
+      refresh(st);
+    });
+    st.timer = { part: head.part, handle };
+  };
+
+  const startJob = (st: StationRt, batch: Waiting[]) => {
     const lead = batch[0]!;
+    const cycle = st.cure ?? lead.cycle;
+    const partIds = () => batch.map((w) => w.part.id);
     const finish = () => {
       st.held += batch.length;
       refresh(st);
+      for (const { part } of batch)
+        emit({ t: sim.now, type: 'partFinished', partId: part.id, equipmentId: st.def.id });
       for (const { part } of batch) advance(part);
     };
     const started = (endsAt?: number) => {
@@ -302,13 +338,29 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
           ...(endsAt !== undefined && { endsAt }),
         });
     };
+    /** Runs the cycle (cure) itself; batch events mark it on batch stations (ADR-0017). */
+    const runCycle = (t: number, done: () => void) => {
+      if (st.def.batches)
+        emit({
+          t: sim.now,
+          type: 'batchStarted',
+          equipmentId: st.def.id,
+          partIds: partIds(),
+          endsAt: sim.now + t,
+        });
+      sim.schedule(t, () => {
+        if (st.def.batches)
+          emit({ t: sim.now, type: 'batchFinished', equipmentId: st.def.id, partIds: partIds() });
+        done();
+      });
+    };
     if (!st.load || !st.unload) {
       withTech(st, lead.part, (tech) => {
-        const t = lead.cycle();
+        const t = cycle();
         st.processing++;
         started(sim.now + t);
         refresh(st);
-        sim.schedule(t, () => {
+        runCycle(t, () => {
           st.processing--;
           freeTech(tech, lead.part);
           finish();
@@ -323,7 +375,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       refresh(st);
       sim.schedule(load(), () => {
         freeTech(tech, lead.part);
-        sim.schedule(lead.cycle(), () => {
+        runCycle(cycle(), () => {
           st.processing--;
           withTech(st, lead.part, (tech2) => {
             st.processing++;
@@ -436,7 +488,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       case 'station': {
         emit({ t: sim.now, type: 'partEntered', partId: part.id, equipmentId: node.id });
         const st = stations.get(node.id)!;
-        st.waiting.push({ part, cycle: part.product.cycles[index]! });
+        st.waiting.push({ part, cycle: part.product.cycles[index]!, since: sim.now });
         tryStart(st);
       }
     }
