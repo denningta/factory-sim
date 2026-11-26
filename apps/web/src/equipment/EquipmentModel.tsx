@@ -9,6 +9,7 @@ import { useTheme, useThemeStore } from '../ui/themeStore';
 import { roleColor, roleMaterial } from './models/materials';
 import { buildModel, type ModelSource } from './models/registry';
 import type { ModelPart } from './models/types';
+import styles from './library.module.css';
 
 /** The unit geometry a part's instanced mesh is built on (sized per instance by its matrix). */
 export function UnitGeometry({ part }: { part: ModelPart }) {
@@ -58,7 +59,9 @@ export function ModelPreview({ type, label }: { type: PreviewType; label?: strin
   const floor = useTheme().scene.floor;
   return (
     <div
-      style={{ height: 200, background: floor }}
+      className={styles.preview}
+      // The floor colour comes from the active theme at run time, so it can't live in the CSS file.
+      style={{ background: floor }} // eslint-disable-line no-restricted-syntax
       aria-label={label ?? '3D preview'}
       data-model={id}
     >

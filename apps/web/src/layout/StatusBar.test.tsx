@@ -7,7 +7,7 @@ import { createEditorStore } from './editorStore';
 afterEach(cleanup);
 
 describe('UI-3 AC4: status bar', () => {
-  it('shows units, snap and the selected object', () => {
+  it('shows units, snap and the selected object', async () => {
     const store = createEditorStore();
     store.getState().setUnit('ft');
     render(<StatusBar useStore={store} />);
@@ -16,7 +16,7 @@ describe('UI-3 AC4: status bar', () => {
     expect(screen.getByText(/selected: none/i)).toBeTruthy();
     const e = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 })!;
     store.getState().selectEquipment(e.id, true);
-    expect(screen.getByText(new RegExp(`selected: ${e.name}`, 'i'))).toBeTruthy();
+    expect(await screen.findByText(`Selected: ${e.name}`)).toBeTruthy();
   });
 
   it('shows the overlap count; clicking it selects the first overlapping object', async () => {

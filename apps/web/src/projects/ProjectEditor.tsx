@@ -239,7 +239,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
           className={locked ? styles.bodyLocked : styles.body}
         >
           {tab === 'layout' ? (
-            <Editor readOnly={locked} />
+            <Editor readOnly={locked} onOpenProducts={() => setTab('products')} />
           ) : tab === 'products' ? (
             <ProductsPanel />
           ) : tab === 'simulate' ? (

@@ -1,8 +1,11 @@
 import { Fragment, useState } from 'react';
+import { Button, Section } from '../ui';
+import styles from './panels.module.css';
 import { useEditorStore as defaultStore } from './editorStore';
 import { Field, parseNumber } from './Field';
 import { DurationEditor } from '../products/DurationEditor';
-import { LaborEditor } from '../technicians/LaborEditor';
+import { LaborEditor, StaffingEditor } from '../technicians/LaborEditor';
+import { resolveModel } from '../equipment/models/registry';
 import { BASE_EQUIPMENT_TYPES, type Connection, type Equipment } from '@factory-sim/schema';
 import { portWorldPosition } from './ports';
 import {
@@ -44,15 +47,14 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
     if (m === 'finite' && mode !== 'finite') updateConnection(conn.id, { capacity: 1 });
   };
   const radio = (m: 'none' | 'finite' | 'unlimited', text: string) => (
-    <label style={{ display: 'flex', gap: 6 }}>
+    <label className={styles.choice}>
       <input type="radio" name="conn-capacity" checked={mode === m} onChange={() => pick(m)} />
       {text}
     </label>
   );
   return (
-    <section aria-label="Properties" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Properties</h2>
-      <fieldset style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <Section heading="Buffer & transfer" collapsible memoryKey="props-connection">
+      <fieldset className={styles.choices}>
         <legend>Buffer on this connection</legend>
         {radio('none', 'No buffer (0)')}
         {radio('finite', 'Finite')}
@@ -75,7 +77,7 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
         />
       )}
       {transferTime(conn, distanceOf(conn, equipment))}
-    </section>
+    </Section>
   );
 
   // A plain function, not a component: a nested component would remount (and drop focus) per render.
@@ -94,7 +96,7 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
       if (k === 'speed') updateConnection(conn.id, { transfer: { kind: 'speed', speed: 1 } });
     };
     const radio = (k: Connection['transfer']['kind'], text: string) => (
-      <label style={{ display: 'flex', gap: 6 }}>
+      <label className={styles.choice}>
         <input
           type="radio"
           name="conn-transfer"
@@ -106,7 +108,7 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
     );
     return (
       <>
-        <fieldset style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <fieldset className={styles.choices}>
           <legend>Transfer time</legend>
           {radio('instant', 'Instant')}
           {radio('fixed', 'Fixed time')}
@@ -148,7 +150,7 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
               }}
             />
             {distance !== null && (
-              <p>
+              <p className={styles.muted}>
                 Distance {formatLength(distance, unit)} → {formatNumber(distance / t.speed)} s
               </p>
             )}
@@ -171,7 +173,55 @@ function distanceOf(conn: Connection, equipment: readonly Equipment[]): number |
   return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : null;
 }
 
-export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store }) {
+/** What the Process section says about this station's cycle times (ADR-0009: keyed by product + station). */
+function CycleTimeSummary({
+  stationId,
+  useStore,
+  onOpenProducts,
+}: {
+  stationId: string;
+  useStore: Store;
+  onOpenProducts?: () => void;
+}) {
+  const { cycleTimes, products } = useStore();
+  const rows = cycleTimes.flatMap((c) => {
+    const product = products.find((p) => p.id === c.productId);
+    return c.stationId === stationId && product ? [{ product, time: c.time }] : [];
+  });
+  const text = (d: (typeof rows)[number]['time']) =>
+    d.kind === 'fixed'
+      ? `${formatNumber(d.value)} s`
+      : `${formatNumber(d.kind === 'triangular' ? d.mode : d.mean)} s (${d.kind})`;
+  return (
+    <div className={styles.stack}>
+      {rows.length === 0 ? (
+        <p className={styles.muted}>No cycle times set for this station.</p>
+      ) : (
+        <dl className={styles.stack}>
+          {rows.map((r) => (
+            <div key={r.product.id} className={styles.readout}>
+              <dt>{r.product.name}</dt>
+              <dd>{text(r.time)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {onOpenProducts && (
+        <button type="button" className={styles.linkButton} onClick={onOpenProducts}>
+          Edit in Products &amp; routings
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function PropertiesPanel({
+  useStore = defaultStore,
+  onOpenProducts,
+}: {
+  useStore?: Store;
+  onOpenProducts?: () => void;
+}) {
   const {
     equipment,
     selectedIds,
@@ -193,141 +243,15 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
   // WS-4: techs assigned to the first selected station.
   const assigned = first ? technicians.filter((t) => t.stationIds.includes(first.id)).length : 0;
   if (!first && selectedConnectionId) return <ConnectionProperties useStore={useStore} />;
-  if (!first) {
-    return (
-      <section aria-label="Properties">
-        <h2>Properties</h2>
-        <p style={{ color: '#6b7280' }}>Select equipment on the floor to edit it.</p>
-      </section>
-    );
-  }
+  // Nothing selected: the right panel shows floor and technician settings instead (RightPanel).
+  if (!first) return null;
   const single = selected.length === 1;
   const same = selected.every((e) => e.rotation === first.rotation);
   const pos = (m: number) => formatNumber(toDisplay(m, unit));
-  return (
-    <section aria-label="Properties" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <h2>Properties</h2>
-      {single ? (
-        <>
-          <Field
-            beginEdit={beginEdit}
-            endEdit={endEdit}
-            key={`name-${first.id}`}
-            label="Name"
-            value={first.name}
-            commit={(t) => {
-              const r = updateEquipment(first.id, { name: t });
-              return r.ok ? null : r.error;
-            }}
-          />
-          <p style={{ margin: 0 }}>
-            Type:{' '}
-            <span data-testid="type">
-              {[...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === first.typeId)?.name ??
-                first.typeId}
-            </span>
-          </p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(
-              [
-                ['Length', first.footprint.length, (m: number) => ({ footprint: { length: m } })],
-                ['Width', first.footprint.width, (m: number) => ({ footprint: { width: m } })],
-                ['Height', first.height, (m: number) => ({ height: m })],
-              ] as const
-            ).map(([label, meters, patchOf]) => (
-              <Field
-                beginEdit={beginEdit}
-                endEdit={endEdit}
-                key={`${label}-${first.id}`}
-                label={`${label} (${unit})`}
-                value={pos(meters)}
-                commit={(t) => {
-                  const n = parseNumber(t);
-                  if (typeof n === 'string') return n;
-                  const r = updateEquipment(first.id, patchOf(fromDisplay(n, unit)));
-                  return r.ok ? null : r.error;
-                }}
-              />
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['x', 'y'] as const).map((axis) => (
-              <Field
-                beginEdit={beginEdit}
-                endEdit={endEdit}
-                key={`${axis}-${first.id}`}
-                label={`Position ${axis.toUpperCase()} (${unit})`}
-                value={pos(first.position[axis])}
-                commit={(t) => {
-                  const n = parseNumber(t);
-                  if (typeof n === 'string') return n;
-                  const r = updateEquipment(first.id, {
-                    position: { [axis]: fromDisplay(n, unit) },
-                  });
-                  if (r.ok) return null;
-                  // The store words bounds in meters; say it in the display unit.
-                  return r.bounds
-                    ? `${axis.toUpperCase()} must be on the floor (0 to ${formatLength(r.bounds.max, unit)})`
-                    : r.error;
-                }}
-              />
-            ))}
-          </div>
-          {/* Numeric params only; labor (TE-1) has its own editor below. */}
-          {Object.entries(first.params)
-            .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
-            .map(([key, v]) => {
-              const isSpeed = key === 'speed';
-              const techLimited =
-                key === 'capacity' &&
-                first.behavior === 'workstation' &&
-                first.params.labor.mode === 'manual' &&
-                v > assigned;
-              return (
-                <Fragment key={`${key}-${first.id}`}>
-                  <Field
-                    beginEdit={beginEdit}
-                    describedBy={techLimited ? 'tech-limit-hint' : undefined}
-                    endEdit={endEdit}
-                    label={
-                      isSpeed
-                        ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
-                        : (PARAM_LABELS[key] ?? key)
-                    }
-                    value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
-                    commit={(t) => {
-                      const parsed = parseNumber(t);
-                      if (typeof parsed === 'string') return parsed;
-                      const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
-                      const r = updateEquipment(first.id, { params: { [key]: n } });
-                      setLinked(
-                        !r.ok && r.field && r.field !== key
-                          ? { key: r.field, message: r.error }
-                          : null,
-                      );
-                      return r.ok ? null : r.error;
-                    }}
-                    extraError={linked?.key === key ? linked.message : null}
-                    onBlur={() => setLinked(null)}
-                  />
-                  {techLimited && (
-                    <p id="tech-limit-hint" style={{ color: '#b45309', margin: 0 }}>
-                      {`Parallel units limited by assigned techs (${assigned})`}
-                    </p>
-                  )}
-                </Fragment>
-              );
-            })}
-          {first.behavior === 'workstation' && (
-            <LaborEditor equipmentId={first.id} useStore={useStore} />
-          )}
-        </>
-      ) : (
-        <p style={{ margin: 0 }}>
-          <strong>{`${selected.length} selected`}</strong>
-        </p>
-      )}
-      {/* Keyed by selection so the field re-reads when the selection changes. */}
+  const type = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === first.typeId);
+  // Keyed by selection so the field re-reads when the selection changes.
+  const rotation = (
+    <>
       <Field
         beginEdit={beginEdit}
         endEdit={endEdit}
@@ -342,17 +266,166 @@ export function PropertiesPanel({ useStore = defaultStore }: { useStore?: Store 
           return null;
         }}
       />
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" onClick={() => rotateSelected(-90)}>
-          Rotate −90°
-        </button>
-        <button type="button" onClick={() => rotateSelected(90)}>
-          Rotate 90°
-        </button>
+      <div className={styles.row}>
+        <Button onClick={() => rotateSelected(-90)}>Rotate −90°</Button>
+        <Button onClick={() => rotateSelected(90)}>Rotate 90°</Button>
       </div>
-      <button type="button" onClick={deleteSelected}>
-        Delete
-      </button>
-    </section>
+    </>
+  );
+  const remove = (
+    <Button variant="danger" onClick={deleteSelected}>
+      Delete
+    </Button>
+  );
+  if (!single)
+    return (
+      <div className={styles.panel}>
+        <Section heading="Selection" collapsible memoryKey="props-selection">
+          <p>
+            <strong>{`${selected.length} selected`}</strong>
+          </p>
+          {rotation}
+          {remove}
+        </Section>
+      </div>
+    );
+  return (
+    <div className={styles.panel}>
+      <Section heading="General" collapsible memoryKey="props-general">
+        <Field
+          beginEdit={beginEdit}
+          endEdit={endEdit}
+          key={`name-${first.id}`}
+          label="Name"
+          value={first.name}
+          commit={(t) => {
+            const r = updateEquipment(first.id, { name: t });
+            return r.ok ? null : r.error;
+          }}
+        />
+        <dl className={styles.stack}>
+          <div className={styles.readout}>
+            <dt>Type</dt>
+            <dd data-testid="type">{type?.name ?? first.typeId}</dd>
+          </div>
+          <div className={styles.readout}>
+            <dt>Model</dt>
+            <dd data-testid="model">{resolveModel(first).label}</dd>
+          </div>
+        </dl>
+      </Section>
+      <Section heading="Size & position" collapsible memoryKey="props-size">
+        <div className={styles.row}>
+          {(
+            [
+              ['Length', first.footprint.length, (m: number) => ({ footprint: { length: m } })],
+              ['Width', first.footprint.width, (m: number) => ({ footprint: { width: m } })],
+              ['Height', first.height, (m: number) => ({ height: m })],
+            ] as const
+          ).map(([label, meters, patchOf]) => (
+            <Field
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+              key={`${label}-${first.id}`}
+              label={`${label} (${unit})`}
+              value={pos(meters)}
+              commit={(t) => {
+                const n = parseNumber(t);
+                if (typeof n === 'string') return n;
+                const r = updateEquipment(first.id, patchOf(fromDisplay(n, unit)));
+                return r.ok ? null : r.error;
+              }}
+            />
+          ))}
+        </div>
+        <div className={styles.row}>
+          {(['x', 'y'] as const).map((axis) => (
+            <Field
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+              key={`${axis}-${first.id}`}
+              label={`Position ${axis.toUpperCase()} (${unit})`}
+              value={pos(first.position[axis])}
+              commit={(t) => {
+                const n = parseNumber(t);
+                if (typeof n === 'string') return n;
+                const r = updateEquipment(first.id, {
+                  position: { [axis]: fromDisplay(n, unit) },
+                });
+                if (r.ok) return null;
+                // The store words bounds in meters; say it in the display unit.
+                return r.bounds
+                  ? `${axis.toUpperCase()} must be on the floor (0 to ${formatLength(r.bounds.max, unit)})`
+                  : r.error;
+              }}
+            />
+          ))}
+        </div>
+        {rotation}
+      </Section>
+      <Section heading="Process" collapsible memoryKey="props-process">
+        {/* Numeric params only; labor (TE-1) has its own editor below. */}
+        {Object.entries(first.params)
+          .flatMap(([key, v]) => (typeof v === 'number' ? [[key, v] as const] : []))
+          .map(([key, v]) => {
+            const isSpeed = key === 'speed';
+            const techLimited =
+              key === 'capacity' &&
+              first.behavior === 'workstation' &&
+              first.params.labor.mode === 'manual' &&
+              v > assigned;
+            return (
+              <Fragment key={`${key}-${first.id}`}>
+                <Field
+                  beginEdit={beginEdit}
+                  describedBy={techLimited ? 'tech-limit-hint' : undefined}
+                  endEdit={endEdit}
+                  label={
+                    isSpeed
+                      ? `Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`
+                      : (PARAM_LABELS[key] ?? key)
+                  }
+                  value={isSpeed ? formatNumber(speedToDisplay(v, unit)) : String(v)}
+                  commit={(t) => {
+                    const parsed = parseNumber(t);
+                    if (typeof parsed === 'string') return parsed;
+                    const n = isSpeed ? speedFromDisplay(parsed, unit) : parsed;
+                    const r = updateEquipment(first.id, { params: { [key]: n } });
+                    setLinked(
+                      !r.ok && r.field && r.field !== key
+                        ? { key: r.field, message: r.error }
+                        : null,
+                    );
+                    return r.ok ? null : r.error;
+                  }}
+                  extraError={linked?.key === key ? linked.message : null}
+                  onBlur={() => setLinked(null)}
+                />
+                {techLimited && (
+                  <p id="tech-limit-hint" className={styles.warn}>
+                    {`Parallel units limited by assigned techs (${assigned})`}
+                  </p>
+                )}
+              </Fragment>
+            );
+          })}
+        {first.behavior === 'workstation' && (
+          <>
+            <LaborEditor equipmentId={first.id} useStore={useStore} />
+            <CycleTimeSummary
+              stationId={first.id}
+              useStore={useStore}
+              {...(onOpenProducts ? { onOpenProducts } : {})}
+            />
+          </>
+        )}
+      </Section>
+      {first.behavior === 'workstation' && (
+        <Section heading="Staffing" collapsible memoryKey="props-staffing">
+          <StaffingEditor equipmentId={first.id} useStore={useStore} />
+        </Section>
+      )}
+      {remove}
+    </div>
   );
 }

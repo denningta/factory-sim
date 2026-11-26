@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ViewToolbar } from './ViewToolbar';
 import { createEditorStore } from './editorStore';
@@ -32,8 +32,13 @@ describe('UI-3 AC3: toolbar groups and shortcut tooltips', () => {
     const undo = screen.getByRole('button', { name: 'Undo' }) as HTMLButtonElement;
     expect(undo.disabled).toBe(true);
     const e = store.getState().placeEquipment('base-workstation', { x: 5, y: 5 })!;
-    expect(undo.disabled).toBe(false);
+    await waitFor(() => expect(undo.disabled).toBe(false));
     store.getState().selectEquipment(e.id, true);
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Delete' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
+    );
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(store.getState().equipment).toHaveLength(0);
     await user.click(undo);

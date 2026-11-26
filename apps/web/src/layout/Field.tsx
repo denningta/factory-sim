@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Field as UiField } from '../ui';
+import styles from './panels.module.css';
 
 /**
  * A text field that commits each keystroke through `commit`, which returns an error reason or
@@ -31,8 +33,6 @@ export function Field({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const errorId = useId();
-  const shown = error ?? extraError ?? null;
   // The field can unmount while focused (selection changes); close its session then.
   const session = useRef(0);
   const begin = () => {
@@ -41,40 +41,31 @@ export function Field({
   const end = () => endEdit(session.current);
   useEffect(() => () => endEdit(session.current), [endEdit]);
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
-      {label}
-      <input
-        type="text"
-        inputMode="decimal"
-        value={draft ?? value}
-        placeholder={placeholder}
-        aria-invalid={shown ? 'true' : undefined}
-        aria-describedby={
-          [shown ? errorId : null, describedBy].filter(Boolean).join(' ') || undefined
-        }
-        onFocus={begin}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter') return;
-          end();
-          begin();
-        }}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          setError(commit(e.target.value));
-        }}
-        onBlur={() => {
-          end();
-          setDraft(null);
-          setError(null);
-          onBlur?.();
-        }}
-      />
-      {shown && (
-        <span id={errorId} role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>
-          {shown}
-        </span>
-      )}
-    </label>
+    <UiField
+      className={styles.fieldRow}
+      label={label}
+      inputMode="decimal"
+      value={draft ?? value}
+      placeholder={placeholder}
+      error={error ?? extraError ?? null}
+      aria-describedby={describedBy}
+      onFocus={begin}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter') return;
+        end();
+        begin();
+      }}
+      onChange={(text) => {
+        setDraft(text);
+        setError(commit(text));
+      }}
+      onBlur={() => {
+        end();
+        setDraft(null);
+        setError(null);
+        onBlur?.();
+      }}
+    />
   );
 }
 

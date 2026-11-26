@@ -19,6 +19,7 @@ import {
 import { PORT_SIDES, portAt, portOffset, portSide, type PortSide } from './portSides';
 import { ModelPreview, type PreviewType } from './EquipmentModel';
 import { defaultModelFor, modelsFor } from './models/registry';
+import styles from './library.module.css';
 
 interface Props {
   unit: DisplayUnit;
@@ -166,7 +167,7 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
   }
 
   const field = (label: string, value: string, set: (v: string) => void) => (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <label className={styles.labelCol}>
       {label}
       <input type="text" value={value} onChange={(e) => set(e.target.value)} />
     </label>
@@ -179,10 +180,10 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
         e.preventDefault();
         save();
       }}
-      style={{ display: 'grid', gap: 8, margin: '8px 0' }}
+      className={styles.form}
     >
       {field('Name', name, setName)}
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <label className={styles.labelCol}>
         Base behavior
         {/* A saved type's instances may be connected, routed or staffed; changing behavior would
             break those. Make a new type instead. */}
@@ -207,7 +208,7 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       {field(`Length (${unit})`, length, setLength)}
       {field(`Height (${unit})`, height, setHeight)}
       {field('Color', color, setColor)}
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <label className={styles.labelCol}>
         3D model
         {/* Registry ids only (ADR-0015): a typed id could silently fall back to the default. */}
         <select value={model} onChange={(e) => setModel(e.target.value)}>
@@ -230,8 +231,8 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
         const set = (patch: Partial<PortDraft>) =>
           setPortDrafts((ds) => ds.map((x, j) => (j === i ? { ...x, ...patch, edited: true } : x)));
         return (
-          <div key={d.id} style={{ display: 'flex', gap: 8 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div key={d.id} className={styles.row}>
+            <label className={styles.labelCol}>
               {label} port side
               <select value={d.side} onChange={(e) => set({ side: e.target.value as PortSide })}>
                 {PORT_SIDES.map((s) => (
@@ -246,11 +247,11 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
         );
       })}
       {error && (
-        <p role="alert" style={{ color: '#b91c1c', margin: 0 }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className={styles.row}>
         <button type="submit">Save type</button>
         <button type="button" onClick={onCancel}>
           Cancel
