@@ -252,9 +252,9 @@ describe.each(['bench', 'machine'])('SF-1 AC4: workstation anchors of %s', (id) 
 describe('SF-1 AC1: the bench keeps its legs, upright and light bar at real size', () => {
   it('has at least four legs, two upright posts and a light bar marked fixed', () => {
     const m = MODELS.find((x) => x.id === 'bench')!;
-    const fixed = m.build({ width: 2, length: 1.5, height: 1.2 }, paramsFor(m)).lods[0]!.filter(
-      (p) => p.fixed,
-    );
+    const fixed = m
+      .build({ width: 2, length: 1.5, height: 1.2 }, paramsFor(m))
+      .lods[0]!.filter((p) => p.fixed);
     expect(fixed.length).toBeGreaterThanOrEqual(7);
   });
 });

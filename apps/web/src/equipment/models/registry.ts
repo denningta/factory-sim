@@ -1,6 +1,8 @@
 import type { Equipment, EquipmentBehavior } from '@factory-sim/schema';
+import { bench } from './bench';
 import { bufferRack } from './buffer-rack';
 import { conveyorBelt } from './conveyor-belt';
+import { machine } from './machine';
 import { sinkContainer } from './sink-container';
 import { sourceHopper } from './source-hopper';
 import type { ModelDefinition } from './types';
@@ -8,6 +10,8 @@ import { workstationCell } from './workstation-cell';
 
 /** Every model the app can draw. Add a model here (see README.md). */
 export const MODELS: readonly ModelDefinition[] = [
+  bench,
+  machine,
   workstationCell,
   bufferRack,
   conveyorBelt,
@@ -17,15 +21,21 @@ export const MODELS: readonly ModelDefinition[] = [
 
 /** What each behavior looks like when its `model` is absent or unusable (ADR-0015). */
 const DEFAULTS: Record<EquipmentBehavior, ModelDefinition> = {
-  workstation: workstationCell,
+  workstation: bench,
   buffer: bufferRack,
   conveyor: conveyorBelt,
   source: sourceHopper,
   sink: sinkContainer,
 };
 
-export function defaultModelFor(behavior: EquipmentBehavior): ModelDefinition {
-  return DEFAULTS[behavior];
+/** A workstation run automatically (a tech only loads and unloads) looks like a machine. */
+function isAutomatic(params: object | undefined): boolean {
+  const labor = (params as { labor?: { mode?: unknown } } | undefined)?.labor;
+  return labor?.mode === 'automatic';
+}
+
+export function defaultModelFor(behavior: EquipmentBehavior, params?: object): ModelDefinition {
+  return behavior === 'workstation' && isAutomatic(params) ? machine : DEFAULTS[behavior];
 }
 
 /** Models the picker may offer for a behavior, in registry order. */
@@ -41,9 +51,9 @@ export function resolveModel(
   equipment: Pick<Equipment, 'behavior' | 'model'> & { params?: object },
   registry: readonly ModelDefinition[] = MODELS,
 ): ModelDefinition {
-  const { behavior, model } = equipment;
+  const { behavior, model, params } = equipment;
   const found = model === undefined ? undefined : registry.find((m) => m.id === model);
-  return found && found.behaviors.includes(behavior) ? found : defaultModelFor(behavior);
+  return found && found.behaviors.includes(behavior) ? found : defaultModelFor(behavior, params);
 }
 
 /** Builds the equipment's resolved model at its own size and params. */

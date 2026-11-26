@@ -86,7 +86,8 @@ describe('UI-7 AC8: the five current shapes are the behavior defaults', () => {
   it('the defaults keep the current part layout', () => {
     // Same part counts and shapes as the pre-registry shapes.ts (b = box, c = cylinder, f = taper).
     const expected: Record<string, string> = {
-      workstation: 'bbc',
+      // SF-1: the workstation default is now the bench (top, legs, feet, upright, shelves, bins).
+      workstation: 'bbbbbccccbbbbbbbbbbbbbb',
       buffer: 'bbbbbbbbbb',
       conveyor: 'bbbbbbb',
       source: 'bcf',
