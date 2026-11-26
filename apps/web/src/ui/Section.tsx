@@ -45,3 +45,8 @@ export function Section({
     </section>
   );
 }
+
+/** Forgets which collapsible sections the user opened or closed (tests, and a new session). */
+export function resetSectionMemory(): void {
+  throw new Error('not implemented');
+}
