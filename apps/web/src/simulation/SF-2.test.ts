@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createEditorStore } from '../layout/editorStore';
 import { buildLineGeometry } from './partTracks';
 import { createTechTracks } from './techTracks';
-import { figureTriangleCount, limbAngles } from './techFigure';
+import { figureTriangleCount, limbAngles, techColor } from './techFigure';
+import { dark, light } from '../ui/tokens';
 
 /** One bench, two stations 12 m apart, `n` techs all assigned to the first bench. */
 function setup(n: number) {
@@ -43,6 +44,25 @@ function inside(
   const lz = -dx * sn + dz * c;
   return Math.abs(lx) < e.footprint.width / 2 && Math.abs(lz) < e.footprint.length / 2;
 }
+
+describe('SF-2: technician colours', () => {
+  it('distinct techs get distinct, run-stable vest colours from the theme palette', () => {
+    for (const theme of [dark, light]) {
+      const cols = [0, 1, 2, 3].map((i) => techColor(theme.scene.techs, i));
+      expect(new Set(cols).size).toBe(4);
+      expect(cols).toEqual([0, 1, 2, 3].map((i) => techColor(theme.scene.techs, i)));
+      expect(
+        theme.scene.techs.every((c) => !Object.values(theme.state).some((s) => s.strong === c)),
+      ).toBe(true);
+    }
+    const { geometry, techs } = setup(3);
+    expect(
+      createTechTracks(geometry, techs)
+        .at(0)
+        .map((p) => p.order),
+    ).toEqual([0, 1, 2]);
+  });
+});
 
 describe('SF-2: technician figure at the bench', () => {
   it('AC1: a figure is within 1,500 triangles', () => {
@@ -108,12 +128,17 @@ describe('SF-2: technician figure at the bench', () => {
         expect(Math.hypot(poses[i]!.x - poses[j]!.x, poses[i]!.z - poses[j]!.z)).toBeGreaterThan(
           0.5,
         );
-    // Along the front edge: all at the same distance from the bench, same heading.
-    const d = poses.map((p) => Math.hypot(p.x - bench.position.x, p.z - bench.position.y));
-    const along = poses.map((p) => (p.x - poses[0]!.x) ** 2 + (p.z - poses[0]!.z) ** 2);
-    expect(along.every((v) => Number.isFinite(v))).toBe(true);
+    // Along the front edge: same offset from the bench in its own frame, different positions along it.
+    const local = poses.map((p) => {
+      const dx = p.x - bench.position.x;
+      const dz = p.z - bench.position.y;
+      const c = Math.cos(bench.rotation);
+      const sn = Math.sin(bench.rotation);
+      return { x: dx * c + dz * sn, z: -dx * sn + dz * c };
+    });
+    for (const l of local) expect(l.z).toBeCloseTo(local[0]!.z, 6);
+    expect(new Set(local.map((l) => l.x.toFixed(3))).size).toBe(3);
     expect(new Set(poses.map((p) => p.heading.toFixed(6))).size).toBe(1);
-    expect(Math.max(...d) - Math.min(...d)).toBeLessThan(1.2);
   });
 
   it('AC5: poses are a pure function of sim time, so animation off/on restores them', () => {

@@ -5,12 +5,15 @@
       "screen": "simulate",
       "settle": 1500,
       "actions": [
+        { "fill": ["role=spinbutton >> nth=1", "0"] },
+        { "click": "text=Apply" },
+        { "fill": ["role=slider", "40"] },
         { "click": "text=Play" },
-        { "wait": 3000 },
+        { "wait": 9000 },
         {
-          "eval": "(()=>{const c=document.querySelector('canvas');const r=c.getBoundingClientRect();for(let i=0;i<30;i++)c.dispatchEvent(new WheelEvent('wheel',{deltaY:-300,clientX:r.left+r.width*0.46,clientY:r.top+r.height*0.5,bubbles:true,cancelable:true}));})()"
+          "eval": "(()=>{const c=document.querySelector('canvas');const r=c.getBoundingClientRect();for(let i=0;i<22;i++)c.dispatchEvent(new WheelEvent('wheel',{deltaY:-300,clientX:r.left+r.width*0.36,clientY:r.top+r.height*0.72,bubbles:true,cancelable:true}));})()"
         },
-        { "wait": 1500 }
+        { "wait": 1200 }
       ]
     }
   ]

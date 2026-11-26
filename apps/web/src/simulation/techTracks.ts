@@ -4,6 +4,8 @@ import type { LineGeometry, Pt } from './partTracks';
 export interface TechPose {
   techId: string;
   name: string;
+  /** Position in the project's technician list: picks the tech's colour. */
+  order: number;
   x: number;
   z: number;
   state: 'walking' | 'standing';
@@ -33,6 +35,7 @@ export interface TechInfo {
 
 interface Track {
   info: TechInfo;
+  order: number;
   /** Station it stands at before its first recorded walk; changed by `seed`. */
   baseId: string | undefined;
   /** Walks in time order; between them the tech stands where the last one ended. */
@@ -47,8 +50,12 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
   // A tech with no station has nowhere to be drawn.
   const tracks = new Map<string, Track>(
     techs
-      .filter((info) => info.homeId !== undefined)
-      .map((info) => [info.id, { info, baseId: info.homeId, walks: [], cursor: 0 }]),
+      .map((info, order) => ({ info, order }))
+      .filter(({ info }) => info.homeId !== undefined)
+      .map(({ info, order }) => [
+        info.id,
+        { info, order, baseId: info.homeId, walks: [], cursor: 0 },
+      ]),
   );
   // Techs sharing a bench take fixed spots along its front edge, so nobody overlaps and the
   // spot doesn't change while others walk away.
@@ -115,7 +122,7 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
         while (i < walks.length && walks[i]!.t <= t) i++;
         tr.cursor = i;
         const last = walks[i - 1];
-        const base = { techId: tr.info.id, name: tr.info.name };
+        const base = { techId: tr.info.id, name: tr.info.name, order: tr.order };
         if (last && t < last.t1) {
           const dx = last.to.x - last.from.x;
           const dz = last.to.z - last.from.z;

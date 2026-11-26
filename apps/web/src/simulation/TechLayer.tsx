@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { TextLabel } from '../layout/FloorScene';
 import type { RunSession } from './runSession';
 import { getTheme } from '../ui/themeStore';
-import { createFigureGeometries, FIGURE, limbAngles } from './techFigure';
+import { createFigureGeometries, FIGURE, limbAngles, techColor } from './techFigure';
 
 const BODY_HEIGHT = 1.7;
 const LABEL_HEIGHT = 1.1;
@@ -55,7 +55,7 @@ function TechFigures({ session, ids }: { session: RunSession; ids: string[] }) {
     const { head, torso, vest, arm, leg } = refs;
     if (!head.current || !torso.current || !vest.current || !arm.current || !leg.current) return;
     const poses = new Map(session.techPoses(session.now).map((p) => [p.techId, p]));
-    const { state, scene } = getTheme();
+    const { scene } = getTheme();
     ids.forEach((id, i) => {
       const pose = poses.get(id);
       if (!pose) {
@@ -82,10 +82,7 @@ function TechFigures({ session, ids }: { session: RunSession; ids: string[] }) {
       swing(arm.current!, 2 * i + 1, FIGURE.armX, FIGURE.shoulderY, limbs.armR);
       swing(leg.current!, 2 * i, -FIGURE.legX, FIGURE.hipY, limbs.legL);
       swing(leg.current!, 2 * i + 1, FIGURE.legX, FIGURE.hipY, limbs.legR);
-      vest.current!.setColorAt(
-        i,
-        color.set(pose.state === 'walking' ? state.walking.strong : state.waiting.strong),
-      );
+      vest.current!.setColorAt(i, color.set(techColor(scene.techs, pose.order)));
     });
     for (const m of [head, torso, vest, arm, leg]) {
       m.current!.instanceMatrix.needsUpdate = true;
@@ -97,9 +94,9 @@ function TechFigures({ session, ids }: { session: RunSession; ids: string[] }) {
     // The vest's colour comes per instance; its material stays white so it isn't tinted twice.
     (vest.current.material as THREE.MeshStandardMaterial).color.setRGB(1, 1, 1);
     paint(head.current, scene.parts.accent);
-    paint(torso.current, scene.parts.dark);
-    paint(arm.current, scene.parts.frame);
-    paint(leg.current, scene.parts.dark);
+    paint(torso.current, scene.parts.frame);
+    paint(arm.current, scene.parts.accent);
+    paint(leg.current, scene.parts.frame);
   });
 
   const { scene } = getTheme();

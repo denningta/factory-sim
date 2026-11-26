@@ -26,6 +26,11 @@ export function limbAngles(pose: Pick<TechPose, 'state' | 'walked'>): LimbAngles
   return { legL: LEG_SWING * s, legR: -LEG_SWING * s, armL: -ARM_SWING * s, armR: ARM_SWING * s };
 }
 
+/** A tech's vest colour: a fixed palette by order in the project, so it is stable across runs. */
+export function techColor(palette: readonly string[], order: number): string {
+  return palette[order % palette.length]!;
+}
+
 /** Body dimensions (m). The figure is ~1.7 m tall and faces +z at heading 0. */
 export const FIGURE = {
   hipY: 0.85,
@@ -45,7 +50,7 @@ export function createFigureGeometries() {
     head: new THREE.SphereGeometry(0.12, 10, 8).translate(0, FIGURE.headY, 0),
     torso: new THREE.BoxGeometry(0.4, 0.55, 0.22).translate(0, 1.125, 0),
     // The vest sits just proud of the torso so its colour reads from front, back and sides.
-    vest: new THREE.BoxGeometry(0.44, 0.4, 0.26).translate(0, 1.13, 0),
+    vest: new THREE.BoxGeometry(0.46, 0.52, 0.28).translate(0, 1.125, 0),
     arm: limb(0.1, FIGURE.armLength, 0.1),
     leg: limb(0.15, FIGURE.legLength, 0.17),
   };
