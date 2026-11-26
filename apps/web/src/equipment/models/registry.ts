@@ -38,7 +38,7 @@ export function modelsFor(behavior: EquipmentBehavior): ModelDefinition[] {
  * behavior, otherwise the behavior's default. Never fails, so a stale id can't break a project.
  */
 export function resolveModel(
-  equipment: Pick<Equipment, 'behavior' | 'model'>,
+  equipment: Pick<Equipment, 'behavior' | 'model'> & { params?: object },
   registry: readonly ModelDefinition[] = MODELS,
 ): ModelDefinition {
   const { behavior, model } = equipment;
