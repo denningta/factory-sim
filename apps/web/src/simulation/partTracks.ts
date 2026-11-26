@@ -19,6 +19,8 @@ export interface LineGeometry {
       center: Pt;
       /** Where a tech stands to work it: the model's operator anchor, else the center. */
       operator: Pt;
+      /** Plan direction (unit) the operator at `operator` looks along: toward the bench. */
+      facing?: Pt;
       /** Where the i-th waiting part rests (bottom center): the model's queueSlot anchor. */
       queueSlot: (i: number) => Pt3;
       /** A conveyor's travel path: input port to output port. */

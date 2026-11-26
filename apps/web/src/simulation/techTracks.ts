@@ -7,6 +7,10 @@ export interface TechPose {
   x: number;
   z: number;
   state: 'walking' | 'standing';
+  /** Yaw in radians about +y; 0 faces +z. The direction of travel, or the bench while standing. */
+  heading: number;
+  /** Meters walked so far in the current walk (0 standing): drives the walk cycle (ADR-0008). */
+  walked: number;
 }
 
 export interface TechTracks {
@@ -23,6 +27,8 @@ export interface TechInfo {
   name: string;
   /** Station the tech starts at (the first one it is assigned to). */
   homeId: string | undefined;
+  /** Every station the tech is assigned to: side-by-side spots at a bench are shared out by it. */
+  stationIds?: readonly string[];
 }
 
 interface Track {
@@ -82,7 +88,7 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
         const last = walks[i - 1];
         const base = { techId: tr.info.id, name: tr.info.name };
         if (!last) {
-          poses.push({ ...base, ...center(tr.baseId), state: 'standing' });
+          poses.push({ ...base, ...center(tr.baseId), state: 'standing', heading: 0, walked: 0 });
         } else if (t < last.t1) {
           const f = (t - last.t) / (last.t1 - last.t);
           poses.push({
@@ -90,9 +96,11 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
             x: last.from.x + (last.to.x - last.from.x) * f,
             z: last.from.z + (last.to.z - last.from.z) * f,
             state: 'walking',
+            heading: 0,
+            walked: 0,
           });
         } else {
-          poses.push({ ...base, ...last.to, state: 'standing' });
+          poses.push({ ...base, ...last.to, state: 'standing', heading: 0, walked: 0 });
         }
       }
       return poses;
