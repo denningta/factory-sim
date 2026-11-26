@@ -55,6 +55,7 @@ export function ConnectionLayer() {
               name={`port:${e.id}:${p.id}`}
               kind={p.kind}
               active={active}
+              highlight={valid.has(key)}
               onPointerDown={onPort(ref)}
               visual={(hovered) =>
                 portVisual({

@@ -37,6 +37,7 @@ export function PortMarker({
   kind,
   visual,
   active,
+  highlight = false,
   onHover,
   onPointerDown,
 }: {
@@ -46,6 +47,8 @@ export function PortMarker({
   /** Visual state minus hover, which the marker tracks itself. */
   visual: (hovered: boolean) => PortVisual;
   active: boolean;
+  /** A valid target while connecting: drawn in the accent colour. */
+  highlight?: boolean;
   onHover?: (hovered: boolean) => void;
   onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
 }) {
@@ -57,7 +60,7 @@ export function PortMarker({
     : kind === 'output'
       ? theme.scene.flow
       : theme.scene.grid;
-  const ink = kind === 'output' ? theme.scene.background : theme.scene.label;
+  const ink = kind === 'output' || highlight ? theme.scene.background : theme.scene.label;
   const label = useTextTexture(kind === 'output' ? 'OUT' : 'IN', ink);
   const hint = useTextTexture(v.hint, theme.scene.label);
   const hover = (on: boolean) => () => {
