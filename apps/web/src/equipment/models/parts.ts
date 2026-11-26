@@ -50,6 +50,32 @@ export function cyl(
   };
 }
 
+/**
+ * A cylinder lying along the length axis (z), centered at (x, y, z). `rBack` is the radius at
+ * the -z end and `rFront` at the +z end, so a tapered end cap makes a dome.
+ */
+export function cylZ(
+  rFront: number,
+  rBack: number,
+  length: number,
+  y: number,
+  x = 0,
+  z = 0,
+  { role = 'body', fixed, segments = FULL_SEGMENTS }: Opts & { segments?: number } = {},
+): ModelPart {
+  return {
+    shape: 'cylinder',
+    radiusTop: rFront,
+    radiusBottom: rBack,
+    height: length,
+    segments,
+    axis: 'z',
+    position: [x, y, z],
+    role,
+    ...(fixed ? { fixed } : {}),
+  };
+}
+
 /** Axis-aligned bounds of all parts (cylinders by their bounding box). */
 export function partBounds(parts: readonly ModelPart[]): { min: Vec3; max: Vec3 } {
   const min: Vec3 = [Infinity, Infinity, Infinity];
@@ -57,7 +83,11 @@ export function partBounds(parts: readonly ModelPart[]): { min: Vec3; max: Vec3 
   for (const p of parts) {
     const r = p.shape === 'cylinder' ? Math.max(p.radiusTop, p.radiusBottom) : 0;
     const half: Vec3 =
-      p.shape === 'box' ? [p.size[0] / 2, p.size[1] / 2, p.size[2] / 2] : [r, p.height / 2, r];
+      p.shape === 'box'
+        ? [p.size[0] / 2, p.size[1] / 2, p.size[2] / 2]
+        : p.axis === 'z'
+          ? [r, r, p.height / 2]
+          : [r, p.height / 2, r];
     for (let i = 0; i < 3; i++) {
       min[i] = Math.min(min[i]!, p.position[i]! - half[i]!);
       max[i] = Math.max(max[i]!, p.position[i]! + half[i]!);
@@ -82,7 +112,7 @@ export function structureKey(parts: readonly ModelPart[]): string {
     .map((p) =>
       p.shape === 'box'
         ? `b:${p.role}`
-        : `c:${p.role}:${p.segments}:${+(p.radiusTop / p.radiusBottom).toFixed(6)}`,
+        : `c:${p.role}:${p.axis ?? 'y'}:${p.segments}:${+(p.radiusTop / p.radiusBottom).toFixed(6)}`,
     )
     .join(',');
 }

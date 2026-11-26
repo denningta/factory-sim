@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import {
-  BASE_EQUIPMENT_TYPES,
+  BUILT_IN_EQUIPMENT_TYPES,
   createProject,
   equipmentSchema,
   floorSchema,
@@ -835,7 +835,7 @@ export function createEditorStore() {
       },
       placeEquipment: (typeId, point) => {
         const { floor, snapEnabled, equipment, userTypes } = get();
-        const type = [...BASE_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === typeId);
+        const type = [...BUILT_IN_EQUIPMENT_TYPES, ...userTypes].find((t) => t.id === typeId);
         if (!type) return null;
         const p = snapToGrid(point, floor.gridSpacing, snapEnabled);
         if (p.x < 0 || p.y < 0 || p.x > floor.width || p.y > floor.length) return null;
@@ -908,15 +908,21 @@ export function createEditorStore() {
               bounds: { axis, max },
             };
         }
+        const params: Record<string, unknown> = {
+          ...current.params,
+          ...patch.params,
+          ...(patch.labor ? { labor: patch.labor } : {}),
+          ...(patch.cycle ? { cycle: patch.cycle } : {}),
+          ...(typeof patch.maxWait === 'number' ? { maxWait: patch.maxWait } : {}),
+        };
+        // `perProduct` is the same as no cycle (SF-0); `null` clears the max wait.
+        if (patch.cycle?.mode === 'perProduct') delete params.cycle;
+        if (patch.maxWait === null) delete params.maxWait;
         const next = {
           ...current,
           name: patch.name ?? current.name,
           position,
-          params: {
-            ...current.params,
-            ...patch.params,
-            ...(patch.labor ? { labor: patch.labor } : {}),
-          },
+          params,
           footprint: { ...current.footprint, ...patch.footprint },
           height: patch.height ?? current.height,
         };

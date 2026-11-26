@@ -14,7 +14,7 @@ describe('UI-3 AC1: library search and groups', () => {
     ui();
     const base = screen.getByRole('region', { name: 'Base types' });
     const own = screen.getByRole('region', { name: 'My equipment' });
-    expect(base.querySelectorAll('li')).toHaveLength(5);
+    expect(base.querySelectorAll('li')).toHaveLength(6);
     expect(own.textContent).toContain('Paint booth');
   });
 
@@ -25,7 +25,7 @@ describe('UI-3 AC1: library search and groups', () => {
     await user.type(box, 'conveyor');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
     await user.clear(box);
-    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    expect(screen.getAllByRole('listitem')).toHaveLength(7);
   });
 
   it('also matches the description', async () => {

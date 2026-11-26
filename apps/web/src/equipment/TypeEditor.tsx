@@ -7,6 +7,7 @@ import {
   type EquipmentBehavior,
   type EquipmentType,
   type Port,
+  type WorkstationCycle,
 } from '@factory-sim/schema';
 import {
   formatNumber,
@@ -19,6 +20,7 @@ import {
 import { PORT_SIDES, portAt, portOffset, portSide, type PortSide } from './portSides';
 import { ModelPreview, type PreviewType } from './EquipmentModel';
 import { defaultModelFor, modelsFor } from './models/registry';
+import { SECONDS_PER_MINUTE, typicalSeconds } from '../layout/CycleEditor';
 import styles from './library.module.css';
 
 interface Props {
@@ -64,6 +66,8 @@ const toDraft = (p: Port): PortDraft => ({
   edited: false,
 });
 
+const DEFAULT_CURE_SECONDS = 7200;
+
 const num = (t: string) => (t.trim() === '' ? NaN : Number(t));
 
 /** Create or edit a library type: a base behavior plus name, size, color and default params. */
@@ -86,6 +90,21 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
   const p = seed.params as Record<string, unknown>;
   const [capacity, setCapacity] = useState(String(p.capacity ?? 1));
   const [batchSize, setBatchSize] = useState(String(p.batchSize ?? 1));
+  const seedCycle = p.cycle as WorkstationCycle | undefined;
+  const [cycleMode, setCycleMode] = useState<WorkstationCycle['mode']>(
+    seedCycle?.mode ?? 'perProduct',
+  );
+  // Minutes on screen, seconds stored. An untouched cure time keeps its stored distribution.
+  const [cure, setCure] = useState(
+    formatNumber(
+      (seedCycle?.mode === 'perBatch' ? typicalSeconds(seedCycle.time) : DEFAULT_CURE_SECONDS) /
+        SECONDS_PER_MINUTE,
+    ),
+  );
+  const [cureEdited, setCureEdited] = useState(false);
+  const [maxWait, setMaxWait] = useState(
+    typeof p.maxWait === 'number' ? formatNumber(p.maxWait / SECONDS_PER_MINUTE) : '',
+  );
   const [speed, setSpeed] = useState(
     formatNumber(speedToDisplay(typeof p.speed === 'number' ? p.speed : 0.2, unit)),
   );
@@ -132,7 +151,23 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
         return 'Capacity must be a whole number, 1 or more';
       if (!Number.isInteger(num(batchSize)) || num(batchSize) < 1)
         return 'Batch size must be a whole number, 1 or more';
-      return { capacity: num(capacity), batchSize: num(batchSize), labor };
+      const out: Record<string, unknown> = {
+        capacity: num(capacity),
+        batchSize: num(batchSize),
+        labor,
+      };
+      if (cycleMode === 'perBatch') {
+        if (!(num(cure) > 0)) return 'Cure time must be a number greater than 0';
+        out.cycle =
+          seedCycle?.mode === 'perBatch' && !cureEdited
+            ? seedCycle
+            : { mode: 'perBatch', time: { kind: 'fixed', value: num(cure) * SECONDS_PER_MINUTE } };
+      }
+      if (maxWait.trim() !== '') {
+        if (!(num(maxWait) > 0)) return 'Max wait must be a number greater than 0';
+        out.maxWait = num(maxWait) * SECONDS_PER_MINUTE;
+      }
+      return out;
     }
     if (b === 'buffer') {
       return Number.isInteger(num(capacity)) && num(capacity) >= 1
@@ -224,6 +259,25 @@ export function TypeEditor({ unit, initial, onSave, onCancel }: Props) {
       {(behavior === 'workstation' || behavior === 'buffer') &&
         field('Capacity', capacity, setCapacity)}
       {behavior === 'workstation' && field('Batch size', batchSize, setBatchSize)}
+      {behavior === 'workstation' && (
+        <label className={styles.labelCol}>
+          Cycle
+          <select
+            value={cycleMode}
+            onChange={(e) => setCycleMode(e.target.value as WorkstationCycle['mode'])}
+          >
+            <option value="perProduct">Per product</option>
+            <option value="perBatch">Per batch (cure)</option>
+          </select>
+        </label>
+      )}
+      {behavior === 'workstation' &&
+        cycleMode === 'perBatch' &&
+        field('Cure time (min)', cure, (v) => {
+          setCure(v);
+          setCureEdited(true);
+        })}
+      {behavior === 'workstation' && field('Max wait (min)', maxWait, setMaxWait)}
       {behavior === 'conveyor' &&
         field(`Speed (${unit === 'ft' ? 'ft/min' : 'm/s'})`, speed, setSpeed)}
       {portDrafts.map((d, i) => {

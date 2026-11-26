@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { BASE_EQUIPMENT_TYPES, type EquipmentType } from '@factory-sim/schema';
+import { BUILT_IN_EQUIPMENT_TYPES, type EquipmentType } from '@factory-sim/schema';
 import { TYPE_DESCRIPTIONS } from './descriptions';
 import { formatNumber, toDisplay, type DisplayUnit } from '../layout/units';
 import { Button, EmptyState, Section } from '../ui';
@@ -37,7 +37,7 @@ export function LibraryPanel({
     q === '' ||
     t.name.toLowerCase().includes(q) ||
     TYPE_DESCRIPTIONS[t.behavior].toLowerCase().includes(q);
-  const base = BASE_EQUIPMENT_TYPES.filter(matches);
+  const base = BUILT_IN_EQUIPMENT_TYPES.filter(matches);
   const mine = userTypes.filter(matches);
   const group = (heading: string, types: EquipmentType[], own: boolean) =>
     types.length > 0 && (

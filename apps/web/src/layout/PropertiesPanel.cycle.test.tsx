@@ -41,8 +41,8 @@ describe('SF-7 AC3: cure time, batch size and max wait in the properties panel',
     const field = await screen.findByLabelText(/cure time \(min\)/i);
     await userEvent.clear(field);
     await userEvent.type(field, '0');
-    await userEvent.tab();
     expect(await screen.findByRole('alert')).toBeTruthy();
+    await userEvent.tab();
     expect(params().cycle).toEqual({ mode: 'perBatch', time: { kind: 'fixed', value: 7200 } });
   });
 

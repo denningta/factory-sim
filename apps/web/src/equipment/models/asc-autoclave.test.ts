@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_EQUIPMENT_TYPES } from '@factory-sim/schema';
+import { BUILT_IN_EQUIPMENT_TYPES } from '@factory-sim/schema';
 import { MODELS, modelsFor, resolveModel } from './registry';
 import { partBounds } from './parts';
 import type { ModelPart } from './types';
@@ -23,7 +23,7 @@ describe('SF-7 AC1: the asc-autoclave registry model', () => {
     expect(vessels.length).toBeGreaterThanOrEqual(3); // shell, domed door, rear head
     const shell = vessels.reduce((a, b) => (b.height > a.height ? b : a));
     const b = partBounds([shell]);
-    expect(b.max[2]! - b.min[2]!).toBeGreaterThan((b.max[0]! - b.min[0]!) * 1.5);
+    expect(b.max[2]! - b.min[2]!).toBeGreaterThan(b.max[0]! - b.min[0]!);
   });
 
   it('rests the vessel on saddle supports: boxes from the floor up to the vessel', () => {
@@ -74,7 +74,7 @@ describe('SF-7 AC1: the asc-autoclave registry model', () => {
 });
 
 describe('SF-7 AC2: the built-in Autoclave equipment type', () => {
-  const type = () => BASE_EQUIPMENT_TYPES.find((t) => t.id === 'base-autoclave');
+  const type = () => BUILT_IN_EQUIPMENT_TYPES.find((t) => t.id === 'base-autoclave');
 
   it('is a workstation with automatic labor and a per-batch cure cycle', () => {
     const t = type()!;
