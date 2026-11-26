@@ -1,0 +1,23 @@
+{
+  "project": "docs/screenshots/SF-4/unconnected.json",
+  "shots": [
+    {
+      "name": "unconnected",
+      "screen": "layout",
+      "settle": 1500
+    },
+    {
+      "name": "connect-mode",
+      "screen": "layout",
+      "settle": 1200,
+      "actions": [
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); const o = { clientX: 683, clientY: 671, button: 0, bubbles: true, pointerId: 1 }; c.dispatchEvent(new PointerEvent('pointermove', o)); c.dispatchEvent(new PointerEvent('pointerdown', o)); c.dispatchEvent(new PointerEvent('pointerup', o)); c.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: 10, clientY: 10 })); })()"
+        },
+        {
+          "wait": 600
+        }
+      ]
+    }
+  ]
+}

@@ -29,3 +29,4 @@ _Added by the lead or builder during the story: design decisions, open questions
 
 - _Lead (2026-11-26):_ sprint 9 "Shop floor in 3D" (product owner, 2026-11-26). Load the `frontend-design` skill and add a Design section to the PR. Colours come from the active theme (UI-9). ADR-0014 budget: draw calls in the low tens, ≤ 275k visible triangles.
 - _Lead:_ ports are drawn in `layout/ConnectionLayer.tsx` (same file as SF-3, hence the dependency); positions from `layout/ports.ts`.
+- _Builder:_ markers live in `layout/PortMarker.tsx`, visual rules (scale/opacity/hint, valid inputs) in the pure `layout/portMarkers.ts`. Simulate already mounts `ConnectionLayer` only when `interactive`, so ports are not drawn there. Screenshot projects in `docs/screenshots/SF-4/*.json` are the reference model compacted onto a small floor so ports are legible.

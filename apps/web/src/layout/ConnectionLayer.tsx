@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { PortRef } from '@factory-sim/schema';
 import { useEditorStore } from './editorStore';
-import { useTheme } from '../ui/themeStore';
+import { PortMarker } from './PortMarker';
+import { portKey, portVisual, validInputKeys } from './portMarkers';
 import { ConnectionArcs, PORT_LIFT } from './ConnectionArcs';
 import { hideDragged, portWorldPosition } from './ports';
 
@@ -17,7 +18,14 @@ export function ConnectionLayer() {
   );
   const selectedId = useEditorStore((s) => s.selectedConnectionId);
   const pending = useEditorStore((s) => s.pendingFrom);
-  const theme = useTheme();
+  const connected = useMemo(
+    () => new Set(connections.flatMap((c) => [portKey(c.from), portKey(c.to)])),
+    [connections],
+  );
+  const valid = useMemo(
+    () => validInputKeys(equipment, connections, pending),
+    [equipment, connections, pending],
+  );
 
   const onPort = (ref: PortRef) => (e: ThreeEvent<PointerEvent>) => {
     if (e.button !== 0) return;
@@ -37,28 +45,29 @@ export function ConnectionLayer() {
         e.ports.map((p) => {
           const at = portWorldPosition(e, p);
           const ref = { equipmentId: e.id, portId: p.id };
+          const key = portKey(ref);
           const active = pending?.equipmentId === e.id && pending.portId === p.id;
           return (
-            <mesh
-              key={`${e.id}:${p.id}`}
+            <PortMarker
+              key={key}
               // Above the equipment top so the equipment's own pick handler can't swallow the click.
               position={[at.x, e.height + PORT_LIFT, at.y]}
-              renderOrder={3}
-              onPointerDown={onPort(ref)}
               name={`port:${e.id}:${p.id}`}
-            >
-              <sphereGeometry args={[0.28, 16, 12]} />
-              <meshBasicMaterial
-                depthTest={false}
-                color={
-                  active
-                    ? theme.color.warning
-                    : p.kind === 'output'
-                      ? theme.state.working.strong
-                      : theme.state.blocked.strong
-                }
-              />
-            </mesh>
+              kind={p.kind}
+              active={active}
+              highlight={valid.has(key)}
+              onPointerDown={onPort(ref)}
+              visual={(hovered) =>
+                portVisual({
+                  kind: p.kind,
+                  connected: connected.has(key),
+                  hovered,
+                  pending,
+                  active,
+                  valid: valid.has(key),
+                })
+              }
+            />
           );
         }),
       )}

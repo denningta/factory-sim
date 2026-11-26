@@ -1,0 +1,10 @@
+{
+  "project": "docs/screenshots/SF-4/connected.json",
+  "shots": [
+    {
+      "name": "connected",
+      "screen": "layout",
+      "settle": 1500
+    }
+  ]
+}
