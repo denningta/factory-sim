@@ -44,7 +44,11 @@ function anchorPoints(a: ModelAnchors): [string, Vec3][] {
     ['output', a.output],
   ];
   if (a.statusLight) pts.push(['statusLight', a.statusLight]);
-  if (a.operator) pts.push(['operator', a.operator]);
+  // A bench or machine's operator stands outside the footprint (SF-1); checked separately.
+  if (a.operator && !a.operatorFacing) pts.push(['operator', a.operator]);
+  if (a.workSurface) pts.push(['workSurface', a.workSurface]);
+  a.inTray?.forEach((p, i) => pts.push([`inTray(${i})`, p]));
+  a.outTray?.forEach((p, i) => pts.push([`outTray(${i})`, p]));
   for (let i = 0; i < 60; i++) pts.push([`queueSlot(${i})`, a.queueSlot(i)]);
   return pts;
 }
@@ -188,5 +192,69 @@ describe('UI-7 AC3: fixed parts keep their real size', () => {
       const m = defaultModelFor(b);
       expect(m.build(s0, paramsFor(m)).lods[0]!.some((p) => p.fixed)).toBe(true);
     }
+  });
+});
+
+describe.each(['bench', 'machine'])('SF-1 AC4: workstation anchors of %s', (id) => {
+  const m = MODELS.find((x) => x.id === id)!;
+  const sizes = () => sizesFor(m);
+  const strictlyInside = (p: Vec3, part: Parameters<typeof partBounds>[0][number]) => {
+    const b = partBounds([part]);
+    return p.every((v, k) => v > b.min[k]! + EPS && v < b.max[k]! - EPS);
+  };
+
+  it('is registered', () => expect(m).toBeDefined());
+
+  it.each(Object.entries({ a: 'default', b: 'large', c: 'minimum' }))(
+    'has a work surface, in and out tray slots, and an operator with a facing (%s)',
+    (_k, name) => {
+      const s = sizes()[name]!;
+      const { anchors } = m.build(s, paramsFor(m));
+      expect(anchors.workSurface).toBeDefined();
+      expect(anchors.inTray!.length).toBeGreaterThan(0);
+      expect(anchors.outTray!.length).toBeGreaterThan(0);
+      expect(anchors.operator).toBeDefined();
+      expect(anchors.operatorFacing).toBeDefined();
+    },
+  );
+
+  it.each(['default', 'large', 'narrow', 'shallow', 'minimum'])(
+    'work surface and tray slots are inside the bounds and not inside a part (%s)',
+    (name) => {
+      const s = sizes()[name]!;
+      const { lods, anchors } = m.build(s, paramsFor(m));
+      const slots = [...anchors.inTray!, ...anchors.outTray!];
+      for (const p of [anchors.workSurface!, ...slots]) expect(inside(p, s)).toBe(true);
+      for (const p of slots)
+        for (const part of lods[0]!)
+          expect(strictlyInside([p[0], p[1] + 0.01, p[2]], part), p.join(',')).toBe(false);
+    },
+  );
+
+  it.each(['default', 'large', 'narrow', 'shallow', 'minimum'])(
+    'the operator stands at the front edge outside the footprint, facing it (%s)',
+    (name) => {
+      const s = sizes()[name]!;
+      const { lods, anchors } = m.build(s, paramsFor(m));
+      const [x, y, z] = anchors.operator!;
+      expect(z).toBeGreaterThan(s.length / 2);
+      expect(Math.abs(x)).toBeLessThanOrEqual(s.width / 2 + EPS);
+      expect(y).toBeCloseTo(0, 9);
+      const [fx, fy, fz] = anchors.operatorFacing!;
+      expect(fy).toBe(0);
+      expect(Math.hypot(fx, fz)).toBeCloseTo(1, 9);
+      expect(fz).toBeLessThan(0);
+      for (const part of lods[0]!) expect(strictlyInside([x, 0.9, z], part)).toBe(false);
+    },
+  );
+});
+
+describe('SF-1 AC1: the bench keeps its legs, upright and light bar at real size', () => {
+  it('has at least four legs, two upright posts and a light bar marked fixed', () => {
+    const m = MODELS.find((x) => x.id === 'bench')!;
+    const fixed = m
+      .build({ width: 2, length: 1.5, height: 1.2 }, paramsFor(m))
+      .lods[0]!.filter((p) => p.fixed);
+    expect(fixed.length).toBeGreaterThanOrEqual(7);
   });
 });

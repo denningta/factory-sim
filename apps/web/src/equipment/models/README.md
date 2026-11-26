@@ -49,7 +49,21 @@ checks every registered model automatically.
   every i (use `gridSlots` from `anchors.ts`, which piles parts up instead of spilling), and for
   workstations `statusLight` and `operator`.
 
+## Workstation anchors (SF-1)
+
+Bench- and machine-style workstation models add these optional anchors, which the simulation
+layers use to place parts and people:
+
+- `workSurface`: where the part in process sits.
+- `inTray` / `outTray`: lists of slots on the top where parts are handed in and picked up. They
+  lie inside the footprint and not inside any part.
+- `operator` + `operatorFacing`: where a person stands, on the floor just outside the front edge
+  (+z, `OPERATOR_OFFSET` = 0.45 m from it), and the unit vector (x, 0, z) they look along. When
+  `operatorFacing` is set the contract test requires `operator` to be outside the footprint,
+  in front of it and not inside any part, instead of inside the bounds.
+
 ## Choosing a model
 
 `resolveModel(equipment)` returns the equipment's `model` when it is registered and suits the
-behavior, otherwise the behavior's default, so a stale or unknown id never breaks a project.
+behavior, otherwise the behavior's default (a manual workstation is a `bench`, an automatic one a
+`machine`; every other behavior has one default), so a stale or unknown id never breaks a project.
