@@ -17,6 +17,7 @@ import {
   type PortRef,
   type Floor,
   type Labor,
+  type WorkstationCycle,
   type Product,
   type Technician,
   type Demand,
@@ -97,6 +98,10 @@ export interface EquipmentPatch {
   params?: Record<string, number>;
   /** Workstation labor mode (TE-1); validated with the rest of the equipment. */
   labor?: Labor;
+  /** Workstation cycle (SF-0): per product, or one fixed cure per batch. */
+  cycle?: WorkstationCycle;
+  /** Seconds a first waiting part waits before a partial batch starts; `null` clears it. */
+  maxWait?: number | null;
   /** Meters. */
   footprint?: { width?: number; length?: number };
   /** Meters. */
