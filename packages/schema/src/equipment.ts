@@ -298,6 +298,42 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
   },
 ];
 
+/**
+ * An ASC-style composite autoclave (SF-7, ADR-0017): cures a batch for a fixed time.
+ * Capacity is twice the batch so the next load can wait while one cures. Sized like a
+ * 1.8 m × 4.5 m vessel with room for its door and control cabinet.
+ */
+export const AUTOCLAVE_EQUIPMENT_TYPE: EquipmentType = {
+  id: 'base-autoclave',
+  name: 'Autoclave (ASC)',
+  behavior: 'workstation',
+  params: {
+    capacity: 12,
+    batchSize: 6,
+    labor: {
+      mode: 'automatic',
+      loadTime: { kind: 'fixed', value: 600 },
+      unloadTime: { kind: 'fixed', value: 600 },
+    },
+    cycle: { mode: 'perBatch', time: { kind: 'fixed', value: 14400 } },
+    maxWait: 3600,
+  },
+  footprint: { width: 2.6, length: 6 },
+  height: 2.6,
+  color: '#7d8b96',
+  ports: defaultPorts('workstation'),
+  model: 'asc-autoclave',
+};
+
+/**
+ * Every type the library ships with: the five base behaviors, then ready-made equipment
+ * built on them. `BASE_EQUIPMENT_TYPES` stays one per behavior (EQ-1 contract).
+ */
+export const BUILT_IN_EQUIPMENT_TYPES: readonly EquipmentType[] = [
+  ...BASE_EQUIPMENT_TYPES,
+  AUTOCLAVE_EQUIPMENT_TYPE,
+];
+
 export interface Placement {
   id: string;
   position: { x: number; y: number };

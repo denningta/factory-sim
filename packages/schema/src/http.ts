@@ -168,7 +168,7 @@ export const updateProjectRequestSchema = z
 
 /**
  * A user-defined library type (ADR-0010). Private to the user who created it, like projects
- * (ADR-0011), and usable in all of that user's projects. The built-ins (`BASE_EQUIPMENT_TYPES`)
+ * (ADR-0011), and usable in all of that user's projects. The built-ins (`BUILT_IN_EQUIPMENT_TYPES`)
  * are not stored or served; the web app lists them first.
  *
  * The client generates `id` as a lowercase UUID (what Postgres `uuid` returns, so ids round-trip), so it never collides with built-in ids and placed
