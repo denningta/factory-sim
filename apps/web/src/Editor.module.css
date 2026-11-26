@@ -1,0 +1,41 @@
+/* Layout screen: library left, viewport centre, selection-driven panel right. */
+.editor {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 280px;
+  height: 100%;
+  min-height: 0;
+}
+.side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-content: start;
+  padding: var(--space-4);
+  overflow-y: auto;
+  min-height: 0;
+  background: var(--color-surface);
+}
+.side:first-child {
+  border-right: 1px solid var(--color-panel-border);
+}
+.side:last-child {
+  border-left: 1px solid var(--color-panel-border);
+}
+.main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  min-width: 0;
+}
+.viewport {
+  position: relative;
+  min-height: 0;
+}
+.viewport > :first-child {
+  position: absolute;
+  inset: 0;
+}
+.previewHint {
+  margin: 0;
+  color: var(--color-muted);
+}

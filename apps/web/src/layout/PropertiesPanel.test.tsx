@@ -27,8 +27,8 @@ describe('PropertiesPanel', () => {
     expect(screen.queryByDisplayValue('[object Object]')).toBeNull();
   });
 
-  it('prompts to select something when nothing is selected', async () => {
-    expect(await screen.findByText(/select equipment/i)).toBeTruthy();
+  it('renders nothing when nothing is selected (the right panel shows floor settings then)', () => {
+    expect(screen.queryByRole('heading')).toBeNull();
   });
 
   it('Position and rotation show in the properties panel', async () => {

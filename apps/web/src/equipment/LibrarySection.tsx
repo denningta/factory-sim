@@ -4,6 +4,8 @@ import { useEditorStore } from '../layout/editorStore';
 import type { DisplayUnit } from '../layout/units';
 import { LibraryPanel } from './LibraryPanel';
 import { TypeEditor } from './TypeEditor';
+import { Button } from '../ui';
+import styles from './library.module.css';
 
 /** The calls the library needs; the real `api` client satisfies it. */
 export interface LibraryApi {
@@ -87,9 +89,7 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
         onDelete={(t) => void remove(t)}
       />
       {form === null ? (
-        <button type="button" style={{ marginTop: 8 }} onClick={() => setForm('new')}>
-          New type…
-        </button>
+        <Button onClick={() => setForm('new')}>New type…</Button>
       ) : (
         <TypeEditor
           key={form === 'new' ? 'new' : form.id}
@@ -100,15 +100,14 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
         />
       )}
       {offer && count > 0 && (
-        <div role="status" style={{ margin: '8px 0' }}>
-          <p style={{ margin: '0 0 4px' }}>
+        <div role="status" className={styles.offer}>
+          <p className={styles.offerText}>
             {count === 1
               ? '1 placed instance uses this type.'
               : `${count} placed instances use this type.`}{' '}
             Update them to the new settings? Names and positions stay.
           </p>
-          <button
-            type="button"
+          <Button
             onClick={() => {
               const r = useEditorStore.getState().syncInstancesToType(offer);
               if (r.ok) {
@@ -118,19 +117,17 @@ export function LibrarySection({ api, unit }: { api: LibraryApi; unit: DisplayUn
             }}
           >
             Update instances
-          </button>{' '}
-          <button type="button" onClick={() => setOffer(null)}>
-            Keep their settings
-          </button>
+          </Button>
+          <Button onClick={() => setOffer(null)}>Keep their settings</Button>
           {offerError && (
-            <p role="alert" style={{ color: '#b91c1c', margin: '4px 0 0' }}>
+            <p role="alert" className={styles.error}>
               {offerError}
             </p>
           )}
         </div>
       )}
       {error && (
-        <p role="alert" style={{ color: '#b91c1c' }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}

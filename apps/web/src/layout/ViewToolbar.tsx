@@ -1,100 +1,113 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
-import { findIssues } from './overlaps';
 import { formatNumber, fromDisplay, toDisplay } from './units';
 import type { ViewMode } from './viewControls';
+import { Button } from '../ui';
+import styles from './ViewToolbar.module.css';
 
 const SEGMENTS: { mode: ViewMode; label: string }[] = [
   { mode: '3d', label: '3D' },
   { mode: '2d', label: '2D top-down' },
 ];
 
-/** Wireframe 1's viewport toolbar: a 3D | 2D top-down segmented control and zoom to fit. */
+/** Viewport toolbar: View (3D/2D, fit) · Edit (undo, redo, delete) · Connect · Clearance. */
 export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof defaultStore }) {
   const requestFit = useStore((s) => s.requestFit);
   const viewMode = useStore((s) => s.viewMode);
   const toggleView = useStore((s) => s.toggleView);
-  const equipment = useStore((s) => s.equipment);
   const clearance = useStore((s) => s.clearance);
   const setClearance = useStore((s) => s.setClearance);
   const unit = useStore((s) => s.unit);
   const beginEdit = useStore((s) => s.beginEdit);
   const endEdit = useStore((s) => s.endEdit);
+  const canUndo = useStore((s) => s.canUndo);
+  const canRedo = useStore((s) => s.canRedo);
+  const undo = useStore((s) => s.undo);
+  const redo = useStore((s) => s.redo);
+  const deleteSelected = useStore((s) => s.deleteSelected);
+  const clearSelection = useStore((s) => s.clearSelection);
+  const pending = useStore((s) => s.pendingFrom !== null);
+  const hasSelection = useStore((s) => s.selectedIds.length > 0 || s.selectedConnectionId !== null);
   // One focus-to-blur typing session is one undo step, not one per keystroke.
   const session = useRef(0);
   useEffect(() => () => endEdit(session.current), [endEdit]);
   // Typed text is kept while editing so "0." or "" aren't reformatted under the cursor.
   const [draft, setDraft] = useState<string | null>(null);
-  const issues = useMemo(() => findIssues(equipment, clearance).count, [equipment, clearance]);
   return (
-    <div
-      style={{
-        padding: 8,
-        alignItems: 'center',
-        borderBottom: '1px solid #e5e7eb',
-        display: 'flex',
-        gap: 8,
-      }}
-    >
-      <div role="group" aria-label="View" style={{ display: 'flex' }}>
-        {SEGMENTS.map(({ mode, label }) => {
-          const active = viewMode === mode;
-          return (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={active}
-              onClick={() => active || toggleView()}
-              style={{
-                background: active ? '#1f2937' : undefined,
-                color: active ? '#fff' : undefined,
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
+    <div role="toolbar" aria-label="Layout tools" className={styles.toolbar}>
+      <div role="group" aria-label="View" className={styles.group}>
+        <div className={styles.segment}>
+          {SEGMENTS.map(({ mode, label }) => {
+            const active = viewMode === mode;
+            return (
+              <Button
+                key={mode}
+                aria-pressed={active}
+                title={mode === '3d' ? '3D perspective view' : '2D top-down view'}
+                onClick={() => active || toggleView()}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+        <Button onClick={requestFit} title="Zoom to fit the whole floor">
+          Zoom to fit
+        </Button>
       </div>
-      <button type="button" onClick={requestFit}>
-        Zoom to fit
-      </button>
-      <label style={{ display: 'flex', gap: 4, alignItems: 'center', font: '13px sans-serif' }}>
-        Min clearance ({unit})
-        <input
-          type="text"
-          inputMode="decimal"
-          aria-label="Minimum clearance"
-          style={{ width: 64 }}
-          value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
-          placeholder="off"
-          onFocus={() => {
-            session.current = beginEdit();
-          }}
-          onChange={(e) => {
-            const text = e.target.value;
-            setDraft(text);
-            const n = Number(text);
-            // Blank or invalid means off; the store ignores non-positive values too.
-            setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
-          }}
-          onBlur={() => {
-            endEdit(session.current);
-            setDraft(null);
-          }}
-        />
-      </label>
-      <span
-        role="status"
-        style={{
-          font: '13px sans-serif',
-          color: issues ? '#b91c1c' : '#4b5563',
-          marginLeft: 'auto',
-        }}
-      >
-        {issues === 0
-          ? 'No layout issues'
-          : `${issues} layout ${issues === 1 ? 'issue' : 'issues'}`}
-      </span>
+      <div role="group" aria-label="Edit" className={styles.group}>
+        <Button disabled={!canUndo} onClick={undo} title="Undo (Ctrl+Z)">
+          Undo
+        </Button>
+        <Button disabled={!canRedo} onClick={redo} title="Redo (Ctrl+Shift+Z)">
+          Redo
+        </Button>
+        <Button
+          variant="danger"
+          disabled={!hasSelection}
+          onClick={deleteSelected}
+          title="Delete the selection (Del)"
+        >
+          Delete
+        </Button>
+      </div>
+      <div role="group" aria-label="Connect" className={styles.group}>
+        <span className={styles.hint} title="Click an output port, then an input port">
+          {pending ? 'Now click an input' : 'Click ports to link'}
+        </span>
+        {pending && (
+          <Button onClick={clearSelection} title="Cancel connecting (Esc)">
+            Cancel
+          </Button>
+        )}
+      </div>
+      <div role="group" aria-label="Clearance" className={styles.group}>
+        <div className={styles.inline}>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={styles.clearance}
+            aria-label="Minimum clearance"
+            value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
+            placeholder={`Clearance (${unit})`}
+            title="Minimum clearance between equipment; leave blank for off"
+            onFocus={() => {
+              session.current = beginEdit();
+            }}
+            onChange={(e) => {
+              const text = e.target.value;
+              setDraft(text);
+              const n = Number(text);
+              // Blank or invalid means off; the store ignores non-positive values too.
+              setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
+            }}
+            onBlur={() => {
+              endEdit(session.current);
+              setDraft(null);
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

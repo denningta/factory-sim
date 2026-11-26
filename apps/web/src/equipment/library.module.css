@@ -1,0 +1,99 @@
+.library {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.search {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+}
+.search:focus-visible {
+  outline: 0;
+  border-color: var(--color-accent);
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+/* The type's own colour marks it, here and on the floor. The colour is data, so it is a custom property. */
+.type {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-left: 6px solid var(--type-color);
+  border-radius: var(--radius-md);
+  cursor: grab;
+}
+.type:hover {
+  border-color: var(--color-accent);
+}
+.type:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+.type[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 10px var(--color-glow);
+}
+.name {
+  font-weight: 600;
+}
+.meta {
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+.actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.error {
+  margin: 0;
+  color: var(--color-danger);
+}
+.offer {
+  display: grid;
+  gap: var(--space-2);
+}
+.offerText {
+  margin: 0;
+}
+.form {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+.labelCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+.labelCol input,
+.labelCol select {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+}
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+.preview {
+  height: 200px;
+}

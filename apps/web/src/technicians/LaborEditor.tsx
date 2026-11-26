@@ -1,6 +1,8 @@
 import type { Labor } from '@factory-sim/schema';
 import type { useEditorStore } from '../layout/editorStore';
 import { DurationEditor } from '../products/DurationEditor';
+import styles from '../layout/panels.module.css';
+import { EmptyState } from '../ui';
 
 type Store = typeof useEditorStore;
 
@@ -8,11 +10,10 @@ const DEFAULT_HANDLING_TIME = 5;
 
 /**
  * Workstation labor (TE-1): manual (tech present for the whole cycle) or automatic (tech only
- * for load/unload), plus which technicians staff the station.
+ * for load/unload). Shown in the Process section; staffing is `StaffingEditor`.
  */
 export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; useStore: Store }) {
-  const { equipment, technicians, updateEquipment, setTechnicianStation, beginEdit, endEdit } =
-    useStore();
+  const { equipment, updateEquipment, beginEdit, endEdit } = useStore();
   const station = equipment.find((e) => e.id === equipmentId);
   if (station?.behavior !== 'workstation') return null;
   const labor: Labor = station.params.labor;
@@ -31,8 +32,8 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
   };
   const timeField = (key: 'loadTime' | 'unloadTime', label: string) =>
     labor.mode === 'automatic' && (
-      <div key={`${key}-${equipmentId}`} style={{ display: 'grid', gap: 4 }}>
-        <span>{label}</span>
+      <div key={`${key}-${equipmentId}`} className={`${styles.stack} ${styles.durationHost}`}>
+        <span className={styles.muted}>{label}</span>
         <DurationEditor
           name={label}
           fixedLabel={`${label} (s)`}
@@ -52,7 +53,7 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
     );
   return (
     <>
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+      <fieldset className={styles.choices}>
         <legend>Mode</legend>
         {(
           [
@@ -60,7 +61,7 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
             ['automatic', 'Automatic (tech loads / unloads)'],
           ] as const
         ).map(([mode, text]) => (
-          <label key={mode} style={{ display: 'flex', gap: 6 }}>
+          <label key={mode} className={styles.choice}>
             <input
               type="radio"
               name={`labor-${equipmentId}`}
@@ -72,27 +73,43 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
         ))}
       </fieldset>
       {labor.mode === 'automatic' && (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className={styles.stack}>
           {timeField('loadTime', 'Load time')}
           {timeField('unloadTime', 'Unload time')}
         </div>
       )}
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend>Assigned techs</legend>
-        {technicians.length === 0 && (
-          <p style={{ color: '#6b7280', margin: 0 }}>No technicians yet. Add one below.</p>
-        )}
-        {technicians.map((t) => (
-          <label key={t.id} style={{ display: 'flex', gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={t.stationIds.includes(equipmentId)}
-              onChange={(e) => setTechnicianStation(t.id, equipmentId, e.target.checked)}
-            />
-            {t.name}
-          </label>
-        ))}
-      </fieldset>
     </>
+  );
+}
+
+/** Which technicians staff a workstation (WS-4). */
+export function StaffingEditor({
+  equipmentId,
+  useStore,
+}: {
+  equipmentId: string;
+  useStore: Store;
+}) {
+  const { technicians, setTechnicianStation } = useStore();
+  if (technicians.length === 0)
+    return (
+      <EmptyState title="Add a technician, then assign stations">
+        Clear the selection to add one.
+      </EmptyState>
+    );
+  return (
+    <fieldset className={styles.choices}>
+      <legend>Assigned techs</legend>
+      {technicians.map((t) => (
+        <label key={t.id} className={styles.choice}>
+          <input
+            type="checkbox"
+            checked={t.stationIds.includes(equipmentId)}
+            onChange={(e) => setTechnicianStation(t.id, equipmentId, e.target.checked)}
+          />
+          {t.name}
+        </label>
+      ))}
+    </fieldset>
   );
 }
