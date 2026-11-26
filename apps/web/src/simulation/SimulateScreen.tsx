@@ -33,9 +33,14 @@ const clock = (t: number) => {
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
 export function SimulateScreen({
   onNavigate,
+  playRequest,
+  onPlayRequestHandled,
 }: {
   /** Switches the editor screen when a clicked issue points at an object on another one. */
   onNavigate?: (screen: 'layout' | 'products') => void;
+  /** Set by the top bar's Run simulation: start playback, then call `onPlayRequestHandled`. */
+  playRequest?: boolean;
+  onPlayRequestHandled?: () => void;
 }) {
   const run = useEditorStore((s) => s.run);
   // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
@@ -58,6 +63,10 @@ export function SimulateScreen({
     () => createRunSession(currentProject(), applied.options),
     [applied],
   );
+  // A run that can't start never consumes the request; clear it so playback doesn't start unasked later.
+  useEffect(() => {
+    if (!result.ok && playRequest) onPlayRequestHandled?.();
+  }, [result.ok, playRequest, onPlayRequestHandled]);
   const apply = (next: RunSettings, shiftLength: number) => {
     useEditorStore.getState().applyRun(toProjectRun(next), shiftLength);
     setApplied(toRunOptions(next, shiftLength));
@@ -65,7 +74,13 @@ export function SimulateScreen({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
       {result.ok ? (
-        <Running session={result.session} stations={stations} products={products} />
+        <Running
+          session={result.session}
+          stations={stations}
+          products={products}
+          playRequest={playRequest}
+          onPlayRequestHandled={onPlayRequestHandled}
+        />
       ) : (
         <Issues issues={result.issues} onNavigate={onNavigate} />
       )}
@@ -94,15 +109,24 @@ function Running({
   session,
   stations,
   products,
+  playRequest,
+  onPlayRequestHandled,
 }: {
   session: Extract<RunSessionResult, { ok: true }>['session'];
   stations: readonly Equipment[];
   products: readonly Product[];
+  playRequest?: boolean;
+  onPlayRequestHandled?: () => void;
 }) {
   const equipment = useEditorStore((s) => s.equipment);
   const connections = useEditorStore((s) => s.connections);
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!playRequest) return;
+    session.play();
+    onPlayRequestHandled?.();
+  }, [playRequest, session, onPlayRequestHandled]);
   useEffect(() => session.subscribe(rerender), [session]);
   // The clock readout is text, not per-frame React state: poll it a few times a second.
   useEffect(() => {

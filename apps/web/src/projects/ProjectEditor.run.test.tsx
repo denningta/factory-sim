@@ -16,6 +16,7 @@ vi.mock('../simulation/TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('../simulation/PartLayer', () => ({ PartLayer: () => <div /> }));
 
 beforeEach(() => {
+  location.hash = ''; // the open tab is kept in the hash, so don't leak it between tests
   useEditorStore.setState(useEditorStore.getInitialState(), true);
   vi.spyOn(api, 'getProject').mockResolvedValue({
     id: 'p1',
@@ -36,7 +37,7 @@ describe('SE-7: ProjectEditor saves run settings', () => {
       .spyOn(api, 'updateProject')
       .mockResolvedValue({ id: 'p1', name: 'Line', updatedAt: '', revision: 4 });
     render(<ProjectEditor id="p1" onClose={() => {}} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Simulate' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Simulate' }));
     await userEvent.clear(screen.getByLabelText('Warm-up (hr)'));
     await userEvent.type(screen.getByLabelText('Warm-up (hr)'), '2');
     await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
@@ -54,7 +55,7 @@ describe('LE-6: ProjectEditor saves minimum clearance', () => {
       .spyOn(api, 'updateProject')
       .mockResolvedValue({ id: 'p1', name: 'Line', updatedAt: '', revision: 4 });
     render(<ProjectEditor id="p1" onClose={() => {}} />);
-    await screen.findByRole('button', { name: 'Simulate' });
+    await screen.findByRole('tab', { name: 'Simulate' });
     useEditorStore.getState().setClearance(0.6);
     await waitFor(() => expect(update).toHaveBeenCalled(), { timeout: 5000 });
     expect(update.mock.calls[0]![1].document?.layout.minClearance).toBe(0.6);
@@ -73,7 +74,7 @@ describe('SC-2: sign in again without losing edits', () => {
       role: 'admin',
     } as Awaited<ReturnType<typeof api.login>>);
     render(<ProjectEditor id="p1" onClose={() => {}} />);
-    await screen.findByRole('button', { name: 'Simulate' });
+    await screen.findByRole('tab', { name: 'Simulate' });
     useEditorStore.getState().setClearance(0.7);
     const dialog = await screen.findByRole('dialog', undefined, { timeout: 5000 });
     // Header and editor are inert behind the modal, and focus starts in the email field.

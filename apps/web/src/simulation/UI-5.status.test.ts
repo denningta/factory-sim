@@ -6,8 +6,8 @@ import {
   calloutLines,
   connectionLook,
   pixelsPerMeter,
+  ANCHOR_BOX,
   placeCards,
-  resolveOverlaps,
 } from './callouts';
 import { fitOrtho } from '../layout/cameraFit';
 
@@ -53,23 +53,6 @@ describe('UI-5 AC2: callout card text', () => {
       800 / (2 * 20 * Math.tan((45 / 2) * (Math.PI / 180))),
     );
   });
-  it('overlapping cards are lifted apart; separate ones stay put', () => {
-    const rects = [
-      { x: 0, y: 100, w: 100, h: 40 },
-      { x: 50, y: 100, w: 100, h: 40 },
-      { x: 400, y: 100, w: 100, h: 40 },
-    ];
-    const lift = resolveOverlaps(rects, 4);
-    const placed = rects.map((r, i) => ({ ...r, y: r.y - lift[i]! }));
-    for (let i = 0; i < 3; i++)
-      for (let j = i + 1; j < 3; j++) {
-        const a = placed[i]!;
-        const b = placed[j]!;
-        const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-        expect(overlap).toBe(false);
-      }
-    expect(lift[2]).toBe(0);
-  });
 });
 
 describe('UI-5 AC4: connections', () => {
@@ -90,25 +73,50 @@ describe('UI-5 AC7: idle is "Waiting for tech"', () => {
 });
 
 describe('UI-5 AC2: cards on a line that runs along the depth axis', () => {
-  it('five stations stacked on screen get non-overlapping cards inside the viewport', () => {
-    // The reference line seen from the front: stations in a column, 70 px apart.
-    const anchors = [0, 1, 2, 3, 4].map((i) => ({ x: 400, y: 200 + i * 70 }));
-    const size = { w: 176, h: 62 };
-    const viewport = { w: 980, h: 800 };
-    const spots = placeCards(anchors, size, viewport);
-    const rects = spots.map((s) => ({ ...s, ...size }));
-    for (const r of rects) {
-      expect(r.x).toBeGreaterThanOrEqual(0);
-      expect(r.y).toBeGreaterThanOrEqual(0);
-      expect(r.x + r.w).toBeLessThanOrEqual(viewport.w);
-      expect(r.y + r.h).toBeLessThanOrEqual(viewport.h);
-    }
-    for (let i = 0; i < 5; i++)
-      for (let j = i + 1; j < 5; j++) {
-        const a = rects[i]!;
-        const b = rects[j]!;
-        const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-        expect(overlap).toBe(false);
-      }
-  });
+  const size = { w: 176, h: 62 };
+  const viewport = { w: 980, h: 800 };
+  const overlap = (
+    a: { x: number; y: number; w: number; h: number },
+    b: { x: number; y: number; w: number; h: number },
+  ) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  // The reference line seen from the front is a column with the two off-line stations beside it;
+  // the spacing is tighter than a card (62 + 36 px) so "above" alone cannot work.
+  const columns = [
+    [0, 1, 2, 3, 4].map((i) => ({ x: 400, y: 260 + i * 55 })),
+    [
+      { x: 400, y: 250 },
+      { x: 440, y: 300 },
+      { x: 400, y: 350 },
+      { x: 440, y: 400 },
+      { x: 400, y: 450 },
+    ],
+  ];
+  it.each(columns)(
+    'no card covers another card or any station box, none falls back',
+    (...anchors) => {
+      const spots = placeCards(anchors, size, viewport);
+      const rects = spots.map((s) => ({ ...s, ...size }));
+      rects.forEach((r, i) => {
+        expect(spots[i]!.fallback).toBe(false);
+        expect(r.x).toBeGreaterThanOrEqual(0);
+        expect(r.y).toBeGreaterThanOrEqual(0);
+        expect(r.x + r.w).toBeLessThanOrEqual(viewport.w);
+        expect(r.y + r.h).toBeLessThanOrEqual(viewport.h);
+        anchors.forEach((a) =>
+          expect(
+            overlap(r, {
+              x: a.x - ANCHOR_BOX,
+              y: a.y - ANCHOR_BOX,
+              w: ANCHOR_BOX * 2,
+              h: ANCHOR_BOX * 2,
+            }),
+          ).toBe(false),
+        );
+        for (let j = i + 1; j < rects.length; j++) expect(overlap(r, rects[j]!)).toBe(false);
+      });
+      // The tight column cannot be served by the "above" spot alone: some card sits beside.
+      expect(spots.some((s, i) => s.x > anchors[i]!.x || s.x + size.w < anchors[i]!.x)).toBe(true);
+    },
+  );
 });
