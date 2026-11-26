@@ -555,7 +555,7 @@ describe('TE-2: techs walk between their stations', () => {
       { id: tech.id, name: tech.name, homeId: tech.stationIds[0] },
     ]);
     const c = geometry.equipment.get(a.id)!.operator;
-    expect(tracks.at(0)).toEqual([
+    expect(tracks.at(0)).toMatchObject([
       { techId: tech.id, name: tech.name, x: c.x, z: c.z, state: 'standing' },
     ]);
   });

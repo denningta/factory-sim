@@ -1,0 +1,15 @@
+{
+  "shots": [
+    {
+      "name": "techs-working",
+      "screen": "simulate",
+      "settle": 1500,
+      "actions": [
+        { "click": "text=Play" },
+        { "wait": 3000 },
+        { "eval": "(()=>{const c=document.querySelector('canvas');const r=c.getBoundingClientRect();for(let i=0;i<30;i++)c.dispatchEvent(new WheelEvent('wheel',{deltaY:-300,clientX:r.left+r.width*0.46,clientY:r.top+r.height*0.5,bubbles:true,cancelable:true}));})()" },
+        { "wait": 1500 }
+      ]
+    }
+  ]
+}
