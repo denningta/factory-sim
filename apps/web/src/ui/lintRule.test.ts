@@ -17,7 +17,7 @@ describe(
   'UI-1 AC4: lint forbids style= on DOM elements in migrated directories',
   { timeout: 30_000 },
   () => {
-    it.each(['ui', 'auth', 'projects', 'products'])('rejects style in %s/', async (dir) => {
+    it.each(['ui', 'auth', 'projects', 'products', 'results'])('rejects style in %s/', async (dir) => {
       const m = await lint(dir);
       expect(m).toHaveLength(1);
       expect(m[0]!.message).toMatch(/style/i);

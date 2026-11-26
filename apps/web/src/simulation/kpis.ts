@@ -50,3 +50,19 @@ export function formatLeadTime(seconds: number | null): string {
   if (seconds === null) return '–';
   return seconds < 60 ? `${seconds.toFixed(1)} s` : `${(seconds / 60).toFixed(1)} min`;
 }
+
+export interface LittlesLaw {
+  /** null while there is nothing to check (no part has exited). */
+  ok: boolean | null;
+  /** Throughput × lead time, in units. */
+  expectedWip: number;
+  /** |WIP − X·W| / WIP. */
+  deviation: number;
+}
+
+/** Same tolerance as AN-1 / the reference model. */
+export const LITTLES_LAW_TOLERANCE = 0.05;
+
+export function littlesLaw(_total: KpiRow): LittlesLaw {
+  throw new Error('not implemented');
+}
