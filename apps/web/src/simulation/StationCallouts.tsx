@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Equipment } from '@factory-sim/schema';
-import { MIN_TEXT_PX, calloutLines, pixelsPerMeter, resolveOverlaps, type Rect } from './callouts';
+import { MIN_TEXT_PX, calloutLines, pixelsPerMeter, placeCards } from './callouts';
 import type { RunSession } from './runSession';
 import { lightSegments } from './stationStatus';
 import { stationUtilization } from './utilization';
@@ -162,22 +162,24 @@ export function StationCallouts({
         sy: ((1 - ndc.y) / 2) * size.height,
       };
     });
-    const rects: Rect[] = anchors.map((a) => ({
-      x: a.sx - CARD_W / 2,
-      y: a.sy - LEADER_PX - CARD_H,
-      w: CARD_W,
-      h: CARD_H,
-    }));
-    const lifts = resolveOverlaps(rects);
+    const spots = placeCards(
+      anchors.map((a) => ({ x: a.sx, y: a.sy })),
+      { w: CARD_W, h: CARD_H },
+      { w: size.width, h: size.height },
+      LEADER_PX,
+    );
     cards.forEach((c, i) => {
       const a = anchors[i]!;
+      const spot = spots[i]!;
       const ppm = pixelsPerMeter(cam, size.height, a.depth);
       const toWorld = (sx: number, sy: number, out: THREE.Vector3) =>
         out.set((sx / size.width) * 2 - 1, 1 - (sy / size.height) * 2, a.ndc.z).unproject(camera);
-      const cardBottom = a.sy - LEADER_PX - lifts[i]!;
-      toWorld(a.sx, cardBottom - CARD_H / 2, c.sprite.position);
+      toWorld(spot.x + CARD_W / 2, spot.y + CARD_H / 2, c.sprite.position);
       c.sprite.scale.set(CARD_W / ppm, CARD_H / ppm, 1);
-      toWorld(a.sx, cardBottom, scratch.b);
+      // The leader ends at the card's edge point nearest the station.
+      const ex = Math.min(Math.max(a.sx, spot.x), spot.x + CARD_W);
+      const ey = Math.min(Math.max(a.sy, spot.y), spot.y + CARD_H);
+      toWorld(ex, ey, scratch.b);
       const pos = c.leader.geometry.getAttribute('position') as THREE.BufferAttribute;
       pos.setXYZ(0, c.station.position.x, c.station.height, c.station.position.y);
       pos.setXYZ(1, scratch.b.x, scratch.b.y, scratch.b.z);

@@ -6,6 +6,7 @@ import {
   calloutLines,
   connectionLook,
   pixelsPerMeter,
+  placeCards,
   resolveOverlaps,
 } from './callouts';
 import { fitOrtho } from '../layout/cameraFit';
@@ -85,5 +86,29 @@ describe('UI-5 AC7: idle is "Waiting for tech"', () => {
     expect(stateLabel('working')).toBe('Working');
     expect(stateLabel('starved')).toBe('Starved');
     expect(stateLabel('blocked')).toBe('Blocked');
+  });
+});
+
+describe('UI-5 AC2: cards on a line that runs along the depth axis', () => {
+  it('five stations stacked on screen get non-overlapping cards inside the viewport', () => {
+    // The reference line seen from the front: stations in a column, 70 px apart.
+    const anchors = [0, 1, 2, 3, 4].map((i) => ({ x: 400, y: 200 + i * 70 }));
+    const size = { w: 176, h: 62 };
+    const viewport = { w: 980, h: 800 };
+    const spots = placeCards(anchors, size, viewport);
+    const rects = spots.map((s) => ({ ...s, ...size }));
+    for (const r of rects) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.y).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.w).toBeLessThanOrEqual(viewport.w);
+      expect(r.y + r.h).toBeLessThanOrEqual(viewport.h);
+    }
+    for (let i = 0; i < 5; i++)
+      for (let j = i + 1; j < 5; j++) {
+        const a = rects[i]!;
+        const b = rects[j]!;
+        const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+        expect(overlap).toBe(false);
+      }
   });
 });

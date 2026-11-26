@@ -69,3 +69,56 @@ export const connectionLook = (
   playing: boolean,
 ): { kind: 'flow' | 'blocked'; flowing: boolean } =>
   from === 'blocked' ? { kind: 'blocked', flowing: false } : { kind: 'flow', flowing: playing };
+
+/**
+ * Screen position (top-left, px) of each card, given its station's screen point. Each card tries
+ * above its station, then to the right, then to the left, then above but lifted tier by tier;
+ * the first spot inside the viewport that clears the cards already placed wins. Lines that run
+ * along the view's depth axis (stations stacked on screen) end up with cards alternating sides
+ * instead of piling off the top edge.
+ */
+export function placeCards(
+  anchors: readonly { x: number; y: number }[],
+  size: { w: number; h: number },
+  viewport: { w: number; h: number },
+  leader = 36,
+  gap = 6,
+): { x: number; y: number }[] {
+  const { w, h } = size;
+  const out = new Array<{ x: number; y: number }>(anchors.length);
+  const placed: Rect[] = [];
+  const margin = 4;
+  const inside = (r: Rect) =>
+    r.x >= margin &&
+    r.y >= margin &&
+    r.x + r.w <= viewport.w - margin &&
+    r.y + r.h <= viewport.h - margin;
+  const clear = (r: Rect) =>
+    placed.every(
+      (p) =>
+        r.x + r.w + gap <= p.x ||
+        p.x + p.w + gap <= r.x ||
+        r.y + r.h + gap <= p.y ||
+        p.y + p.h + gap <= r.y,
+    );
+  // Back-to-front (top of the screen first) so nearer stations keep the nicer spots.
+  const order = anchors.map((_, i) => i).sort((a, b) => anchors[a]!.y - anchors[b]!.y || a - b);
+  for (const i of order) {
+    const a = anchors[i]!;
+    const above = { x: a.x - w / 2, y: a.y - leader - h };
+    const side = a.y - h / 2 - 10;
+    const candidates = [
+      above,
+      { x: a.x + 28, y: side },
+      { x: a.x - 28 - w, y: side },
+      ...[1, 2, 3, 4].map((k) => ({ x: above.x, y: above.y - k * (h + gap) })),
+      ...[1, 2].map((k) => ({ x: a.x + 28, y: side + k * (h + gap) })),
+      ...[1, 2].map((k) => ({ x: a.x - 28 - w, y: side + k * (h + gap) })),
+    ];
+    const pick =
+      candidates.find((c) => inside({ ...c, w, h }) && clear({ ...c, w, h })) ?? candidates[0]!;
+    out[i] = pick;
+    placed.push({ ...pick, w, h });
+  }
+  return out;
+}
