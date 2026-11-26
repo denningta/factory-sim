@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createEditorStore } from './editorStore';
-import { portKey, portVisual, validInputKeys, type PortVisualInput } from './portMarkers';
+import { themes } from '../ui/tokens';
+import {
+  portColors,
+  portKey,
+  portVisual,
+  validInputKeys,
+  type PortVisualInput,
+} from './portMarkers';
 
 const base: PortVisualInput = {
   kind: 'output',
@@ -76,5 +83,15 @@ describe('SF-4 AC4: connected ports shrink to a dim dot', () => {
     });
     expect(mode.scale).toBeGreaterThanOrEqual(free.scale);
     expect(mode.opacity).toBe(1);
+  });
+});
+
+describe('SF-4 AC3: valid inputs are drawn in the accent', () => {
+  it.each(['dark', 'light'] as const)('fill is accent with accentInk text (%s)', (mode) => {
+    const th = themes[mode];
+    const valid = portColors({ kind: 'input', active: false, valid: true }, th);
+    const other = portColors({ kind: 'input', active: false, valid: false }, th);
+    expect(valid).toEqual({ fill: th.color.accent, ink: th.color.accentInk });
+    expect(valid.fill).not.toBe(other.fill);
   });
 });

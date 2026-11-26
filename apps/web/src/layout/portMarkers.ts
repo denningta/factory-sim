@@ -1,3 +1,4 @@
+import type { Theme } from '../ui/tokens';
 import type { Connection, Equipment, PortRef } from '@factory-sim/schema';
 
 export type PortKind = 'input' | 'output';
@@ -69,3 +70,15 @@ export function validInputKeys(
 }
 
 export const portKey = (r: PortRef) => `${r.equipmentId}:${r.portId}`;
+
+/** Fill and label ink: pending output warns, valid targets take the accent, the rest stay muted. */
+export function portColors(
+  i: { kind: PortKind; active: boolean; valid: boolean },
+  theme: Theme,
+): { fill: string; ink: string } {
+  if (i.active) return { fill: theme.color.warning, ink: theme.scene.background };
+  if (i.valid) return { fill: theme.color.accent, ink: theme.color.accentInk };
+  return i.kind === 'output'
+    ? { fill: theme.scene.flow, ink: theme.scene.background }
+    : { fill: theme.scene.grid, ink: theme.scene.label };
+}

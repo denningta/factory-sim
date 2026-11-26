@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
 import { useTheme } from '../ui/themeStore';
-import type { PortVisual } from './portMarkers';
+import { portColors, type PortVisual } from './portMarkers';
 
 /** Metres across a marker at scale 1. */
 const SIZE = 0.6;
@@ -55,12 +55,7 @@ export function PortMarker({
   const theme = useTheme();
   const [hovered, setHovered] = useState(false);
   const v = visual(hovered);
-  const fill = active
-    ? theme.color.warning
-    : kind === 'output'
-      ? theme.scene.flow
-      : theme.scene.grid;
-  const ink = kind === 'output' || highlight ? theme.scene.background : theme.scene.label;
+  const { fill, ink } = portColors({ kind, active, valid: highlight }, theme);
   const label = useTextTexture(kind === 'output' ? 'OUT' : 'IN', ink);
   const hint = useTextTexture(v.hint, theme.scene.label);
   const hover = (on: boolean) => () => {
