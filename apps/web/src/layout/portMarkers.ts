@@ -23,17 +23,49 @@ export interface PortVisual {
   hint: string | null;
 }
 
-export function portVisual(_i: PortVisualInput): PortVisual {
-  throw new Error('not implemented');
+const REST = 1;
+const HOVER = 1.5;
+const DOT = 0.35;
+const DIM = 0.35;
+
+export function portVisual(i: PortVisualInput): PortVisual {
+  const connecting = i.pending !== null;
+  const hint = i.hovered ? (i.kind === 'output' ? 'Output: click to connect' : 'Input') : null;
+  // Connect mode: valid targets (and the pending output) stand out, everything else recedes.
+  if (connecting) {
+    const lit = i.active || i.valid;
+    return {
+      scale: i.hovered ? HOVER : lit ? HOVER : REST,
+      opacity: lit ? 1 : DIM,
+      showLabel: true,
+      hint,
+    };
+  }
+  if (i.hovered) return { scale: HOVER, opacity: 1, showLabel: true, hint };
+  // A connected port is a quiet dot until the user needs it again.
+  if (i.connected) return { scale: DOT, opacity: 0.5, showLabel: false, hint };
+  return { scale: REST, opacity: 0.85, showLabel: true, hint };
 }
 
 /** Input ports the pending output could connect to (other equipment, not already linked). */
 export function validInputKeys(
-  _equipment: readonly Equipment[],
-  _connections: readonly Connection[],
-  _pending: PortRef | null,
+  equipment: readonly Equipment[],
+  connections: readonly Connection[],
+  pending: PortRef | null,
 ): Set<string> {
-  throw new Error('not implemented');
+  const keys = new Set<string>();
+  if (!pending) return keys;
+  const linked = new Set(
+    connections.filter((c) => portKey(c.from) === portKey(pending)).map((c) => portKey(c.to)),
+  );
+  for (const e of equipment) {
+    if (e.id === pending.equipmentId) continue;
+    for (const p of e.ports) {
+      const k = portKey({ equipmentId: e.id, portId: p.id });
+      if (p.kind === 'input' && !linked.has(k)) keys.add(k);
+    }
+  }
+  return keys;
 }
 
 export const portKey = (r: PortRef) => `${r.equipmentId}:${r.portId}`;
