@@ -26,6 +26,7 @@ describe(
       'equipment',
       'technicians',
       'results',
+      'simulation',
     ])('rejects style in %s/', async (dir) => {
       const m = await lint(dir);
       expect(m).toHaveLength(1);
@@ -33,7 +34,7 @@ describe(
     });
 
     it('leaves directories that are not migrated yet alone', async () => {
-      expect(await lint('simulation')).toEqual([]);
+      expect(await lint('api')).toEqual([]);
     });
 
     it('allows style on a component (only DOM elements are restricted)', async () => {

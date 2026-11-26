@@ -33,11 +33,14 @@ const clock = (t: number) => {
 /** Wireframe 3 (simulation run): the 3D line with parts moving through it, and run settings. */
 export function SimulateScreen({
   onNavigate,
+  onOpenResults: _onOpenResults,
   playRequest,
   onPlayRequestHandled,
 }: {
   /** Switches the editor screen when a clicked issue points at an object on another one. */
   onNavigate?: (screen: 'layout' | 'products') => void;
+  /** Opens the Results screen. */
+  onOpenResults?: () => void;
   /** Set by the top bar's Run simulation: start playback, then call `onPlayRequestHandled`. */
   playRequest?: boolean;
   onPlayRequestHandled?: () => void;
