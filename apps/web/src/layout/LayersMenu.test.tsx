@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LayersMenu } from './LayersMenu';
 import { ViewToolbar } from './ViewToolbar';
 import { useLayersStore } from './layersStore';
 
 afterEach(() => {
+  cleanup();
   localStorage.clear();
   useLayersStore.setState({ connections: true });
 });

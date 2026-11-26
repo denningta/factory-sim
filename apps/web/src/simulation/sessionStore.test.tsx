@@ -12,7 +12,7 @@ vi.mock('../layout/FloorScene', () => ({
 }));
 vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('./StationLayer', () => ({ StationLayer: () => <div /> }));
-vi.mock('./RunConnections', () => ({ RunConnections: () => <div /> }));
+vi.mock('../layout/ConnectionArcs', () => ({ ConnectionArcs: () => <div /> }));
 vi.mock('./PartLayer', () => ({
   PartLayer: () => {
     useEffect(() => undefined, []);
