@@ -63,6 +63,10 @@ export interface LittlesLaw {
 /** Same tolerance as AN-1 / the reference model. */
 export const LITTLES_LAW_TOLERANCE = 0.05;
 
-export function littlesLaw(_total: KpiRow): LittlesLaw {
-  throw new Error('not implemented');
+export function littlesLaw(total: KpiRow): LittlesLaw {
+  if (total.leadTime === null || total.averageWip <= 0)
+    return { ok: null, expectedWip: 0, deviation: 0 };
+  const expectedWip = (total.throughputPerHour / 3600) * total.leadTime;
+  const deviation = Math.abs(total.averageWip - expectedWip) / total.averageWip;
+  return { ok: deviation <= LITTLES_LAW_TOLERANCE, expectedWip, deviation };
 }

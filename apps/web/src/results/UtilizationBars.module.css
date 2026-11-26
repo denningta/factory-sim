@@ -1,0 +1,74 @@
+.root {
+  display: grid;
+  gap: var(--space-4);
+}
+.group {
+  display: grid;
+  gap: var(--space-2);
+}
+.title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--space-2);
+  font-size: var(--font-size-sm);
+}
+.share {
+  font-variant-numeric: tabular-nums;
+}
+.flag {
+  color: var(--color-danger);
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+}
+.bar {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  background: var(--color-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar > span {
+  min-width: 0;
+}
+.bar > span:first-child {
+  border-radius: 2px 0 0 2px;
+}
+.bar > span:last-child {
+  border-radius: 0 2px 2px 0;
+}
+.bar .working,
+.bar .starved,
+.bar .blocked,
+.bar .walking,
+.bar .waiting {
+  display: block;
+}
+.bar .working {
+  background: var(--state-working-tint);
+}
+.bar .starved {
+  background: var(--state-starved-tint);
+}
+.bar .blocked {
+  background: var(--state-blocked-tint);
+}
+.bar .walking {
+  background: var(--state-walking-tint);
+}
+.bar .waiting {
+  background: var(--state-waiting-tint);
+}

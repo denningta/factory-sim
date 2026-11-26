@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { RunSessionResult } from './runSession';
+import { useEditorStore } from '../layout/editorStore';
+import { currentProject } from './currentProject';
+import { createRunSession, type RunSessionResult } from './runSession';
+import { fromProjectRun, toRunOptions } from './runSettings';
 
 /** The editor slices a run was built from; a different reference later means the model changed. */
 export interface ModelRefs {
@@ -12,6 +15,8 @@ export interface ModelRefs {
   demand: unknown;
   release: unknown;
   shiftLength: number;
+  /** Saved run settings: undoing an Apply makes the run on screen stale too. */
+  run: unknown;
 }
 
 export interface RunEntry {
@@ -37,25 +42,54 @@ interface SessionState {
 }
 
 export const modelRefs = (): ModelRefs => {
-  throw new Error('not implemented');
-};
-export const isStale = (_entry: RunEntry): boolean => {
-  throw new Error('not implemented');
+  const s = useEditorStore.getState();
+  return {
+    floor: s.floor,
+    equipment: s.equipment,
+    products: s.products,
+    connections: s.connections,
+    cycleTimes: s.cycleTimes,
+    technicians: s.technicians,
+    demand: s.demand,
+    release: s.release,
+    shiftLength: s.shiftLength,
+    run: s.run,
+  };
 };
 
-export const useSessionStore = create<SessionState>(() => ({
-  count: 0,
-  current: null,
-  startRun: () => {
-    throw new Error('not implemented');
-  },
-  startRunWith: () => {
-    throw new Error('not implemented');
-  },
-  resetRun: () => {
-    throw new Error('not implemented');
-  },
-  ensureFreshRun: () => {
-    throw new Error('not implemented');
-  },
-}));
+export const isStale = (entry: RunEntry): boolean => {
+  const now = modelRefs();
+  return (Object.keys(now) as (keyof ModelRefs)[]).some((k) => now[k] !== entry.model[k]);
+};
+
+export const useSessionStore = create<SessionState>((set, get) => {
+  const start = (options: { warmUp: number; runLength: number }, seed: number) => {
+    const result = createRunSession(currentProject(), { ...options, seed });
+    // A model that can't run isn't a run: keep the count, show the issues.
+    const number = result.ok ? get().count + 1 : get().count;
+    set({
+      count: number,
+      current: { number, settings: { ...options, seed }, result, model: modelRefs() },
+    });
+  };
+  return {
+    count: 0,
+    current: null,
+    startRun: () => {
+      const e = useEditorStore.getState();
+      const { options, seed } = toRunOptions(fromProjectRun(e.run), e.shiftLength);
+      start(options, seed);
+    },
+    startRunWith: (options, seed) => start(options, seed),
+    resetRun: () => {
+      const { current, count } = get();
+      if (!current?.result.ok) return;
+      current.result.session.reset();
+      set({ count: count + 1, current: { ...current, number: count + 1 } });
+    },
+    ensureFreshRun: () => {
+      const { current } = get();
+      if (!current || isStale(current)) get().startRun();
+    },
+  };
+});

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEditorStore } from '../layout/editorStore';
+import { useSessionStore } from './sessionStore';
 import type { RunSession } from './runSession';
 import { SimulateScreen } from './SimulateScreen';
 
@@ -24,6 +25,7 @@ vi.mock('./PartLayer', () => ({
 }));
 
 beforeEach(() => {
+  useSessionStore.setState({ count: 0, current: null });
   useEditorStore.setState(useEditorStore.getInitialState(), true);
   const s = useEditorStore.getState;
   const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;
@@ -111,18 +113,6 @@ describe('SE-4: run settings panel', () => {
     await userEvent.click(button('Apply'));
     expect(screen.getByRole('status', { name: 'Seed used' }).textContent).toContain('42');
   });
-});
-
-describe('AN-2: utilization panel on the Simulate screen', () => {
-  it('renders the station and technician utilization tables after a run', async () => {
-    render(<SimulateScreen />);
-    await userEvent.click(button('Run to end'));
-    await waitFor(() => expect(clock()).toContain('(finished)'), { timeout: 5000 });
-    const table = screen.getByRole('table', { name: 'Station utilization' });
-    expect(within(table).getAllByRole('rowheader').length).toBeGreaterThan(0);
-    expect(within(table).getAllByRole('cell')[0]!.textContent).toMatch(/^\d+\.\d%$/);
-    expect(screen.getByRole('table', { name: 'Technician utilization' })).toBeTruthy();
-  }, 15_000);
 });
 
 describe('AN-1: live KPI panel', () => {

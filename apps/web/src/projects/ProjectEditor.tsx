@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Project } from '@factory-sim/schema';
 import { api, type ApiRequestError } from '../api/client';
 import { SignIn } from '../auth/SignIn';
-import { Badge, Button, EmptyState, Tabs, ThemeToggle, type BadgeTone } from '../ui';
+import { Badge, Button, Tabs, ThemeToggle, type BadgeTone } from '../ui';
 import { preRunIssues } from '../products/preRunIssues';
 import { Editor } from '../Editor';
 import { SimulateScreen } from '../simulation/SimulateScreen';
+import { ResultsScreen } from '../results/ResultsScreen';
+import { useSessionStore } from '../simulation/sessionStore';
 import { ProductsPanel } from '../products/ProductsPanel';
 import { useEditorStore } from '../layout/editorStore';
 import { useUndoShortcuts } from '../layout/shortcuts';
@@ -77,6 +79,19 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
     [equipment, storeProducts, cycleTimes, technicians],
   );
   const handlePlayRequest = useCallback(() => setPlayRequest(false), []);
+  // Run simulation and Run again: a new run on the current model, played from the start.
+  const runSimulation = useCallback(() => {
+    useSessionStore.getState().startRun();
+    setTab('simulate');
+    setPlayRequest(true);
+  }, [setTab]);
+  const openInLayout = useCallback(
+    (stationId: string) => {
+      useEditorStore.getState().selectEquipment(stationId, false);
+      setTab('layout');
+    },
+    [setTab],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -216,10 +231,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               variant="primary"
               disabled={issues.length > 0}
               aria-describedby={issues.length > 0 ? 'run-issues' : undefined}
-              onClick={() => {
-                setTab('simulate');
-                setPlayRequest(true);
-              }}
+              onClick={runSimulation}
             >
               Run simulation
             </Button>
@@ -249,7 +261,11 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
               onPlayRequestHandled={handlePlayRequest}
             />
           ) : (
-            <EmptyState title="Run a simulation to see results" />
+            <ResultsScreen
+              onOpenSimulate={() => setTab('simulate')}
+              onRunAgain={runSimulation}
+              onOpenInLayout={openInLayout}
+            />
           )}
         </div>
       </div>

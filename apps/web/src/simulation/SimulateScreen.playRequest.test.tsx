@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEditorStore } from '../layout/editorStore';
+import { useSessionStore } from './sessionStore';
 import type { RunSession } from './runSession';
 import { SimulateScreen } from './SimulateScreen';
 
@@ -23,6 +24,7 @@ vi.mock('./PartLayer', () => ({
 }));
 
 beforeEach(() => {
+  useSessionStore.setState({ count: 0, current: null });
   useEditorStore.setState(useEditorStore.getInitialState(), true);
   const s = useEditorStore.getState;
   const src = s().placeEquipment('base-source', { x: 0, y: 0 })!;

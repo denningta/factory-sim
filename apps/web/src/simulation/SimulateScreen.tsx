@@ -9,10 +9,10 @@ import { issueTarget } from './issueTarget';
 import { PartLayer } from './PartLayer';
 import { StationLayer } from './StationLayer';
 import { BottleneckTile } from './BottleneckTile';
-import { UtilizationPanel } from './UtilizationPanel';
 import { RunSettingsPanel } from './RunSettingsPanel';
 import { TechLayer } from './TechLayer';
-import { createRunSession, type RunSessionResult } from './runSession';
+import type { RunSessionResult } from './runSession';
+import { useSessionStore } from './sessionStore';
 import { fromProjectRun, toProjectRun, toRunOptions, type RunSettings } from './runSettings';
 
 // Same range as the session's clamp (runSession MIN_SPEED/MAX_SPEED).
@@ -41,33 +41,28 @@ export function SimulateScreen({
   onPlayRequestHandled?: () => void;
 }) {
   const run = useEditorStore((s) => s.run);
-  // Each Apply starts a new run; a random seed is drawn once per Apply, so Reset replays it.
-  const [applied, setApplied] = useState(() =>
-    toRunOptions(
-      fromProjectRun(useEditorStore.getState().run),
-      useEditorStore.getState().shiftLength,
-    ),
-  );
   const shiftLength = useEditorStore((s) => s.shiftLength);
   const products = useEditorStore((s) => s.products);
   const equipment = useEditorStore((s) => s.equipment);
-  const technicians = useEditorStore((s) => s.technicians);
   // The engine reports utilization for workstations only.
   const stations = useMemo(
     () => equipment.filter((e) => e.behavior === 'workstation'),
     [equipment],
   );
-  const result = useMemo<RunSessionResult>(
-    () => createRunSession(currentProject(), applied.options),
-    [applied],
-  );
+  // The run lives in the session store so it outlives this tab; a changed model starts a new one.
+  const current = useSessionStore((s) => s.current);
+  useEffect(() => useSessionStore.getState().ensureFreshRun(), []);
+  const result: RunSessionResult | undefined = current?.result;
   // A run that can't start never consumes the request; clear it so playback doesn't start unasked later.
+  const failed = result !== undefined && !result.ok;
   useEffect(() => {
-    if (!result.ok && playRequest) onPlayRequestHandled?.();
-  }, [result.ok, playRequest, onPlayRequestHandled]);
+    if (failed && playRequest) onPlayRequestHandled?.();
+  }, [failed, playRequest, onPlayRequestHandled]);
+  if (!current || !result) return null;
   const apply = (next: RunSettings, shiftLength: number) => {
     useEditorStore.getState().applyRun(toProjectRun(next), shiftLength);
-    setApplied(toRunOptions(next, shiftLength));
+    const { options, seed } = toRunOptions(next, shiftLength);
+    useSessionStore.getState().startRunWith(options, seed);
   };
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', height: '100%' }}>
@@ -86,7 +81,6 @@ export function SimulateScreen({
           <>
             <KpiPanel session={result.session} products={products} shiftLength={shiftLength} />
             <BottleneckTile session={result.session} stations={stations} />
-            <UtilizationPanel session={result.session} stations={stations} techs={technicians} />
           </>
         )}
         <RunSettingsPanel
@@ -94,7 +88,7 @@ export function SimulateScreen({
           key={JSON.stringify([run, shiftLength])}
           initial={fromProjectRun(run)}
           shiftLength={shiftLength}
-          seedUsed={applied.seed}
+          seedUsed={current.settings.seed}
           onApply={apply}
         />
       </div>
@@ -151,7 +145,7 @@ function Running({
         </button>
         <button
           onClick={() => {
-            session.reset();
+            useSessionStore.getState().resetRun();
             setNow(0);
           }}
         >

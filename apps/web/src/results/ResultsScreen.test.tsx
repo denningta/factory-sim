@@ -46,7 +46,7 @@ describe('UI-6 AC1: header', () => {
   it('shows run number, length, warm-up and seed, and a complete run', () => {
     finishRun();
     render(<ResultsScreen {...handlers()} />);
-    const head = screen.getByRole('banner');
+    const head = screen.getByRole('region', { name: 'Run summary' });
     expect(head.textContent).toContain('Results · run 1');
     expect(head.textContent).toMatch(/Run length 1 h/);
     expect(head.textContent).toMatch(/Warm-up 0 h/);
@@ -57,14 +57,18 @@ describe('UI-6 AC1: header', () => {
   it('says in progress while the run is going, and the figures update live', () => {
     useSessionStore.getState().startRunWith({ warmUp: 0, runLength: 3600 }, 5);
     render(<ResultsScreen {...handlers()} />);
-    expect(within(screen.getByRole('banner')).getByText('In progress')).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: 'Run summary' })).getByText('In progress'),
+    ).toBeTruthy();
     const r = useSessionStore.getState().current!.result;
     if (!r.ok) throw new Error('should run');
     act(() => r.session.runToEnd());
     act(() => {
       for (let i = 0; i < 1000 && !r.session.done; i++) r.session.frame(1000);
     });
-    expect(within(screen.getByRole('banner')).getByText('Complete')).toBeTruthy();
+    expect(
+      within(screen.getByRole('region', { name: 'Run summary' })).getByText('Complete'),
+    ).toBeTruthy();
   });
 });
 
