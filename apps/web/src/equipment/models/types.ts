@@ -52,6 +52,16 @@ export interface ModelAnchors {
   /** Workstations: the signal light, and where the operator stands. */
   statusLight?: Vec3;
   operator?: Vec3;
+  /**
+   * Workstations drawn as a bench or machine (SF-1). `workSurface`: where the part in process
+   * sits. `inTray` / `outTray`: slots on top where parts are handed in and picked up.
+   * `operatorFacing`: unit vector (x, 0, z) the operator at `operator` looks along; when set,
+   * `operator` is on the floor just outside the front edge instead of inside the footprint.
+   */
+  workSurface?: Vec3;
+  inTray?: Vec3[];
+  outTray?: Vec3[];
+  operatorFacing?: Vec3;
 }
 
 export interface ModelBuild {

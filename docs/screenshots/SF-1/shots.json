@@ -1,0 +1,52 @@
+{
+  "shots": [
+    {
+      "name": "reference-line",
+      "screen": "layout",
+      "settle": 1500,
+      "actions": [
+        {
+          "click": "text=Zoom to fit"
+        },
+        {
+          "wait": 800
+        }
+      ]
+    },
+    {
+      "name": "library-preview-bench",
+      "screen": "layout",
+      "actions": [
+        {
+          "click": "text=New type\u2026"
+        },
+        {
+          "wait": 500
+        },
+        {
+          "eval": "document.querySelector('[aria-label=\"3D model preview\"]')?.scrollIntoView({block:'center'})"
+        }
+      ],
+      "settle": 1500
+    },
+    {
+      "name": "library-preview-machine",
+      "screen": "layout",
+      "actions": [
+        {
+          "click": "text=New type\u2026"
+        },
+        {
+          "eval": "(() => { const s=[...document.querySelectorAll('select')].find(x=>[...x.options].some(o=>o.text==='Machine')); const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set; set.call(s,'machine'); s.dispatchEvent(new Event('change',{bubbles:true})); })()"
+        },
+        {
+          "wait": 500
+        },
+        {
+          "eval": "document.querySelector('[aria-label=\"3D model preview\"]')?.scrollIntoView({block:'center'})"
+        }
+      ],
+      "settle": 1500
+    }
+  ]
+}

@@ -26,3 +26,4 @@ issue: 171
 _Added by the lead or builder during the story: design decisions, open questions, links._
 
 - _Lead (2026-11-26):_ lead-owned (packages/schema and the sim-engine public API). Blocks SF-6, SF-7, SF-5.
+- _Lead (2026-11-26):_ `cycle` is optional (absent = `perProduct`) instead of upgraded in, because library types stored in the API (EQ-3) aren't reached by the project upgrader; the v7 → v8 step bumps the version only. `batchStarted.endsAt` is always set (emitted when the cycle starts). See ADR-0017.

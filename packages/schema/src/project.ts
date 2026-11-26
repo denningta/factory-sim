@@ -23,7 +23,7 @@ import {
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();

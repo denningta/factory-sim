@@ -86,7 +86,8 @@ describe('UI-7 AC8: the five current shapes are the behavior defaults', () => {
   it('the defaults keep the current part layout', () => {
     // Same part counts and shapes as the pre-registry shapes.ts (b = box, c = cylinder, f = taper).
     const expected: Record<string, string> = {
-      workstation: 'bbc',
+      // SF-1: the workstation default is now the bench (top, legs, feet, upright, shelves, bins).
+      workstation: 'bbbbbccccbbbbbbbbbbbbbb',
       buffer: 'bbbbbbbbbb',
       conveyor: 'bbbbbbb',
       source: 'bcf',
@@ -106,5 +107,27 @@ describe('UI-7 AC8: the five current shapes are the behavior defaults', () => {
     const parts = defaultModelFor('sink').build(sizeOf(t), t.params).lods[0]!;
     const mouth = parts.find((p) => p.role === 'dark')!;
     expect(mouth.position[1]).toBeGreaterThan(t.height * 0.9);
+  });
+});
+
+describe('SF-1 AC1-3: bench and machine models', () => {
+  const manual = { labor: { mode: 'manual' } };
+  const automatic = { labor: { mode: 'automatic', loadTime: 5, unloadTime: 5 } };
+
+  it('registers a bench and a machine for workstations', () => {
+    for (const id of ['bench', 'machine'])
+      expect(MODELS.find((m) => m.id === id)?.behaviors).toContain('workstation');
+  });
+
+  it('a manual workstation with no model is drawn as bench, an automatic one as machine', () => {
+    expect(resolveModel({ behavior: 'workstation', params: manual }).id).toBe('bench');
+    expect(resolveModel({ behavior: 'workstation', params: automatic }).id).toBe('machine');
+    expect(resolveModel({ behavior: 'workstation' }).id).toBe('bench');
+  });
+
+  it('an explicit model still wins over the labor default', () => {
+    expect(
+      resolveModel({ behavior: 'workstation', model: 'workstation-cell', params: automatic }).id,
+    ).toBe('workstation-cell');
   });
 });
