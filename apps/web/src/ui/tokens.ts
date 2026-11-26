@@ -36,6 +36,8 @@ export interface Theme {
     flow: string;
     /** Equipment parts that aren't the equipment's own colour (materials roles frame, accent, dark). */
     parts: { frame: string; accent: string; dark: string };
+    /** Categorical hi-vis colours for technicians' vests, by order in the project (SF-2). */
+    techs: string[];
     /** Light intensities. */
     ambient: number;
     key: number;
@@ -77,6 +79,7 @@ export const light: Theme = {
     label: '#374151',
     flow: '#475569',
     parts: { frame: '#8a929c', accent: '#d7dbe0', dark: '#2b2f36' },
+    techs: ['#e8590c', '#0b7285', '#c2255c', '#5c940d', '#e0a800', '#3b5bdb'],
     ambient: 1.2,
     key: 2,
   },
@@ -124,6 +127,7 @@ export const dark: Theme = {
     label: '#b9cecf',
     flow: '#2f9d8a',
     parts: { frame: '#6f7f88', accent: '#b9c6cb', dark: '#161d21' },
+    techs: ['#ff922b', '#3bc9db', '#f06595', '#94d82d', '#ffd43b', '#748ffc'],
     ambient: 0.9,
     key: 1.6,
   },

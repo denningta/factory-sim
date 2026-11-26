@@ -4,9 +4,15 @@ import type { LineGeometry, Pt } from './partTracks';
 export interface TechPose {
   techId: string;
   name: string;
+  /** Position in the project's technician list: picks the tech's colour. */
+  order: number;
   x: number;
   z: number;
   state: 'walking' | 'standing';
+  /** Yaw in radians about +y; 0 faces +z. The direction of travel, or the bench while standing. */
+  heading: number;
+  /** Meters walked so far in the current walk (0 standing): drives the walk cycle (ADR-0008). */
+  walked: number;
 }
 
 export interface TechTracks {
@@ -23,33 +29,69 @@ export interface TechInfo {
   name: string;
   /** Station the tech starts at (the first one it is assigned to). */
   homeId: string | undefined;
+  /** Every station the tech is assigned to: side-by-side spots at a bench are shared out by it. */
+  stationIds?: readonly string[];
 }
 
 interface Track {
   info: TechInfo;
+  order: number;
   /** Station it stands at before its first recorded walk; changed by `seed`. */
   baseId: string | undefined;
   /** Walks in time order; between them the tech stands where the last one ended. */
-  walks: { t: number; t1: number; from: Pt; to: Pt }[];
+  walks: { t: number; t1: number; from: Pt; to: Pt; toId: string }[];
   cursor: number;
 }
+
+/** Side-by-side spacing of techs at one bench along its front edge (m). */
+export const TECH_SPACING = 0.7;
 
 export function createTechTracks(geometry: LineGeometry, techs: readonly TechInfo[]): TechTracks {
   // A tech with no station has nowhere to be drawn.
   const tracks = new Map<string, Track>(
     techs
-      .filter((info) => info.homeId !== undefined)
-      .map((info) => [info.id, { info, baseId: info.homeId, walks: [], cursor: 0 }]),
+      .map((info, order) => ({ info, order }))
+      .filter(({ info }) => info.homeId !== undefined)
+      .map(({ info, order }) => [
+        info.id,
+        { info, order, baseId: info.homeId, walks: [], cursor: 0 },
+      ]),
   );
-  // Techs stand at the station's operator anchor (UI-7), and walk between those spots.
-  const center = (id: string | undefined): Pt =>
-    (id !== undefined && geometry.equipment.get(id)?.operator) || { x: 0, z: 0 };
+  // Techs sharing a bench take fixed spots along its front edge, so nobody overlaps and the
+  // spot doesn't change while others walk away.
+  const sharing = new Map<string, string[]>();
+  for (const info of techs)
+    for (const sid of info.stationIds ?? [])
+      sharing.set(sid, [...(sharing.get(sid) ?? []), info.id]);
+
+  /** Unit plan direction a tech at `id` looks along: toward the bench. */
+  const facingAt = (id: string | undefined): Pt => {
+    const g = id !== undefined ? geometry.equipment.get(id) : undefined;
+    if (!g) return { x: 0, z: 1 };
+    const f = g.facing ?? { x: g.center.x - g.operator.x, z: g.center.z - g.operator.z };
+    const len = Math.hypot(f.x, f.z);
+    return len > 1e-9 ? { x: f.x / len, z: f.z / len } : { x: 0, z: 1 };
+  };
+  const yawOf = (d: Pt) => Math.atan2(d.x, d.z);
+
+  // Techs stand at the station's operator anchor (UI-7), shifted along the front edge.
+  const spot = (stationId: string | undefined, techId: string): Pt => {
+    const g = stationId !== undefined ? geometry.equipment.get(stationId) : undefined;
+    if (!g) return { x: 0, z: 0 };
+    const group = stationId !== undefined ? sharing.get(stationId) : undefined;
+    const idx = group?.indexOf(techId) ?? -1;
+    if (!group || idx < 0) return g.operator;
+    const side = (idx - (group.length - 1) / 2) * TECH_SPACING;
+    const f = facingAt(stationId);
+    return { x: g.operator.x - f.z * side, z: g.operator.z + f.x * side };
+  };
 
   const walkOf = (ev: Extract<LineEvent, { type: 'techMoved' }>) => ({
     t: ev.t,
     t1: ev.arrivesAt,
-    from: center(ev.fromId),
-    to: center(ev.toId),
+    from: spot(ev.fromId, ev.techId),
+    to: spot(ev.toId, ev.techId),
+    toId: ev.toId,
   });
 
   return {
@@ -80,19 +122,29 @@ export function createTechTracks(geometry: LineGeometry, techs: readonly TechInf
         while (i < walks.length && walks[i]!.t <= t) i++;
         tr.cursor = i;
         const last = walks[i - 1];
-        const base = { techId: tr.info.id, name: tr.info.name };
-        if (!last) {
-          poses.push({ ...base, ...center(tr.baseId), state: 'standing' });
-        } else if (t < last.t1) {
+        const base = { techId: tr.info.id, name: tr.info.name, order: tr.order };
+        if (last && t < last.t1) {
+          const dx = last.to.x - last.from.x;
+          const dz = last.to.z - last.from.z;
+          const len = Math.hypot(dx, dz);
           const f = (t - last.t) / (last.t1 - last.t);
           poses.push({
             ...base,
-            x: last.from.x + (last.to.x - last.from.x) * f,
-            z: last.from.z + (last.to.z - last.from.z) * f,
+            x: last.from.x + dx * f,
+            z: last.from.z + dz * f,
             state: 'walking',
+            heading: len > 1e-9 ? yawOf({ x: dx, z: dz }) : yawOf(facingAt(last.toId)),
+            walked: len * f,
           });
         } else {
-          poses.push({ ...base, ...last.to, state: 'standing' });
+          const at = last ? last.toId : tr.baseId;
+          poses.push({
+            ...base,
+            ...(last ? last.to : spot(tr.baseId, tr.info.id)),
+            state: 'standing',
+            heading: yawOf(facingAt(at)),
+            walked: 0,
+          });
         }
       }
       return poses;

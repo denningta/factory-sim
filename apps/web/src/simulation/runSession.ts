@@ -67,6 +67,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     id: t.id,
     name: t.name,
     homeId: t.stationIds[0],
+    stationIds: t.stationIds,
   }));
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());

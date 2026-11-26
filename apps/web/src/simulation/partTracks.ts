@@ -19,6 +19,8 @@ export interface LineGeometry {
       center: Pt;
       /** Where a tech stands to work it: the model's operator anchor, else the center. */
       operator: Pt;
+      /** Plan direction (unit) the operator at `operator` looks along: toward the bench. */
+      facing?: Pt;
       /** Where the i-th waiting part rests (bottom center): the model's queueSlot anchor. */
       queueSlot: (i: number) => Pt3;
       /** A conveyor's travel path: input port to output port. */
@@ -90,9 +92,13 @@ export function buildLineGeometry(
       return { x: p.x, y, z: p.y };
     };
     const op = anchors.operator ? place(anchors.operator) : undefined;
+    const [fx, , fz] = anchors.operatorFacing ?? [0, 0, 0];
+    const f0 = localToPlan(e, 0, 0);
+    const f1 = localToPlan(e, fx, fz);
     eq.set(e.id, {
       center,
       operator: op ? { x: op.x, z: op.z } : center,
+      facing: anchors.operatorFacing ? { x: f1.x - f0.x, z: f1.y - f0.y } : undefined,
       queueSlot: (i) => place(anchors.queueSlot(i)),
       path: [inPt, outPt],
     });
