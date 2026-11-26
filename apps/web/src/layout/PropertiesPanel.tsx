@@ -115,22 +115,24 @@ function ConnectionProperties({ useStore }: { useStore: Store }) {
           {radio('speed', 'From distance and speed')}
         </fieldset>
         {t.kind === 'fixed' && (
-          <DurationEditor
-            key={`tt-${conn.id}`}
-            name="Transfer time"
-            fixedLabel="Transfer time (s)"
-            time={t.time}
-            setTime={(d) => updateConnection(conn.id, { transfer: { kind: 'fixed', time: d } })}
-            // A transfer always has a time, so clearing the field is ignored.
-            setFixed={(seconds) =>
-              seconds !== null &&
-              updateConnection(conn.id, {
-                transfer: { kind: 'fixed', time: { kind: 'fixed', value: seconds } },
-              })
-            }
-            beginEdit={beginEdit}
-            endEdit={endEdit}
-          />
+          <div className={styles.durationHost}>
+            <DurationEditor
+              key={`tt-${conn.id}`}
+              name="Transfer time"
+              fixedLabel="Transfer time (s)"
+              time={t.time}
+              setTime={(d) => updateConnection(conn.id, { transfer: { kind: 'fixed', time: d } })}
+              // A transfer always has a time, so clearing the field is ignored.
+              setFixed={(seconds) =>
+                seconds !== null &&
+                updateConnection(conn.id, {
+                  transfer: { kind: 'fixed', time: { kind: 'fixed', value: seconds } },
+                })
+              }
+              beginEdit={beginEdit}
+              endEdit={endEdit}
+            />
+          </div>
         )}
         {t.kind === 'speed' && (
           <>

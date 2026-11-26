@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useEditorStore as defaultStore } from './editorStore';
 import { formatNumber, fromDisplay, toDisplay } from './units';
 import type { ViewMode } from './viewControls';
-import { Button, Field } from '../ui';
+import { Button } from '../ui';
 import styles from './ViewToolbar.module.css';
 
 const SEGMENTS: { mode: ViewMode; label: string }[] = [
@@ -72,8 +72,8 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
         </Button>
       </div>
       <div role="group" aria-label="Connect" className={styles.group}>
-        <span className={styles.hint}>
-          {pending ? 'Now click an input port' : 'Click an output, then an input'}
+        <span className={styles.hint} title="Click an output port, then an input port">
+          {pending ? 'Now click an input' : 'Click ports to link'}
         </span>
         {pending && (
           <Button onClick={clearSelection} title="Cancel connecting (Esc)">
@@ -82,27 +82,31 @@ export function ViewToolbar({ useStore = defaultStore }: { useStore?: typeof def
         )}
       </div>
       <div role="group" aria-label="Clearance" className={styles.group}>
-        <Field
-          className={styles.clearance}
-          label={`Min clearance (${unit})`}
-          inputMode="decimal"
-          aria-label="Minimum clearance"
-          value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
-          placeholder="off"
-          onFocus={() => {
-            session.current = beginEdit();
-          }}
-          onChange={(text) => {
-            setDraft(text);
-            const n = Number(text);
-            // Blank or invalid means off; the store ignores non-positive values too.
-            setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
-          }}
-          onBlur={() => {
-            endEdit(session.current);
-            setDraft(null);
-          }}
-        />
+        <div className={styles.inline}>
+          <input
+            type="text"
+            inputMode="decimal"
+            className={styles.clearance}
+            aria-label="Minimum clearance"
+            value={draft ?? (clearance === null ? '' : formatNumber(toDisplay(clearance, unit)))}
+            placeholder={`Clearance (${unit})`}
+            title="Minimum clearance between equipment; leave blank for off"
+            onFocus={() => {
+              session.current = beginEdit();
+            }}
+            onChange={(e) => {
+              const text = e.target.value;
+              setDraft(text);
+              const n = Number(text);
+              // Blank or invalid means off; the store ignores non-positive values too.
+              setClearance(text.trim() !== '' && Number.isFinite(n) ? fromDisplay(n, unit) : null);
+            }}
+            onBlur={() => {
+              endEdit(session.current);
+              setDraft(null);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

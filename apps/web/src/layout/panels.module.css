@@ -90,3 +90,19 @@
   gap: var(--space-2);
   align-items: end;
 }
+.labelCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-muted);
+}
+/* DurationEditor right-aligns for the products table; in a panel it fills the width. */
+.durationHost > div {
+  justify-items: stretch;
+}
+.durationHost input,
+.durationHost select {
+  width: 100%;
+  box-sizing: border-box;
+}

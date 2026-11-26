@@ -111,8 +111,8 @@ function UiFieldSelect({
   setUnit: (u: DisplayUnit) => void;
 }) {
   return (
-    <label className={styles.stack}>
-      <span className={styles.muted}>Units</span>
+    <label className={styles.labelCol}>
+      Units
       <select
         className={styles.select}
         value={unit}

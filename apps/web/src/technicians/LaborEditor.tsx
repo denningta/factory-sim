@@ -32,7 +32,7 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
   };
   const timeField = (key: 'loadTime' | 'unloadTime', label: string) =>
     labor.mode === 'automatic' && (
-      <div key={`${key}-${equipmentId}`} className={styles.stack}>
+      <div key={`${key}-${equipmentId}`} className={`${styles.stack} ${styles.durationHost}`}>
         <span className={styles.muted}>{label}</span>
         <DurationEditor
           name={label}
@@ -73,7 +73,7 @@ export function LaborEditor({ equipmentId, useStore }: { equipmentId: string; us
         ))}
       </fieldset>
       {labor.mode === 'automatic' && (
-        <div className={styles.row}>
+        <div className={styles.stack}>
           {timeField('loadTime', 'Load time')}
           {timeField('unloadTime', 'Unload time')}
         </div>
