@@ -11,7 +11,7 @@ const TECH_KEYS: TechKey[] = ['working', 'walking', 'idle'];
 
 function rows<K extends string>(
   fractions: Record<string, Record<K, number>>,
-  named: { id: string; name: string }[],
+  named: readonly { id: string; name: string }[],
   keys: K[],
 ): UtilRow<K>[] {
   // Only objects the engine reports on (e.g. workstations, not every piece of equipment).
@@ -26,8 +26,10 @@ function rows<K extends string>(
 }
 
 /** Engine fractions of the measured window → percentages for the station table (AN-2). */
-export const stationUtilization = (stats: RunStats, stations: { id: string; name: string }[]) =>
-  rows(stats.stations, stations, STATION_KEYS);
+export const stationUtilization = (
+  stats: RunStats,
+  stations: readonly { id: string; name: string }[],
+) => rows(stats.stations, stations, STATION_KEYS);
 
 export const techUtilization = (stats: RunStats, techs: { id: string; name: string }[]) =>
   rows(stats.techs, techs, TECH_KEYS);

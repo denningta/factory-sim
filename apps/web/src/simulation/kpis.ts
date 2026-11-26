@@ -36,7 +36,7 @@ const NONE: RunStats['total'] = {
 /** Turns engine stats (already warm-up-free) into the figures the KPI panel shows (AN-1). */
 export function computeKpis(
   stats: RunStats,
-  products: { id: string; name: string }[],
+  products: readonly { id: string; name: string }[],
   shiftLength: number,
 ): Kpis {
   return {

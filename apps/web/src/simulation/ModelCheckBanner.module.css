@@ -1,0 +1,31 @@
+.banner {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  border: 1px solid;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+}
+.ok {
+  color: var(--state-working);
+  border-color: var(--state-working-tint);
+}
+.bad {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.title {
+  margin: 0 0 var(--space-1);
+}
+.list {
+  margin: 0;
+  padding-left: var(--space-4);
+  color: var(--color-text);
+}
+.issue {
+  all: unset;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.issue:focus-visible {
+  outline: 2px solid var(--color-accent);
+}

@@ -258,6 +258,7 @@ export function ProjectEditor({ id, onClose }: { id: string; onClose: () => void
             <ProductsPanel />
           ) : tab === 'simulate' ? (
             <SimulateScreen
+              onOpenResults={() => setTab('results')}
               onNavigate={setTab}
               playRequest={playRequest}
               onPlayRequestHandled={handlePlayRequest}

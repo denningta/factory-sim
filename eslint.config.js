@@ -112,7 +112,7 @@ export default tseslint.config(
     // widths, product colour swatches) may keep `style` with a disable comment saying why. Each
     // sprint 8 screen story adds its directory here.
     files: [
-      'apps/web/src/{ui,auth,projects,products,layout,equipment,technicians,results}/**/*.tsx',
+      'apps/web/src/{ui,auth,projects,products,layout,equipment,technicians,results,simulation}/**/*.tsx',
     ],
     rules: {
       'no-restricted-syntax': [

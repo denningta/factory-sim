@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEditorStore } from '../layout/editorStore';
 import { useSessionStore } from './sessionStore';
+import type { RunSession } from './runSession';
 import { SimulateScreen } from './SimulateScreen';
 
 vi.mock('../layout/FloorScene', () => ({
@@ -12,7 +13,16 @@ vi.mock('../layout/FloorScene', () => ({
 vi.mock('./TechLayer', () => ({ TechLayer: () => <div /> }));
 vi.mock('./StationLayer', () => ({ StationLayer: () => <div /> }));
 vi.mock('./RunConnections', () => ({ RunConnections: () => <div /> }));
-vi.mock('./PartLayer', () => ({ PartLayer: () => <div /> }));
+// Stands in for the render loop that calls session.frame in the real PartLayer.
+vi.mock('./PartLayer', () => ({
+  PartLayer: ({ session }: { session: RunSession }) => {
+    useEffect(() => {
+      const id = setInterval(() => session.frame(1 / 60), 5);
+      return () => clearInterval(id);
+    }, [session]);
+    return <div />;
+  },
+}));
 
 const build = (withTech: boolean) => {
   useSessionStore.setState({ count: 0, current: null });
@@ -76,14 +86,19 @@ describe('UI-4 AC2: four live KPI tiles across the top of the viewport', () => {
     for (const n of ['Throughput', 'WIP', 'Lead time', 'Bottleneck'])
       expect(tile(n).textContent).toContain('Warm-up excluded');
   });
-  it('shows the bottleneck station and its working % once the run has finished', async () => {
+  it('shows the bottleneck station and its working % while the run plays', async () => {
+    useEditorStore.setState({ run: { ...useEditorStore.getState().run, warmUp: 0 } });
     render(<SimulateScreen />);
     await userEvent.click(screen.getByRole('button', { name: 'Run to end' }));
-    await waitFor(() =>
-      expect(screen.getByRole('group', { name: 'Bottleneck' }).textContent).toMatch(/\d+% working/),
+    await waitFor(
+      () =>
+        expect(screen.getByRole('group', { name: 'Bottleneck' }).textContent).toMatch(
+          /\d+% working/,
+        ),
+      { timeout: 12_000 },
     );
     expect(screen.getByRole('group', { name: 'Bottleneck' }).textContent).toMatch(/Workstation/);
-  });
+  }, 20_000);
 });
 
 describe('UI-4 AC3: the model check shows as a banner', () => {
