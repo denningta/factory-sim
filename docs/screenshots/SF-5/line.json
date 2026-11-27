@@ -11,7 +11,7 @@
       "name": "Material release",
       "typeId": "base-source",
       "position": {
-        "x": 0,
+        "x": 7.5,
         "y": 14
       },
       "rotation": 0,
@@ -34,10 +34,10 @@
     },
     {
       "id": "s3",
-      "name": "S3 Weld",
+      "name": "Autoclave",
       "typeId": "base-autoclave",
       "position": {
-        "x": 0,
+        "x": 7.5,
         "y": 20
       },
       "rotation": 0,
@@ -63,7 +63,7 @@
       ],
       "behavior": "workstation",
       "params": {
-        "capacity": 12,
+        "capacity": 3,
         "batchSize": 3,
         "labor": {
           "mode": "automatic",
@@ -92,7 +92,7 @@
       "name": "Shipping",
       "typeId": "base-sink",
       "position": {
-        "x": 0,
+        "x": 7.5,
         "y": 26
       },
       "rotation": 0,
@@ -174,7 +174,24 @@
       ]
     }
   ],
-  "cycleTimes": [],
+  "cycleTimes": [
+    {
+      "productId": "A",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 600
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 600
+      }
+    }
+  ],
   "calendar": {
     "shiftLength": 28800
   },
@@ -203,7 +220,7 @@
   },
   "technicians": [],
   "run": {
-    "warmUp": 3600,
+    "warmUp": 0,
     "length": {
       "unit": "seconds",
       "value": 86400

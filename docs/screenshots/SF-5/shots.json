@@ -1,14 +1,19 @@
 {
-  "project": "docs/reference-model/model.json",
+  "project": "docs/screenshots/SF-5/reference-line.json",
   "shots": [
     {
       "name": "reference-mid-run",
       "screen": "simulate",
-      "themes": ["dark", "light"],
       "settle": 800,
       "actions": [
         {
-          "eval": "(() => { const c = document.querySelector('canvas'); for (let i=0;i<6;i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 640, clientY: 400, bubbles: true, cancelable: true })); })()"
+          "waitFor": "canvas"
+        },
+        {
+          "wait": 1500
+        },
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); for (let i=0;i<20;i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 640, clientY: 400, bubbles: true, cancelable: true })); })()"
         },
         {
           "fill": ["input[type=range]", "60"]

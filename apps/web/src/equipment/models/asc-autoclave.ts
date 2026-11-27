@@ -131,7 +131,8 @@ export const ascAutoclave: ModelDefinition = {
         cure: {
           cart: { center: [0, ch + 0.02, cz], size: [cw * 0.96, ct, cl * 0.96], travel },
           door: { center: [0, yc, zf + 0.02], radius: r },
-          progress: { center: [0, yc + r * 1.12, z0 + vl / 2], width: vl * 0.5 },
+          // Over the cart zone in front of the door, clear of the station card above the vessel.
+          progress: { center: [0, yc + r * 1.12, zf + front * 0.5], width: cw },
         },
         statusLight: [poleX, h, cabZ],
         workSurface: [0, yc, z0 + vl / 2],
