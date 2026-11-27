@@ -213,8 +213,8 @@ describe('SF-8: isometric-style default camera that frames the equipment', () =>
       const n = ndc(fit, aspect, p);
       max = Math.max(max, Math.abs(n.x), Math.abs(n.y));
     }
-    expect(max).toBeLessThanOrEqual(1);
-    expect(max).toBeGreaterThan(0.9);
+    expect(max).toBeLessThanOrEqual(0.9); // room left for callouts and panels
+    expect(max).toBeGreaterThan(0.7);
     // Much closer than fitting the 40 × 30 m floor.
     const whole = fitCamera({ ...floor, aspect, fovDeg: FOV });
     expect(fit.distance).toBeLessThan(whole.distance * 0.6);

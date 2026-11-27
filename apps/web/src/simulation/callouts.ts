@@ -113,7 +113,7 @@ export function placeCards(
 }
 
 /** Most cards drawn at once: every card is a sprite and a line, so they dominate draw calls. */
-export const MAX_CALLOUTS = 8;
+export const MAX_CALLOUTS = 6;
 
 /**
  * Which stations get a card: the `limit` nearest the camera, then the bottleneck if it isn't

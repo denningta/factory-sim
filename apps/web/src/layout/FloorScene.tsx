@@ -174,8 +174,7 @@ export function FloorScene({
   const scene = useTheme().scene;
   return (
     <Canvas
-      onCreated={({ gl, scene: s3 }) => {
-        (window as unknown as { __scene?: unknown }).__scene = s3;
+      onCreated={({ gl }) => {
         // Dev-only handle for the SF-8 performance check (renderer.info); absent in production.
         if (import.meta.env.DEV)
           (window as unknown as { __rendererInfo?: unknown }).__rendererInfo = gl.info;

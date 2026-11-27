@@ -65,6 +65,8 @@ const ELEVATION = (35 * Math.PI) / 180;
 const AZIMUTH = Math.PI / 4;
 /** Breathing room around the fitted bounds. */
 const PAD = 1.05;
+/** Equipment gets more room: callout cards, labels and floating panels sit around it. */
+const EQUIPMENT_PAD = 1.25;
 
 /**
  * Smallest distance, along the fixed isometric view direction, at which the equipment (or, with
@@ -80,8 +82,11 @@ export function fitCamera(
   distance: number;
 } {
   let points: Vec3[];
-  if (opts.equipment && opts.equipment.length > 0) points = equipmentPoints(opts.equipment);
-  else {
+  let pad = PAD;
+  if (opts.equipment && opts.equipment.length > 0) {
+    points = equipmentPoints(opts.equipment);
+    pad = EQUIPMENT_PAD;
+  } else {
     const b = planBounds(opts);
     points = [b.minX, b.maxX].flatMap((x) => [b.minZ, b.maxZ].map((z): Vec3 => [x, 0, z]));
   }
@@ -117,8 +122,8 @@ export function fitCamera(
     const along = dot(q, u);
     distance = Math.max(
       distance,
-      along + (PAD * Math.abs(dot(q, up))) / t,
-      along + (PAD * Math.abs(dot(q, right))) / (t * opts.aspect),
+      along + (pad * Math.abs(dot(q, up))) / t,
+      along + (pad * Math.abs(dot(q, right))) / (t * opts.aspect),
     );
   }
   return {
