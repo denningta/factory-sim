@@ -83,7 +83,41 @@ export function groupEquipment(equipment: readonly Equipment[]): EquipmentGroup[
   return [...groups.values()];
 }
 
+/** Triangles in one part: 12 for a box, 4 per radial segment for a capped cylinder. */
+function partTriangles(part: ModelPart): number {
+  return part.shape === 'box' ? 12 : 4 * part.segments;
+}
+
 /** Triangles drawn if every instance showed LOD 0 (an upper bound; LOD only lowers it). */
-export function triangleCount(_groups: readonly EquipmentGroup[]): number {
+export function triangleCount(groups: readonly EquipmentGroup[]): number {
+  let n = 0;
+  for (const g of groups)
+    for (const lods of g.itemLods) n += lods[0]!.reduce((sum, p) => sum + partTriangles(p), 0);
+  return n;
+}
+
+/** One part of one LOD level of one group; the unit a batch draws. */
+export interface BatchEntry {
+  group: number;
+  lod: number;
+  part: number;
+}
+
+/** Parts that share a role (material) and unit geometry, drawn as one InstancedMesh. */
+export interface Batch {
+  key: string;
+  role: ModelPart['role'];
+  /** A part to build the unit geometry from; every entry's part has the same one. */
+  sample: ModelPart;
+  entries: BatchEntry[];
+  /** Slots needed if every item sat at every entry (items sit at one LOD, so this is an upper bound). */
+  capacity: number;
+}
+
+/**
+ * Groups parts across models and LOD levels by (role, unit geometry) so the draw-call count
+ * follows the number of materials and shapes, not the number of models and parts (ADR-0014).
+ */
+export function planBatches(_groups: readonly EquipmentGroup[]): Batch[] {
   throw new Error('not implemented');
 }

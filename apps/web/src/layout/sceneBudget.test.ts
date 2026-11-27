@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createEditorStore } from './editorStore';
-import { drawCalls, groupEquipment, triangleCount } from './equipmentGroups';
+import { groupEquipment, planBatches, triangleCount } from './equipmentGroups';
 
 /** PL-5 target load: 200 objects (ADR-0014). Parts and technicians are instanced separately. */
 function load200() {
@@ -15,19 +15,19 @@ function load200() {
 }
 
 describe('SF-8 AC3: the scene stays inside the ADR-0014 budget at 200 objects', () => {
-  it('draws 200 objects in the low tens of instanced draw calls, not one per object', () => {
+  it('draws 200 objects in a few instanced batches: parts share one mesh per material and shape', () => {
     const equipment = load200();
     expect(equipment).toHaveLength(200);
     const groups = groupEquipment(equipment);
-    // One frame shows each instance at one LOD level, so the busiest frame draws the meshes of
-    // the most detailed level (empty levels have count 0 and are skipped by three).
-    const calls = Math.max(
-      ...groups[0]!.lods.map((_, lod) =>
-        drawCalls(groups.map((g) => ({ ...g, lods: [g.lods[lod] ?? []] }))),
-      ),
-    );
-    expect(calls).toBeGreaterThan(0);
-    expect(calls).toBeLessThanOrEqual(40);
+    const batches = planBatches(groups);
+    expect(batches.length).toBeGreaterThan(0);
+    expect(batches.length).toBeLessThanOrEqual(24);
+    // Every (group, lod, part) is drawn by exactly one batch.
+    const expected = groups.reduce((n, g) => n + g.lods.reduce((m, l) => m + l.length, 0), 0);
+    expect(batches.reduce((n, b) => n + b.entries.length, 0)).toBe(expected);
+    // A batch is big enough for every item that could land in it.
+    for (const b of batches)
+      expect(b.capacity).toBe(b.entries.reduce((n, e) => n + groups[e.group]!.items.length, 0));
   });
 
   it('shows at most 275k triangles with every object at full detail', () => {
