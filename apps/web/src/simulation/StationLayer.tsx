@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Equipment } from '@factory-sim/schema';
 import { buildModel } from '../equipment/models/registry';
+import { CureRig } from './CureRig';
 import { StationCallouts } from './StationCallouts';
 import type { RunSession } from './runSession';
 import {
@@ -58,6 +59,9 @@ export function StationLayer({
     <>
       {stations.map((e) => (
         <StationMarker key={e.id} session={session} station={e} flagged={e.id === bottleneck} />
+      ))}
+      {stations.map((e) => (
+        <CureRig key={e.id} session={session} station={e} />
       ))}
       <StationCallouts session={session} stations={stations} bottleneckId={bottleneck} />
     </>

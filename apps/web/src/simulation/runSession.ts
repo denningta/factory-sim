@@ -8,7 +8,7 @@ import {
   type RunStats,
   type StationState,
 } from '@factory-sim/sim-engine';
-import { buildLineGeometry, type PartPose } from './partTracks';
+import { buildLineGeometry, type CureState, type PartPose } from './partTracks';
 import type { TechPose } from './techTracks';
 import { createPlayback, type Playback } from './playback';
 
@@ -44,6 +44,8 @@ export interface RunSession {
   queueLengths(): ReadonlyMap<string, number>;
   /** Parts on the floor at sim time `t` (none while animation is off). */
   poses(t: number): PartPose[];
+  /** Door, cart and cure progress of an autoclave at sim time `t` (SF-5). */
+  cureState(equipmentId: string, t: number): CureState;
   /** Techs at sim time `t`, standing or walking (none while animation is off, like parts). */
   techPoses(t: number): TechPose[];
   /** Notified when play state, speed, animation, reset or the end of the run changes; not every frame. */
@@ -148,6 +150,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
     queueLengths: () => (animate ? pb.tracks.queueLengths() : new Map()),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
+    cureState: (id, t) => pb.tracks.cure(id, t),
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
