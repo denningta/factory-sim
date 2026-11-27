@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout, planBounds } from './cameraFit';
+import {
+  aspectOf,
+  equipmentPoints,
+  fitCamera,
+  fitOrtho,
+  fitScale,
+  labelLayout,
+  planBounds,
+} from './cameraFit';
 
 const FOV = 45;
 
@@ -154,5 +162,67 @@ describe('fitScale feeds the orbit limits', () => {
       expect(s.zoom).toBeGreaterThan(0);
       expect(Number.isFinite(s.distance + s.zoom)).toBe(true);
     }
+  });
+});
+
+describe('SF-8: isometric-style default camera that frames the equipment', () => {
+  const floor = { width: 40, length: 30 };
+  const item = (x: number, y: number, w = 2, l = 1, rotation = 0, height = 1.5) => ({
+    position: { x, y },
+    footprint: { width: w, length: l },
+    rotation,
+    height,
+  });
+  const angles = (fit: ReturnType<typeof fitCamera>) => {
+    const d = [
+      fit.position[0] - fit.target[0],
+      fit.position[1] - fit.target[1],
+      fit.position[2] - fit.target[2],
+    ];
+    return {
+      elevation: (Math.atan2(d[1]!, Math.hypot(d[0]!, d[2]!)) * 180) / Math.PI,
+      azimuth: (Math.atan2(d[0]!, d[2]!) * 180) / Math.PI,
+    };
+  };
+
+  it('looks from about 35° elevation and 45° azimuth, with or without equipment', () => {
+    for (const equipment of [[], [item(10, 8), item(20, 12)]]) {
+      const a = angles(fitCamera({ ...floor, aspect: 1.6, fovDeg: FOV, equipment }));
+      expect(a.elevation).toBeCloseTo(35, 1);
+      expect(a.azimuth).toBeCloseTo(45, 1);
+    }
+  });
+
+  it('equipmentPoints are the footprint corners at the floor and at the equipment height, rotated', () => {
+    const pts = equipmentPoints([item(10, 8, 4, 2, Math.PI / 2, 3)]);
+    expect(pts).toHaveLength(8);
+    expect(Math.max(...pts.map((p) => p[1]))).toBeCloseTo(3);
+    // Rotated a quarter turn, the 4 × 2 footprint spans 2 in x and 4 in plan y (three z).
+    const xs = pts.map((p) => p[0]);
+    const zs = pts.map((p) => p[2]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2);
+    expect(Math.max(...zs) - Math.min(...zs)).toBeCloseTo(4);
+  });
+
+  it('frames the equipment (not the whole floor) tightly inside the canvas', () => {
+    const equipment = [item(10, 8), item(14, 8), item(18, 8), item(22, 9, 3, 2, 0.4)];
+    const aspect = 16 / 10;
+    const fit = fitCamera({ ...floor, aspect, fovDeg: FOV, equipment });
+    let max = 0;
+    for (const p of equipmentPoints(equipment)) {
+      const n = ndc(fit, aspect, p);
+      max = Math.max(max, Math.abs(n.x), Math.abs(n.y));
+    }
+    expect(max).toBeLessThanOrEqual(0.9); // room left for callouts and panels
+    expect(max).toBeGreaterThan(0.7);
+    // Much closer than fitting the 40 × 30 m floor.
+    const whole = fitCamera({ ...floor, aspect, fovDeg: FOV });
+    expect(fit.distance).toBeLessThan(whole.distance * 0.6);
+  });
+
+  it('with no equipment, falls back to framing the floor', () => {
+    const a = fitCamera({ ...floor, aspect: 1.5, fovDeg: FOV, equipment: [] });
+    const b = fitCamera({ ...floor, aspect: 1.5, fovDeg: FOV });
+    expect(a).toEqual(b);
   });
 });

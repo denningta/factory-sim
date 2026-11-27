@@ -21,11 +21,21 @@ export const ROLE_SPECS: Record<MaterialRole, RoleSpec> = {
   screen: { color: '#1e3a5f', roughness: 0.3, metalness: 0, emissive: '#1d4ed8' },
 };
 
-/** A part's base color: the equipment's for `body`, the active theme's or the role's own otherwise. */
+/** How far the body moves from the equipment's colour toward the theme's pale (SF-8). */
+const BODY_PALE = 0.65;
+const mixed = new THREE.Color();
+
+/**
+ * A part's base color: `body` is the equipment's colour toned toward the theme's pale accent
+ * (pale, low-contrast equipment with the colour as a tint, per the control-room reference); the
+ * other roles follow the active theme or keep their own.
+ */
 export function roleColor(role: MaterialRole, bodyColor: string): string {
-  if (role === 'body') return bodyColor;
   // Theme-owned roles follow the active theme; the rest keep their fixed colour.
   const parts = getTheme().scene.parts;
+  if (role === 'body') {
+    return '#' + mixed.set(bodyColor).lerp(new THREE.Color(parts.accent), BODY_PALE).getHexString();
+  }
   return role === 'frame' || role === 'accent' || role === 'dark'
     ? parts[role]
     : ROLE_SPECS[role].color;

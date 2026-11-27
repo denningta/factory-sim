@@ -1,0 +1,17 @@
+{
+  "project": "docs/reference-model/model.json",
+  "projectName": "Reference line",
+  "shots": [
+    { "name": "reference-3d", "screen": "layout", "settle": 1500 },
+    {
+      "name": "reference-3d-simulate",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [
+        { "waitFor": "canvas" },
+        { "click": "role=button[name=\"Play\"]" },
+        { "wait": 5000 }
+      ]
+    }
+  ]
+}

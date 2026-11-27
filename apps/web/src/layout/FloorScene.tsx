@@ -89,7 +89,7 @@ function DimensionLabels() {
 }
 
 /**
- * Fits the camera on mount, on a 2D/3D switch and whenever "Zoom to fit" is pressed, never on its own after that:
+ * Fits the camera on mount, when equipment first appears, on a 2D/3D switch and whenever "Zoom to fit" is pressed, never on its own after that:
  * floor edits and window resizes would otherwise throw away the user's orbit (#57). This is
  * the only place the initial pose is set.
  */
@@ -105,6 +105,9 @@ function CameraRig() {
   // The canvas can be 0×0 on mount (e.g. inside a shell that lays out later); fitting then would
   // use a NaN aspect. `ready` flips once when it first has a size, which triggers the first fit.
   const ready = useThree((s) => aspectOf(s.size) !== null);
+  // Equipment often arrives after mount (project load). Refit when the floor first has some, not
+  // on every edit, so the user's orbit survives.
+  const hasEquipment = useEditorStore((s) => s.equipment.length > 0);
   useEffect(() => {
     const aspect = aspectOf(getThree().size);
     if (aspect === null) return;
@@ -120,11 +123,17 @@ function CameraRig() {
       return;
     }
     const fovDeg = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
-    const fit = fitCamera({ width: floor.width, length: floor.length, aspect, fovDeg });
+    const fit = fitCamera({
+      width: floor.width,
+      length: floor.length,
+      aspect,
+      fovDeg,
+      equipment: useEditorStore.getState().equipment,
+    });
     camera.position.set(...fit.position);
     controls?.target.set(...fit.target);
     controls?.update();
-  }, [fitTick, viewMode, ready, camera, controls, getThree]);
+  }, [fitTick, viewMode, ready, hasEquipment, camera, controls, getThree]);
   return null;
 }
 
@@ -164,7 +173,13 @@ export function FloorScene({
   const viewMode = useEditorStore((s) => s.viewMode);
   const scene = useTheme().scene;
   return (
-    <Canvas>
+    <Canvas
+      onCreated={({ gl }) => {
+        // Dev-only handle for the SF-8 performance check (renderer.info); absent in production.
+        if (import.meta.env.DEV)
+          (window as unknown as { __rendererInfo?: unknown }).__rendererInfo = gl.info;
+      }}
+    >
       <color attach="background" args={[scene.background]} />
       {viewMode === '3d' ? (
         <PerspectiveCamera makeDefault fov={45} far={5000} />

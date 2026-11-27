@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import type { PortRef } from '@factory-sim/schema';
 import { useEditorStore } from './editorStore';
-import { PortMarker } from './PortMarker';
-import { portKey, portVisual, validInputKeys } from './portMarkers';
+import { PortMarkers, type PortSpot } from './PortMarkers';
+import { portKey, validInputKeys } from './portMarkers';
 import { ConnectionArcs, PORT_LIFT } from './ConnectionArcs';
 import { hideDragged, portWorldPosition } from './ports';
 
@@ -27,7 +27,29 @@ export function ConnectionLayer() {
     [equipment, connections, pending],
   );
 
-  const onPort = (ref: PortRef) => (e: ThreeEvent<PointerEvent>) => {
+  const spots = useMemo<PortSpot[]>(
+    () =>
+      equipment.flatMap((e) =>
+        e.ports.map((p) => {
+          const at = portWorldPosition(e, p);
+          const ref = { equipmentId: e.id, portId: p.id };
+          const key = portKey(ref);
+          return {
+            ref,
+            key,
+            kind: p.kind,
+            // Above the equipment top so the equipment's own pick handler can't swallow the click.
+            position: [at.x, e.height + PORT_LIFT, at.y] as [number, number, number],
+            active: pending?.equipmentId === e.id && pending.portId === p.id,
+            valid: valid.has(key),
+            connected: connected.has(key),
+          };
+        }),
+      ),
+    [equipment, pending, valid, connected],
+  );
+
+  const onPort = (ref: PortRef, e: ThreeEvent<PointerEvent>) => {
     if (e.button !== 0) return;
     e.stopPropagation();
     useEditorStore.getState().clickPort(ref);
@@ -41,36 +63,7 @@ export function ConnectionLayer() {
         selectedId={selectedId}
         onPick={(id) => useEditorStore.getState().selectConnection(id)}
       />
-      {equipment.flatMap((e) =>
-        e.ports.map((p) => {
-          const at = portWorldPosition(e, p);
-          const ref = { equipmentId: e.id, portId: p.id };
-          const key = portKey(ref);
-          const active = pending?.equipmentId === e.id && pending.portId === p.id;
-          return (
-            <PortMarker
-              key={key}
-              // Above the equipment top so the equipment's own pick handler can't swallow the click.
-              position={[at.x, e.height + PORT_LIFT, at.y]}
-              name={`port:${e.id}:${p.id}`}
-              kind={p.kind}
-              active={active}
-              highlight={valid.has(key)}
-              onPointerDown={onPort(ref)}
-              visual={(hovered) =>
-                portVisual({
-                  kind: p.kind,
-                  connected: connected.has(key),
-                  hovered,
-                  pending,
-                  active,
-                  valid: valid.has(key),
-                })
-              }
-            />
-          );
-        }),
-      )}
+      <PortMarkers spots={spots} pending={pending} onPort={onPort} />
     </>
   );
 }

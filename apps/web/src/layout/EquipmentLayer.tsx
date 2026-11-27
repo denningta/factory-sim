@@ -12,11 +12,9 @@ import { useTheme, useThemeStore } from '../ui/themeStore';
 import { roleColor, roleMaterial } from '../equipment/models/materials';
 import { writePartMatrix } from '../equipment/models/instances';
 import { UnitGeometry } from '../equipment/EquipmentModel';
-import { groupEquipment, lodForDistance, splitByLod, type EquipmentGroup } from './equipmentGroups';
+import { groupEquipment, lodForDistance, planBatches, splitByLod } from './equipmentGroups';
 
 type Point = { x: number; y: number };
-
-type Group = EquipmentGroup;
 
 /** Below this floor distance (m) a drag on empty floor is a click, not a box. */
 const CLICK_RADIUS = 0.15;
@@ -56,9 +54,9 @@ const sameSplit = (a: number[][] | undefined, b: number[][]) =>
   a.every((l, i) => l.length === b[i]!.length && l.every((x, j) => x === b[i]![j]));
 
 /**
- * Placed equipment, one InstancedMesh per (model, LOD, part), whatever the instance sizes or
- * types (ADR-0014, ADR-0015). Each mesh can hold every item of its group; the items at that LOD
- * fill its first `count` slots. Matrices are written imperatively: a drag previews through refs
+ * Placed equipment, one InstancedMesh per (material role, unit geometry), whatever the models, LODs,
+ * instance sizes or types (ADR-0014, ADR-0015), so draw calls follow materials and shapes, not
+ * the equipment count. Each frame's items fill a batch's first `count` slots. Matrices are written imperatively: a drag previews through refs
  * and commits to the store once on release, and a camera move rewrites them only when an item
  * changes LOD, so no React state changes per frame or pointer move.
  */
@@ -69,6 +67,8 @@ export function EquipmentLayer() {
   const gl = useThree((s) => s.gl);
   const getThree = useThree((s) => s.get);
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
+  /** Per batch key, the equipment drawn in each slot (what a pointer hit resolves to). */
+  const slotItems = useRef(new Map<string, Equipment[]>());
   const stopDrag = useRef<(() => void) | null>(null);
   /** Per group key, the item indices drawn at each LOD. */
   const splits = useRef(new Map<string, number[][]>());
@@ -77,6 +77,7 @@ export function EquipmentLayer() {
   const clearance = useEditorStore((s) => s.clearance);
   const issues = useMemo(() => findIssues(equipment, clearance), [equipment, clearance]);
   const groups = useMemo(() => groupEquipment(equipment), [equipment]);
+  const batches = useMemo(() => planBatches(groups), [groups]);
 
   const at = (e: Equipment) => preview.current?.[e.id] ?? e.position;
 
@@ -102,35 +103,35 @@ export function EquipmentLayer() {
   const write = () => {
     const color = new THREE.Color();
     const selected = new Set(useEditorStore.getState().selectedIds);
-    for (const g of groups) {
-      const split = splits.current.get(g.key);
-      if (!split) continue;
-      g.lods.forEach((parts, lod) => {
-        const slots = split[lod]!;
-        parts.forEach((part, pi) => {
-          const mesh = meshes.current.get(`${g.key}:${lod}:${pi}`);
-          if (!mesh) return;
-          slots.forEach((i, slot) => {
-            const e = g.items[i]!;
-            const p = at(e);
-            writePartMatrix(mesh, slot, g.itemLods[i]![lod]![pi]!, { ...p, rotation: e.rotation });
-            instanceTint(
-              color.set(roleColor(part.role, e.color)),
-              {
-                overlapping: issues.overlappingIds.has(e.id),
-                tooClose: issues.tooCloseIds.has(e.id),
-                selected: selected.has(e.id),
-              },
-              color,
-            );
-            mesh.setColorAt(slot, color);
-          });
-          mesh.count = slots.length;
-          mesh.instanceMatrix.needsUpdate = true;
-          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-          mesh.computeBoundingSphere(); // keeps picking and culling right after moves
-        });
-      });
+    for (const b of batches) {
+      const mesh = meshes.current.get(b.key);
+      if (!mesh) continue;
+      const items: Equipment[] = [];
+      let slot = 0;
+      for (const { group, lod, part } of b.entries) {
+        const g = groups[group]!;
+        for (const i of splits.current.get(g.key)?.[lod] ?? []) {
+          const e = g.items[i]!;
+          const p = at(e);
+          writePartMatrix(mesh, slot, g.itemLods[i]![lod]![part]!, { ...p, rotation: e.rotation });
+          instanceTint(
+            color.set(roleColor(b.role, e.color)),
+            {
+              overlapping: issues.overlappingIds.has(e.id),
+              tooClose: issues.tooCloseIds.has(e.id),
+              selected: selected.has(e.id),
+            },
+            color,
+          );
+          mesh.setColorAt(slot, color);
+          items[slot++] = e;
+        }
+      }
+      slotItems.current.set(b.key, items);
+      mesh.count = slot;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.computeBoundingSphere(); // keeps picking and culling right after moves
     }
   };
 
@@ -151,10 +152,9 @@ export function EquipmentLayer() {
     [],
   );
 
-  const onPointerDown = (g: Group, lod: number) => (e: ThreeEvent<PointerEvent>) => {
-    const i =
-      e.instanceId === undefined ? undefined : splits.current.get(g.key)?.[lod]?.[e.instanceId];
-    const item = i === undefined ? undefined : g.items[i];
+  const onPointerDown = (key: string) => (e: ThreeEvent<PointerEvent>) => {
+    const item =
+      e.instanceId === undefined ? undefined : slotItems.current.get(key)?.[e.instanceId];
     if (!item || e.button !== 0) return;
     e.stopPropagation();
     const store = useEditorStore.getState();
@@ -205,26 +205,21 @@ export function EquipmentLayer() {
 
   return (
     <>
-      {groups.map((g) =>
-        g.lods.map((parts, lod) =>
-          parts.map((part, pi) => (
-            <instancedMesh
-              // Remount when the count changes: an InstancedMesh's capacity is fixed at creation.
-              key={`${g.key}:${lod}:${pi}:${g.items.length}`}
-              ref={(m: THREE.InstancedMesh | null) => {
-                const k = `${g.key}:${lod}:${pi}`;
-                if (m) meshes.current.set(k, m);
-                else meshes.current.delete(k);
-              }}
-              args={[undefined, undefined, g.items.length]}
-              material={roleMaterial(part.role)}
-              onPointerDown={onPointerDown(g, lod)}
-            >
-              <UnitGeometry part={part} />
-            </instancedMesh>
-          )),
-        ),
-      )}
+      {batches.map((b) => (
+        <instancedMesh
+          // Remount when the capacity changes: an InstancedMesh's capacity is fixed at creation.
+          key={`${b.key}:${b.capacity}`}
+          ref={(m: THREE.InstancedMesh | null) => {
+            if (m) meshes.current.set(b.key, m);
+            else meshes.current.delete(b.key);
+          }}
+          args={[undefined, undefined, b.capacity]}
+          material={roleMaterial(b.role)}
+          onPointerDown={onPointerDown(b.key)}
+        >
+          <UnitGeometry part={b.sample} />
+        </instancedMesh>
+      ))}
     </>
   );
 }
