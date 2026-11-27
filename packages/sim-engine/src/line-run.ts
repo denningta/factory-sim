@@ -16,6 +16,7 @@ import type {
   FlowStats,
   LineEvent,
   PartInLine,
+  BatchInLine,
   Run,
   RunOptions,
   RunStats,
@@ -317,6 +318,9 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     st.timer = { part: head.part, handle };
   };
 
+  /** Cures in progress, for `Run.batches()`; insertion order = start order. */
+  const activeBatches = new Set<BatchInLine>();
+
   const startJob = (st: StationRt, batch: Waiting[]) => {
     const lead = batch[0]!;
     const cycle = st.cure ?? lead.cycle;
@@ -340,17 +344,24 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     };
     /** Runs the cycle (cure) itself; batch events mark it on batch stations (ADR-0017). */
     const runCycle = (t: number, done: () => void) => {
-      if (st.def.batches)
+      const running = st.def.batches
+        ? { equipmentId: st.def.id, partIds: partIds(), startedAt: sim.now, endsAt: sim.now + t }
+        : undefined;
+      if (running) {
+        activeBatches.add(running);
         emit({
           t: sim.now,
           type: 'batchStarted',
-          equipmentId: st.def.id,
-          partIds: partIds(),
-          endsAt: sim.now + t,
+          equipmentId: running.equipmentId,
+          partIds: running.partIds,
+          endsAt: running.endsAt,
         });
+      }
       sim.schedule(t, () => {
-        if (st.def.batches)
+        if (running) {
+          activeBatches.delete(running);
           emit({ t: sim.now, type: 'batchFinished', equipmentId: st.def.id, partIds: partIds() });
+        }
         done();
       });
     };
@@ -615,6 +626,9 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     stationStates() {
       // Map insertion order = model order (built from line.stations).
       return Object.fromEntries([...stations.values()].map((st) => [st.def.id, st.state]));
+    },
+    batches() {
+      return [...activeBatches].map((b) => ({ ...b, partIds: [...b.partIds] }));
     },
     stats(): RunStats {
       const to = Math.max(warmUp, Math.min(sim.now, endTime));

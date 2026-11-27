@@ -300,15 +300,17 @@ export const BASE_EQUIPMENT_TYPES: readonly EquipmentType[] = [
 
 /**
  * An ASC-style composite autoclave (SF-7, ADR-0017): cures a batch for a fixed time.
- * Capacity is twice the batch so the next load can wait while one cures. Sized like a
- * 1.8 m × 4.5 m vessel with room for its door and control cabinet.
+ * Capacity equals the batch: `capacity` counts every part at the station, and with room
+ * for two batches the engine would cure both at once, which one vessel can't. The next
+ * load waits upstream (a staging rack or buffer). Sized like a 1.8 m × 4.5 m vessel with
+ * room for its door and control cabinet.
  */
 export const AUTOCLAVE_EQUIPMENT_TYPE: EquipmentType = {
   id: 'base-autoclave',
   name: 'Autoclave (ASC)',
   behavior: 'workstation',
   params: {
-    capacity: 12,
+    capacity: 6,
     batchSize: 6,
     labor: {
       mode: 'automatic',

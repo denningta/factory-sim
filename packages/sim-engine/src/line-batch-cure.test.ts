@@ -223,3 +223,50 @@ describe('SF-6 AC5: determinism', () => {
     expect(go(8).events).not.toEqual(a.events);
   });
 });
+
+describe('Run.batches(): cures in progress for re-seeding (SF-5, ADR-0017)', () => {
+  function live(station: Partial<StationSpec>) {
+    const spec: LineSpec = {
+      products: ['A'],
+      stations: [
+        {
+          id: 'S1',
+          cycle: { A: fixed(1) },
+          capacity: 3,
+          batchSize: 3,
+          cure: fixed(100),
+          ...station,
+        },
+      ],
+      interval: fixed(10),
+    };
+    const c = compileLine(lineProject(spec));
+    if (!c.ok) throw new Error(JSON.stringify(c.issues));
+    return createRun(c.model, { seed: 1, warmUp: 0, runLength: 3600 });
+  }
+
+  it('lists the batch between batchStarted and batchFinished, with events off', () => {
+    // Automatic: batch fills at 20, load 5, cure 25 → 125, as in SF-6 AC3.
+    const r = live({ labor: AUTOMATIC });
+    r.setEventsEnabled(false);
+    r.runUntil(24);
+    expect(r.batches()).toEqual([]);
+    r.runUntil(60);
+    expect(r.batches()).toEqual([
+      { equipmentId: 'S1', partIds: [1, 2, 3], startedAt: 25, endsAt: 125 },
+    ]);
+    r.runUntil(126);
+    expect(r.batches()).toEqual([]);
+  });
+
+  it('is empty on stations without batches and returns copies', () => {
+    const r = live({ batchSize: 1, capacity: 1, cure: undefined });
+    r.runUntil(500);
+    expect(r.batches()).toEqual([]);
+    const b = live({});
+    b.runUntil(60);
+    const snap = b.batches();
+    snap[0]!.partIds.push(99);
+    expect(b.batches()[0]!.partIds).toEqual([1, 2, 3]);
+  });
+});

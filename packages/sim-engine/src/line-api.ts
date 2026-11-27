@@ -150,6 +150,14 @@ export type LineEvent =
     }
   | { t: SimTime; type: 'techState'; techId: string; state: TechState };
 
+/** A batch whose cycle is running (ADR-0017): between `batchStarted` and `batchFinished`. */
+export interface BatchInLine {
+  equipmentId: string;
+  partIds: number[];
+  startedAt: SimTime;
+  endsAt: SimTime;
+}
+
 /** A part currently in the line, with the latest event that places it (ADR-0008). */
 export interface PartInLine {
   partId: number;
@@ -233,6 +241,12 @@ export interface Run {
    * events off. For re-seeding station colours when animation is turned back on (AN-4).
    */
   stationStates(): Record<string, StationState>;
+  /**
+   * Batch cycles (cures) in progress, by start time, tracked even with events off: the
+   * state a `batchStarted` without its `batchFinished` describes (ADR-0017). For re-seeding
+   * the autoclave door and cure progress when animation is turned back on (SF-5).
+   */
+  batches(): BatchInLine[];
   /** Live statistics for the window so far (AN-1 AC3). Cheap enough to call every frame. */
   stats(): RunStats;
 }
