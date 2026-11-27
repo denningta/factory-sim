@@ -111,3 +111,19 @@ export function placeCards(
   }
   return out;
 }
+
+/** Most cards drawn at once: every card is a sprite and a line, so they dominate draw calls. */
+export const MAX_CALLOUTS = 8;
+
+/**
+ * Which stations get a card: the `limit` nearest the camera, then the bottleneck if it isn't
+ * among them. Beyond a handful the cards overlap into noise anyway.
+ */
+export function pickCalloutStations(
+  _stations: readonly { id: string; x: number; y: number; z: number }[],
+  _camera: { x: number; y: number; z: number },
+  _bottleneckId: string | null,
+  _limit: number,
+): string[] {
+  throw new Error('not implemented');
+}
