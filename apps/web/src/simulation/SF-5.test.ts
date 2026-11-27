@@ -5,6 +5,7 @@ import { buildLineGeometry, createPartTracks, type LineGeometry } from './partTr
 import { createPlayback } from './playback';
 import { createRunSession } from './runSession';
 import { MODELS } from '../equipment/models/registry';
+import lineJson from '../../../../docs/screenshots/SF-5/line.json';
 import modelJson from '../../../../docs/reference-model/model.json';
 
 const P = (x: number, y: number, z: number) => ({ x, y, z });
@@ -342,5 +343,62 @@ describe('SF-5 review: next batch, geometry mapping, animation off', () => {
     if (!r.ok) throw new Error('compile');
     r.session.setAnimate(false);
     expect(r.session.cureState('s1', 0)).toEqual({ door: 1, cart: 0, progress: null });
+  });
+});
+
+describe('SF-5 follow-up: the cure is restored from run.batches() after animation off/on', () => {
+  it('shows door closed, cart in and progress mid-cure on the automatic load/unload path', () => {
+    const project = projectSchema.parse(lineJson);
+    const c = compileLine(project);
+    if (!c.ok) throw new Error('compile');
+    const g = buildLineGeometry(project.equipment, project.connections);
+    const col = new Map(project.products.map((p) => [p.id, p.color]));
+    const pb = createPlayback(
+      createRun(c.model, { seed: 1, warmUp: 0, runLength: 4 * 3600 }),
+      g,
+      col,
+      {
+        sliceMs: 0,
+      },
+    );
+    const acId = project.equipment.find((e) => e.name === 'Autoclave')!.id;
+    // Advance until a cure is under way, well clear of the door moves at either end.
+    let b = pb.run.batches()[0];
+    for (let i = 0; i < 2000 && !(b && pb.run.now > b.startedAt + 30); i++) {
+      pb.advance(5);
+      b = pb.run.batches()[0];
+    }
+    expect(b).toBeDefined();
+    pb.animate = false;
+    pb.advance(1);
+    pb.animate = true;
+    const now = pb.run.now;
+    expect(pb.run.batches()[0]).toBeDefined();
+    const cure = pb.tracks.cure(acId, now);
+    expect(cure.door).toBe(0);
+    expect(cure.cart).toBe(1);
+    expect(cure.progress).toBeGreaterThan(0);
+    expect(cure.progress).toBeLessThan(1);
+  });
+
+  it('clear() forgets cures, and seed(wip, batches) restores one that began while events were off', () => {
+    const tr = createPartTracks(geometry, colors);
+    tr.ingest([rel(0, 1), start(10, 1, 'ac', 70) as LineEvent]);
+    expect(tr.cure('ac', 40).cart).toBe(1);
+    tr.clear();
+    expect(tr.cure('ac', 40).cart).toBe(0);
+    tr.seed(
+      [
+        {
+          partId: 1,
+          productId: 'p1',
+          releasedAt: 0,
+          last: { t: 10, type: 'partStarted', partId: 1, equipmentId: 'ac' },
+        },
+      ],
+      [{ equipmentId: 'ac', partIds: [1], startedAt: 10, endsAt: 70 }],
+    );
+    expect(tr.cure('ac', 40)).toMatchObject({ door: 0, cart: 1 });
+    expect(tr.cure('ac', 40).progress).toBeCloseTo(0.5, 6);
   });
 });

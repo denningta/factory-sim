@@ -1,5 +1,5 @@
 import type { Connection, Equipment, PortRef } from '@factory-sim/schema';
-import type { LineEvent, PartInLine } from '@factory-sim/sim-engine';
+import type { BatchInLine, LineEvent, PartInLine } from '@factory-sim/sim-engine';
 import { localToPlan, portWorldPosition } from '../layout/ports';
 import { buildModel } from '../equipment/models/registry';
 import type { Vec3 } from '../equipment/models/types';
@@ -67,7 +67,7 @@ export interface PartTracks {
    * `t` may go back, except past a part's exit: an exited part is forgotten once drawn gone.
    */
   /** Replaces the tracks with the parts in the line now (animation turned back on). */
-  seed(wip: readonly PartInLine[]): void;
+  seed(wip: readonly PartInLine[], batches?: readonly BatchInLine[]): void;
   at(t: number): PartPose[];
   /** Door, cart and cure progress of a batch station at sim time `t`. */
   cure(equipmentId: string, t: number): CureState;
