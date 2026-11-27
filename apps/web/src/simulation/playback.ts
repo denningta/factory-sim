@@ -67,7 +67,7 @@ export function createPlayback(
       stationStates.seed({});
       // Events weren't recorded while off, so ask the engine which parts are in the line.
       if (on) {
-        tracks.seed(run.wip());
+        tracks.seed(run.wip(), run.batches());
         techs.seed(run.techs());
         stationStates.seed(run.stationStates());
       }
