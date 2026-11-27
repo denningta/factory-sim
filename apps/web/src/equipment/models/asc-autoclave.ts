@@ -1,4 +1,4 @@
-import { gridSlots } from './anchors';
+import { gridSlots, SLOT_PITCH } from './anchors';
 import { OPERATOR_OFFSET } from './bench';
 import { cyl, cylZ, LOW_SEGMENTS, real, slab } from './parts';
 import type { ModelDefinition } from './types';
@@ -85,6 +85,23 @@ export const ascAutoclave: ModelDefinition = {
         ...(segments ? { segments } : {}),
       });
 
+    // The batch's slots on the cart; queued parts wait there, finished ones are unloaded from
+    // the far end so a queue and a finished batch don't share slots.
+    const slotAt = gridSlots({
+      x0: -cw / 2,
+      x1: cw / 2,
+      z0: cz - cl / 2,
+      z1: cz + cl / 2,
+      levels: [ch],
+      yMax: h,
+    });
+    const perLevel =
+      Math.max(1, Math.floor(cw / SLOT_PITCH + 1e-9)) *
+      Math.max(1, Math.floor(cl / SLOT_PITCH + 1e-9));
+    const slots = Array.from({ length: perLevel }, (_, i) => slotAt(i));
+    // In the cure the cart rides in until the batch is mid-vessel.
+    const travel = cz - (z0 + vl * 0.55);
+
     return {
       lods: [
         [
@@ -105,17 +122,18 @@ export const ascAutoclave: ModelDefinition = {
       ],
       anchors: {
         label: [0, h, 0],
-        input: [0, yc, z0],
+        input: [0, ch, cz + cl / 2],
         output: [0, ch, l / 2],
         // The batch sits on the cart; extra parts stack up on it.
-        queueSlot: gridSlots({
-          x0: -cw / 2,
-          x1: cw / 2,
-          z0: cz - cl / 2,
-          z1: cz + cl / 2,
-          levels: [ch],
-          yMax: h,
-        }),
+        queueSlot: slotAt,
+        inTray: slots,
+        outTray: [...slots].reverse(),
+        cure: {
+          cart: { center: [0, ch + 0.02, cz], size: [cw * 0.96, ct, cl * 0.96], travel },
+          door: { center: [0, yc, zf + 0.02], radius: r },
+          // Over the cart zone in front of the door, clear of the station card above the vessel.
+          progress: { center: [0, yc + r * 1.12, zf + front * 0.5], width: cw },
+        },
         statusLight: [poleX, h, cabZ],
         workSurface: [0, yc, z0 + vl / 2],
         operator: [0, 0, l / 2 + OPERATOR_OFFSET],

@@ -5,11 +5,8 @@ import type { RunSession } from './runSession';
 
 /** Parts beyond this are not drawn; a 5-station line holds a few dozen. */
 const MAX_PARTS = 2000;
-// Small enough to sit in the models' queue slots (≥ 0.3 m apart) with a gap between them.
+// Small enough to sit in the models' tray slots (≥ 0.3 m apart) with a gap between them.
 const PART_SIZE = 0.27;
-// Parts being processed sit on top of the machine so they aren't hidden inside it.
-const PART_Y = 0.5;
-const PROCESSING_Y = 2.4;
 /** A long frame (tab in background) must not jump the sim clock. */
 const MAX_FRAME_S = 0.1;
 
@@ -46,14 +43,8 @@ export function PartLayer({ session }: { session: RunSession }) {
     const n = Math.min(poses.length, MAX_PARTS);
     for (let i = 0; i < n; i++) {
       const p = poses[i]!;
-      // Queued parts rest on their slot anchor; the pose gives the slot's height.
-      const y =
-        p.state === 'processing'
-          ? PROCESSING_Y
-          : p.state === 'queued'
-            ? p.y + PART_SIZE / 2
-            : PART_Y;
-      scratch.m.makeTranslation(p.x, y, p.z);
+      // The pose gives the part's bottom: on a tray slot, the work surface or in transit.
+      scratch.m.makeTranslation(p.x, p.y + PART_SIZE / 2, p.z);
       mesh.setMatrixAt(i, scratch.m);
       mesh.setColorAt(i, scratch.c.set(p.color));
     }

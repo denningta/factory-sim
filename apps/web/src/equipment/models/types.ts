@@ -67,6 +67,16 @@ export interface ModelAnchors {
   inTray?: Vec3[];
   outTray?: Vec3[];
   operatorFacing?: Vec3;
+  /**
+   * Autoclave (SF-5): the moving parts of the cure. `cart` is the deck that carries the batch
+   * (center when out, size), `travel` how far it rides in along -z; `door` the hatch disc at
+   * the vessel mouth (center, radius); `progress` the bar above the vessel (center, width).
+   */
+  cure?: {
+    cart: { center: Vec3; size: Vec3; travel: number };
+    door: { center: Vec3; radius: number };
+    progress: { center: Vec3; width: number };
+  };
 }
 
 export interface ModelBuild {

@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 8,
+  "floor": {
+    "width": 20,
+    "length": 40,
+    "gridSpacing": 1
+  },
+  "equipment": [
+    {
+      "id": "source",
+      "name": "Material release",
+      "typeId": "base-source",
+      "position": {
+        "x": 7.5,
+        "y": 14
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1,
+        "length": 1
+      },
+      "height": 1,
+      "color": "#6b7f99",
+      "ports": [
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "source",
+      "params": {}
+    },
+    {
+      "id": "s3",
+      "name": "Autoclave",
+      "typeId": "base-autoclave",
+      "position": {
+        "x": 7.5,
+        "y": 20
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 2.6,
+        "length": 6
+      },
+      "height": 2.6,
+      "color": "#7d8b96",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        },
+        {
+          "id": "out",
+          "kind": "output",
+          "u": 0,
+          "v": 0.5
+        }
+      ],
+      "behavior": "workstation",
+      "params": {
+        "capacity": 3,
+        "batchSize": 3,
+        "labor": {
+          "mode": "automatic",
+          "loadTime": {
+            "kind": "fixed",
+            "value": 30
+          },
+          "unloadTime": {
+            "kind": "fixed",
+            "value": 30
+          }
+        },
+        "cycle": {
+          "mode": "perBatch",
+          "time": {
+            "kind": "fixed",
+            "value": 600
+          }
+        },
+        "maxWait": 300
+      },
+      "model": "asc-autoclave"
+    },
+    {
+      "id": "sink",
+      "name": "Shipping",
+      "typeId": "base-sink",
+      "position": {
+        "x": 7.5,
+        "y": 26
+      },
+      "rotation": 0,
+      "footprint": {
+        "width": 1,
+        "length": 1
+      },
+      "height": 1,
+      "color": "#7a6b99",
+      "ports": [
+        {
+          "id": "in",
+          "kind": "input",
+          "u": 0,
+          "v": -0.5
+        }
+      ],
+      "behavior": "sink",
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "equipmentId": "source",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "s3",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    },
+    {
+      "id": "c2",
+      "from": {
+        "equipmentId": "s3",
+        "portId": "out"
+      },
+      "to": {
+        "equipmentId": "sink",
+        "portId": "in"
+      },
+      "capacity": 0,
+      "transfer": {
+        "kind": "instant"
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "A",
+      "partNumber": "A-100",
+      "name": "Bracket A",
+      "color": "#3b82f6",
+      "routing": [
+        {
+          "id": "A-1",
+          "stationId": "s3",
+          "name": "Cure"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "partNumber": "B-200",
+      "name": "Frame B",
+      "color": "#f59e0b",
+      "routing": [
+        {
+          "id": "B-1",
+          "stationId": "s3",
+          "name": "Cure"
+        }
+      ]
+    }
+  ],
+  "cycleTimes": [
+    {
+      "productId": "A",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 600
+      }
+    },
+    {
+      "productId": "B",
+      "stationId": "s3",
+      "time": {
+        "kind": "fixed",
+        "value": 600
+      }
+    }
+  ],
+  "calendar": {
+    "shiftLength": 28800
+  },
+  "demand": {
+    "basis": "mix",
+    "items": [
+      {
+        "productId": "A",
+        "value": 60
+      },
+      {
+        "productId": "B",
+        "value": 40
+      }
+    ]
+  },
+  "release": {
+    "interval": {
+      "kind": "fixed",
+      "value": 20
+    },
+    "product": {
+      "kind": "sequence",
+      "pattern": ["A", "A", "B", "A", "B"]
+    }
+  },
+  "technicians": [],
+  "run": {
+    "warmUp": 0,
+    "length": {
+      "unit": "seconds",
+      "value": 86400
+    },
+    "seed": {
+      "mode": "fixed",
+      "value": 1
+    }
+  },
+  "layout": {
+    "minClearance": null
+  }
+}

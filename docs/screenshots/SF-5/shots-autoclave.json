@@ -1,0 +1,68 @@
+{
+  "project": "docs/screenshots/SF-5/line.json",
+  "projectName": "Autoclave line",
+  "shots": [
+    {
+      "name": "autoclave-curing",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [
+        {
+          "waitFor": "canvas"
+        },
+        {
+          "wait": 1500
+        },
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); for (let i=0;i<22;i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 640, clientY: 400, bubbles: true, cancelable: true })); })()"
+        },
+        {
+          "fill": ["input[type=range]", "100"]
+        },
+        {
+          "click": "role=button[name=\"Play\"]"
+        },
+        {
+          "wait": 4000
+        },
+        {
+          "click": "role=button[name=\"Pause\"]"
+        },
+        {
+          "wait": 600
+        }
+      ]
+    },
+    {
+      "name": "autoclave-loading",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [
+        {
+          "waitFor": "canvas"
+        },
+        {
+          "wait": 1500
+        },
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); for (let i=0;i<22;i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 640, clientY: 400, bubbles: true, cancelable: true })); })()"
+        },
+        {
+          "fill": ["input[type=range]", "100"]
+        },
+        {
+          "click": "role=button[name=\"Play\"]"
+        },
+        {
+          "wait": 550
+        },
+        {
+          "click": "role=button[name=\"Pause\"]"
+        },
+        {
+          "wait": 600
+        }
+      ]
+    }
+  ]
+}

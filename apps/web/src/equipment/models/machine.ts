@@ -42,6 +42,12 @@ export const machine: ModelDefinition = {
         ...(segments ? { segments } : {}),
       });
     const pendant = slab(pw, ph, pd, cab * 0.55, px, pz, { role: 'screen', fixed: true });
+    // A shelf under the window: the part in process and both trays sit here in plain view,
+    // not inside the cabinet or on its roof (SF-1 review).
+    const sd = (l / 2 - front) * 0.9;
+    const sy = cab * 0.4;
+    const sz = front + sd / 2;
+    const shelf = slab(w * 0.9, 0.04, sd, sy - 0.04, 0, sz, { role: 'frame' });
     const light = (segments?: number) =>
       cyl(r, r, h - cab, cab, ...pole, {
         role: 'accent',
@@ -51,8 +57,8 @@ export const machine: ModelDefinition = {
 
     return {
       lods: [
-        [body, base, frameL, win, arm(), pendant, light()],
-        [body, base, win, arm(LOW_SEGMENTS), pendant, light(LOW_SEGMENTS)],
+        [body, base, shelf, frameL, win, arm(), pendant, light()],
+        [body, base, shelf, win, arm(LOW_SEGMENTS), pendant, light(LOW_SEGMENTS)],
       ],
       anchors: {
         label: [0, h, 0],
@@ -67,9 +73,9 @@ export const machine: ModelDefinition = {
           yMax: h,
         }),
         statusLight: [pole[0], h, pole[1]],
-        workSurface: [0, cab * 0.4, cz],
-        inTray: [[-w * 0.3, cab, front - 0.1 * l]],
-        outTray: [[w * 0.2, cab, front - 0.1 * l]],
+        workSurface: [-w * 0.04, sy, sz],
+        inTray: [[-w * 0.3, sy, sz]],
+        outTray: [[w * 0.22, sy, sz]],
         operator: [0, 0, l / 2 + OPERATOR_OFFSET],
         operatorFacing: [0, 0, -1],
       },
