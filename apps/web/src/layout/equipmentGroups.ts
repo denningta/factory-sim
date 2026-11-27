@@ -82,3 +82,8 @@ export function groupEquipment(equipment: readonly Equipment[]): EquipmentGroup[
   }
   return [...groups.values()];
 }
+
+/** Triangles drawn if every instance showed LOD 0 (an upper bound; LOD only lowers it). */
+export function triangleCount(_groups: readonly EquipmentGroup[]): number {
+  throw new Error('not implemented');
+}

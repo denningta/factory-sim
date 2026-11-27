@@ -32,6 +32,19 @@ export function planBounds(floor: FloorSize) {
   };
 }
 
+/** What the camera needs of a piece of equipment: where it stands and how big it is (m, rad). */
+export interface PlacedBox {
+  position: { x: number; y: number };
+  footprint: { width: number; length: number };
+  rotation: number;
+  height: number;
+}
+
+/** Corners of every footprint at the floor and at the equipment's height (plan y → three z). */
+export function equipmentPoints(_equipment: readonly PlacedBox[]): Vec3[] {
+  throw new Error('not implemented');
+}
+
 /** Camera elevation: looks down at 45° from the +z side, like the original fixed pose. */
 const ELEVATION = Math.PI / 4;
 /** Breathing room around the fitted bounds. */
@@ -42,7 +55,9 @@ const PAD = 1.05;
  * a perspective camera of the given vertical fov and canvas aspect (width / height).
  * Exact for perspective: each bounds corner constrains the distance separately.
  */
-export function fitCamera(opts: FloorSize & { aspect: number; fovDeg: number }): {
+export function fitCamera(
+  opts: FloorSize & { aspect: number; fovDeg: number; equipment?: readonly PlacedBox[] },
+): {
   position: Vec3;
   target: Vec3;
   distance: number;
