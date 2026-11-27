@@ -161,8 +161,10 @@ function traySlot(tray: readonly Pt3[], i: number): Pt3 {
   const last = tray[tray.length - 1]!;
   return i < tray.length ? tray[i]! : { ...last, y: last.y + (i - tray.length + 1) * STACK_PITCH };
 }
+// Past the tray's slots the queue goes on in the model's own queue grid, so a long queue
+// spreads over its levels instead of piling into a tall column on a one-slot tray.
 const inSlot = (g: Station, i: number): Pt3 =>
-  g.inTray?.length ? traySlot(g.inTray, i) : g.queueSlot(i);
+  g.inTray && i < g.inTray.length ? g.inTray[i]! : g.queueSlot(i);
 const outSlot = (g: Station, i: number): Pt3 =>
   g.outTray?.length
     ? traySlot(g.outTray, i)
@@ -279,7 +281,12 @@ export function createPartTracks(
 
   const cure = (equipmentId: string, t: number): CureState => {
     const list = cures.get(equipmentId);
-    const c = list && [...list].reverse().find((x) => x.start <= t);
+    let c: { start: number; end: number } | undefined;
+    for (let i = (list?.length ?? 0) - 1; i >= 0; i--)
+      if (list![i]!.start <= t) {
+        c = list![i];
+        break;
+      }
     if (!c || t >= c.end) return { door: 1, cart: 0, progress: null };
     const d = Math.min(DOOR_S, (c.end - c.start) / 4);
     const progress = (t - c.start) / (c.end - c.start);
@@ -372,8 +379,13 @@ export function createPartTracks(
       if (state === 'queued') queued.set(equipmentId, q.length);
       // A batch rides the cart from where it waited into the vessel.
       const c = state === 'processing' ? cure(equipmentId, t).cart : 0;
+      // While the cart is out the batch is on the deck: the next batch waits behind it.
+      const behind =
+        state === 'queued' && g.cure && cure(equipmentId, t).cart < 1
+          ? (groups.get(`${equipmentId}|processing`)?.length ?? 0)
+          : 0;
       q.forEach(({ pose: p }, slot) => {
-        Object.assign(p, state === 'finished' ? outSlot(g, slot) : inSlot(g, slot));
+        Object.assign(p, state === 'finished' ? outSlot(g, slot) : inSlot(g, slot + behind));
         if (c > 0 && g.cure) {
           p.x += g.cure.travel.x * c;
           p.z += g.cure.travel.z * c;

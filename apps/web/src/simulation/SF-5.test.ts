@@ -3,6 +3,7 @@ import { projectSchema } from '@factory-sim/schema';
 import { compileLine, createRun, type LineEvent } from '@factory-sim/sim-engine';
 import { buildLineGeometry, createPartTracks, type LineGeometry } from './partTracks';
 import { createPlayback } from './playback';
+import { createRunSession } from './runSession';
 import { MODELS } from '../equipment/models/registry';
 import modelJson from '../../../../docs/reference-model/model.json';
 
@@ -92,15 +93,14 @@ describe('SF-5 AC1: parts sit on the work surface and in the trays', () => {
     });
   });
 
-  it('queued parts fill the inTray slots in arrival order, then stack on the last one', () => {
+  it('queued parts fill the inTray slots in arrival order, then go on in the queue grid', () => {
     const tr = createPartTracks(geometry, colors);
     tr.ingest([1, 2, 3].flatMap((id) => [rel(0, id), enter(id, id, 'ws')]));
     const poses = tr.at(5);
     expect(poses.find((p) => p.partId === 1)).toMatchObject({ x: 8, y: 0.9, z: -0.5 });
     expect(poses.find((p) => p.partId === 2)).toMatchObject({ x: 8, y: 0.9, z: 0.5 });
-    const third = poses.find((p) => p.partId === 3)!;
-    expect(third).toMatchObject({ x: 8, z: 0.5 });
-    expect(third.y).toBeGreaterThan(0.9);
+    // Past the tray it is the model's own queueSlot(2), not a column on the last tray slot.
+    expect(poses.find((p) => p.partId === 3)).toMatchObject({ x: 10, y: 0.5, z: 5 });
   });
 
   it('finished parts waiting for downstream sit in the outTray slots', () => {
@@ -285,5 +285,62 @@ describe('SF-5: machine parts in process are visible', () => {
     const front = body.position[2] + (body.shape === 'box' ? body.size[2] / 2 : 0);
     expect(anchors.workSurface![2]).toBeGreaterThan(front);
     for (const t of [...anchors.inTray!, ...anchors.outTray!]) expect(t[2]).toBeGreaterThan(front);
+  });
+});
+
+describe('SF-5 review: next batch, geometry mapping, animation off', () => {
+  it('a next batch waits behind the batch on the deck while the cart is out', () => {
+    const tr = createPartTracks(geometry, colors);
+    tr.ingest([
+      rel(0, 1),
+      rel(0, 2),
+      rel(0, 3),
+      enter(1, 1, 'ac'),
+      enter(2, 2, 'ac'),
+      { t: 10, type: 'batchStarted', equipmentId: 'ac', partIds: [1], endsAt: 70 },
+      start(10, 1, 'ac', 70),
+      enter(11, 3, 'ac'),
+    ]);
+    // At 10 s the batch (part 1) is still on the deck in slot 0; part 2 waits behind it.
+    const at10 = tr.at(10);
+    const key = (p: { x: number; z: number; y: number }) => `${p.x}/${p.y}/${p.z}`;
+    expect(key(at10.find((p) => p.partId === 2)!)).not.toBe(key(at10.find((p) => p.partId === 1)!));
+    // Once the cart is inside, the deck is free: the queue starts at its first slot again.
+    expect(tr.at(40).find((p) => p.partId === 2)).toMatchObject({ x: 38, z: 0 });
+  });
+
+  it('buildLineGeometry passes the model anchors through, rotated into plan', () => {
+    const project = projectSchema.parse(modelJson);
+    const template = project.equipment.find((e) => e.behavior === 'workstation')!;
+    const ac = {
+      ...template,
+      id: 'ac',
+      model: 'asc-autoclave',
+      position: { x: 10, y: 20 },
+      rotation: Math.PI / 2,
+      footprint: { width: 2.4, length: 5 },
+      height: 2.6,
+    };
+    const g = buildLineGeometry([ac], []).equipment.get('ac')!;
+    const { anchors } = MODELS.find((m) => m.id === 'asc-autoclave')!.build(
+      { width: 2.4, length: 5, height: 2.6 },
+      {},
+    );
+    expect(g.workSurface?.y).toBeCloseTo(anchors.workSurface![1], 9);
+    expect(g.inTray).toHaveLength(anchors.inTray!.length);
+    expect(g.outTray).toHaveLength(anchors.outTray!.length);
+    // Travel is |travel| long, along the (rotated) length axis: local -z becomes plan ±x.
+    const { travel } = g.cure!;
+    expect(Math.hypot(travel.x, travel.z)).toBeCloseTo(anchors.cure!.cart.travel, 9);
+    expect(Math.abs(travel.x)).toBeCloseTo(anchors.cure!.cart.travel, 9);
+    expect(travel.z).toBeCloseTo(0, 9);
+  });
+
+  it('cureState is idle while animation is off, like poses', () => {
+    const project = projectSchema.parse(modelJson);
+    const r = createRunSession(project, { seed: 1, warmUp: 0, runLength: 1000 });
+    if (!r.ok) throw new Error('compile');
+    r.session.setAnimate(false);
+    expect(r.session.cureState('s1', 0)).toEqual({ door: 1, cart: 0, progress: null });
   });
 });

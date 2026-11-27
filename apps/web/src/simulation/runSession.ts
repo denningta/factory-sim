@@ -150,7 +150,7 @@ export function createRunSession(project: Project, options: RunOptions): RunSess
     techPoses: (t) => (animate ? pb.techs.at(t) : []),
     queueLengths: () => (animate ? pb.tracks.queueLengths() : new Map()),
     poses: (t) => (animate ? pb.tracks.at(t) : []),
-    cureState: (id, t) => pb.tracks.cure(id, t),
+    cureState: (id, t) => (animate ? pb.tracks.cure(id, t) : { door: 1, cart: 0, progress: null }),
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
