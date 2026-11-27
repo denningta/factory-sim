@@ -311,7 +311,10 @@ export function createPartTracks(
     }
   };
 
-  const seed = (wip: readonly PartInLine[]) => {
+  const seed = (wip: readonly PartInLine[], batches: readonly BatchInLine[] = []) => {
+    // The engine's cures in progress: the only source on the automatic load/unload path,
+    // where a batch part's partStarted carries no endsAt.
+    for (const b of batches) noteCure(b.equipmentId, b.startedAt, b.endsAt);
     for (const p of wip) {
       noteCureEvent(p.last);
       const key = keyFor(p.last);
@@ -402,6 +405,9 @@ export function createPartTracks(
     at,
     cure,
     queueLengths: () => lengths,
-    clear: () => parts.clear(),
+    clear: () => {
+      parts.clear();
+      cures.clear();
+    },
   };
 }
