@@ -12,7 +12,7 @@ export interface Pt {
 
 /** Where parts sit and travel, in plan meters (x, z = floor x, y). */
 export interface LineGeometry {
-  connections: ReadonlyMap<string, { from: Pt; to: Pt }>;
+  connections: ReadonlyMap<string, { from: Pt; to: Pt; fromId?: string; toId?: string }>;
   equipment: ReadonlyMap<
     string,
     {
@@ -25,6 +25,13 @@ export interface LineGeometry {
       queueSlot: (i: number) => Pt3;
       /** A conveyor's travel path: input port to output port. */
       path: [Pt, Pt];
+      /** Where the part in process sits (SF-1/SF-7 `workSurface` anchor). */
+      workSurface?: Pt3;
+      /** Slots where queued parts rest (`inTray`) and finished parts wait (`outTray`). */
+      inTray?: Pt3[];
+      outTray?: Pt3[];
+      /** Autoclave: how far the cart travels into the vessel, in plan meters. */
+      cure?: { travel: Pt };
     }
   >;
 }
@@ -40,7 +47,16 @@ export interface PartPose {
   y: number;
   z: number;
   color: string;
-  state: 'moving' | 'queued' | 'processing';
+  state: 'moving' | 'queued' | 'processing' | 'finished';
+}
+
+export interface CureState {
+  /** 1 = open (load, unload), 0 = closed (cure); eased in between. */
+  door: number;
+  /** 0 = cart out in front of the door, 1 = inside the vessel. */
+  cart: number;
+  /** 0..1 while curing, null otherwise. */
+  progress: number | null;
 }
 
 export interface PartTracks {
@@ -53,6 +69,8 @@ export interface PartTracks {
   /** Replaces the tracks with the parts in the line now (animation turned back on). */
   seed(wip: readonly PartInLine[]): void;
   at(t: number): PartPose[];
+  /** Door, cart and cure progress of a batch station at sim time `t`. */
+  cure(equipmentId: string, t: number): CureState;
   /** Parts waiting at each station's input as of the last `at()` call. */
   queueLengths(): ReadonlyMap<string, number>;
   clear(): void;
@@ -255,6 +273,9 @@ export function createPartTracks(
     ingest,
     seed,
     at,
+    cure: () => {
+      throw new Error('SF-5: not implemented');
+    },
     queueLengths: () => lengths,
     clear: () => parts.clear(),
   };
