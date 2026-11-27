@@ -41,19 +41,36 @@ export interface PlacedBox {
 }
 
 /** Corners of every footprint at the floor and at the equipment's height (plan y → three z). */
-export function equipmentPoints(_equipment: readonly PlacedBox[]): Vec3[] {
-  throw new Error('not implemented');
+export function equipmentPoints(equipment: readonly PlacedBox[]): Vec3[] {
+  const out: Vec3[] = [];
+  for (const e of equipment) {
+    const c = Math.cos(e.rotation);
+    const s = Math.sin(e.rotation);
+    const hw = e.footprint.width / 2;
+    const hl = e.footprint.length / 2;
+    for (const [u, v] of [
+      [-hw, -hl],
+      [hw, -hl],
+      [hw, hl],
+      [-hw, hl],
+    ] as const)
+      for (const y of [0, e.height])
+        out.push([e.position.x + u * c - v * s, y, e.position.y + u * s + v * c]);
+  }
+  return out;
 }
 
-/** Camera elevation: looks down at 45° from the +z side, like the original fixed pose. */
-const ELEVATION = Math.PI / 4;
+/** The default isometric-style view: 35° above the floor, from the +x/+z corner (45° azimuth). */
+const ELEVATION = (35 * Math.PI) / 180;
+const AZIMUTH = Math.PI / 4;
 /** Breathing room around the fitted bounds. */
 const PAD = 1.05;
 
 /**
- * Smallest distance, along a fixed 45° view direction, at which the floor and its labels fit
- * a perspective camera of the given vertical fov and canvas aspect (width / height).
- * Exact for perspective: each bounds corner constrains the distance separately.
+ * Smallest distance, along the fixed isometric view direction, at which the equipment (or, with
+ * none, the floor and its labels) fits a perspective camera of the given vertical fov and canvas
+ * aspect (width / height). Exact for perspective: each point constrains the distance separately.
+ * The view is centred on the middle of the points' screen-space extent.
  */
 export function fitCamera(
   opts: FloorSize & { aspect: number; fovDeg: number; equipment?: readonly PlacedBox[] },
@@ -62,28 +79,56 @@ export function fitCamera(
   target: Vec3;
   distance: number;
 } {
-  const b = planBounds(opts);
-  const target: Vec3 = [(b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2];
-  const u: Vec3 = [0, Math.sin(ELEVATION), Math.cos(ELEVATION)]; // target → camera
-  const up: Vec3 = [0, Math.cos(ELEVATION), -Math.sin(ELEVATION)];
+  let points: Vec3[];
+  if (opts.equipment && opts.equipment.length > 0) points = equipmentPoints(opts.equipment);
+  else {
+    const b = planBounds(opts);
+    points = [b.minX, b.maxX].flatMap((x) => [b.minZ, b.maxZ].map((z): Vec3 => [x, 0, z]));
+  }
+  // Camera basis: u points target → camera, right and up span the screen.
+  const u: Vec3 = [
+    Math.cos(ELEVATION) * Math.sin(AZIMUTH),
+    Math.sin(ELEVATION),
+    Math.cos(ELEVATION) * Math.cos(AZIMUTH),
+  ];
+  const right: Vec3 = [Math.cos(AZIMUTH), 0, -Math.sin(AZIMUTH)];
+  const up: Vec3 = [
+    -Math.sin(ELEVATION) * Math.sin(AZIMUTH),
+    Math.cos(ELEVATION),
+    -Math.sin(ELEVATION) * Math.cos(AZIMUTH),
+  ];
+  const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  // Aim at the centre of the screen-space extent so the framing is balanced.
+  const xs = points.map((p) => dot(p, right));
+  const ys = points.map((p) => dot(p, up));
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const zs = points.map((p) => dot(p, u));
+  const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const target: Vec3 = [
+    cx * right[0] + cy * up[0] + cz * u[0],
+    cx * right[1] + cy * up[1] + cz * u[1],
+    cx * right[2] + cy * up[2] + cz * u[2],
+  ];
   const t = Math.tan((opts.fovDeg * Math.PI) / 360);
   let distance = 0;
-  for (const x of [b.minX, b.maxX])
-    for (const z of [b.minZ, b.maxZ]) {
-      const q: Vec3 = [x - target[0], 0, z - target[2]];
-      const along = q[1] * u[1] + q[2] * u[2]; // q · u
-      const screenY = Math.abs(q[1] * up[1] + q[2] * up[2]);
-      const screenX = Math.abs(q[0]);
-      distance = Math.max(
-        distance,
-        along + (PAD * screenY) / t,
-        along + (PAD * screenX) / (t * opts.aspect),
-      );
-    }
+  for (const p of points) {
+    const q: Vec3 = [p[0] - target[0], p[1] - target[1], p[2] - target[2]];
+    const along = dot(q, u);
+    distance = Math.max(
+      distance,
+      along + (PAD * Math.abs(dot(q, up))) / t,
+      along + (PAD * Math.abs(dot(q, right))) / (t * opts.aspect),
+    );
+  }
   return {
     distance,
     target,
-    position: [target[0] + u[0] * distance, u[1] * distance, target[2] + u[2] * distance],
+    position: [
+      target[0] + u[0] * distance,
+      target[1] + u[1] * distance,
+      target[2] + u[2] * distance,
+    ],
   };
 }
 

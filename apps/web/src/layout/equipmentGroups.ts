@@ -118,6 +118,19 @@ export interface Batch {
  * Groups parts across models and LOD levels by (role, unit geometry) so the draw-call count
  * follows the number of materials and shapes, not the number of models and parts (ADR-0014).
  */
-export function planBatches(_groups: readonly EquipmentGroup[]): Batch[] {
-  throw new Error('not implemented');
+export function planBatches(groups: readonly EquipmentGroup[]): Batch[] {
+  const batches = new Map<string, Batch>();
+  groups.forEach((g, group) =>
+    g.lods.forEach((parts, lod) =>
+      parts.forEach((sample, part) => {
+        const u = unitGeometryArgs(sample);
+        const key = `${sample.role}|${u.shape}|${u.args.join(',')}`;
+        const b = batches.get(key) ?? { key, role: sample.role, sample, entries: [], capacity: 0 };
+        b.entries.push({ group, lod, part });
+        b.capacity += g.items.length;
+        batches.set(key, b);
+      }),
+    ),
+  );
+  return [...batches.values()];
 }
