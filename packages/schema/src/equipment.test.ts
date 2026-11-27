@@ -316,5 +316,7 @@ describe('SF-7: built-in autoclave type', () => {
     expect(autoclave.params.labor.mode).toBe('automatic');
     expect(autoclave.params.cycle?.mode).toBe('perBatch');
     expect(autoclave.params.maxWait).toBeGreaterThan(0);
+    // One vessel cures one batch at a time (SF-5 review).
+    expect(autoclave.params.capacity).toBe(autoclave.params.batchSize);
   });
 });
