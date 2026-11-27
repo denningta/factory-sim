@@ -2,7 +2,14 @@ import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Equipment } from '@factory-sim/schema';
-import { MIN_TEXT_PX, calloutLines, pixelsPerMeter, placeCards } from './callouts';
+import {
+  MAX_CALLOUTS,
+  MIN_TEXT_PX,
+  calloutLines,
+  pickCalloutStations,
+  pixelsPerMeter,
+  placeCards,
+} from './callouts';
 import type { RunSession } from './runSession';
 import { lightSegments } from './stationStatus';
 import { stationUtilization } from './utilization';
@@ -18,7 +25,8 @@ const LEADER_PX = 36;
 const TEXT_INTERVAL_MS = 250;
 
 interface Card {
-  station: Equipment;
+  /** The station this card shows right now; null while the card is parked (hidden). */
+  station: Equipment | null;
   canvas: HTMLCanvasElement;
   texture: THREE.CanvasTexture;
   sprite: THREE.Sprite;
@@ -63,7 +71,8 @@ function draw(card: Card, text: ReturnType<typeof calloutLines>, color: string, 
 }
 
 /**
- * One callout card per station: a canvas sprite sized in screen pixels (so the text is never
+ * Callout cards for the stations nearest the camera (a pool of MAX_CALLOUTS, plus one for the
+ * bottleneck), so a big floor costs a fixed number of draw calls: a canvas sprite sized in screen pixels (so the text is never
  * below MIN_TEXT_PX at any zoom) with a leader line to the machine. All of it is driven from
  * one frame callback: position, size and overlap every frame, text only a few times a second.
  */
@@ -78,7 +87,7 @@ export function StationCallouts({
 }) {
   const cards = useMemo<Card[]>(
     () =>
-      stations.map((station) => {
+      Array.from({ length: Math.min(stations.length, MAX_CALLOUTS + 1) }, () => {
         const canvas = document.createElement('canvas');
         canvas.width = CARD_W * SCALE;
         canvas.height = CARD_H * SCALE;
@@ -94,13 +103,15 @@ export function StationCallouts({
         );
         sprite.renderOrder = 10;
         sprite.frustumCulled = false;
+        sprite.visible = false;
         const leader = new THREE.Line(
           new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
           new THREE.LineBasicMaterial({ color: getTheme().color.panelBorder, depthTest: false }),
         );
         leader.renderOrder = 9;
         leader.frustumCulled = false;
-        return { station, canvas, texture, sprite, leader, key: '' };
+        leader.visible = false;
+        return { station: null, canvas, texture, sprite, leader, key: '' };
       }),
     [stations],
   );
@@ -120,13 +131,36 @@ export function StationCallouts({
   );
 
   useFrame(({ camera, size }) => {
+    // Hand the pool to the nearest stations; a card keeps its station while it stays picked.
+    const picked = pickCalloutStations(
+      stations.map((e) => ({ id: e.id, x: e.position.x, y: e.height, z: e.position.y })),
+      camera.position,
+      bottleneckId,
+      MAX_CALLOUTS,
+    );
+    const wanted = new Set(picked);
+    const kept = new Set<string>();
+    for (const c of cards)
+      if (c.station && wanted.has(c.station.id)) kept.add(c.station.id);
+      else c.station = null;
+    const fresh = picked.filter((id) => !kept.has(id));
+    for (const c of cards) {
+      if (!c.station) {
+        const id = fresh.shift();
+        c.station = id ? (stations.find((e) => e.id === id) ?? null) : null;
+        c.key = '';
+      }
+      c.sprite.visible = c.station !== null;
+      c.leader.visible = c.station !== null;
+    }
+    const live = cards.filter((c): c is Card & { station: Equipment } => c.station !== null);
     const now = performance.now();
     if (now - scratch.lastText >= TEXT_INTERVAL_MS) {
       scratch.lastText = now;
       const rows = stationUtilization(session.stats(), [...stations]);
       const queues = session.queueLengths();
       const states = session.stationStates();
-      for (const card of cards) {
+      for (const card of live) {
         const id = card.station.id;
         const state = states.get(id);
         const text = calloutLines({
@@ -136,7 +170,7 @@ export function StationCallouts({
           working: rows.find((r) => r.id === id)?.working ?? 0,
           bottleneck: id === bottleneckId,
         });
-        const key = JSON.stringify([text, getTheme().color.accent]);
+        const key = JSON.stringify([id, text, getTheme().color.accent]);
         if (key === card.key) continue;
         card.key = key;
         const t = getTheme();
@@ -151,7 +185,7 @@ export function StationCallouts({
         ? { kind: 'ortho', zoom: camera.zoom }
         : { kind: 'persp', fovDeg: (camera as THREE.PerspectiveCamera).fov };
     // Screen-space anchors (px, y down), then lift overlapping cards apart.
-    const anchors = cards.map((c) => {
+    const anchors = live.map((c) => {
       const p = scratch.a.set(c.station.position.x, c.station.height, c.station.position.y);
       const depth = Math.abs(p.clone().applyMatrix4(camera.matrixWorldInverse).z);
       const ndc = p.clone().project(camera);
@@ -168,7 +202,7 @@ export function StationCallouts({
       { w: size.width, h: size.height },
       LEADER_PX,
     );
-    cards.forEach((c, i) => {
+    live.forEach((c, i) => {
       const a = anchors[i]!;
       const spot = spots[i]!;
       const ppm = pixelsPerMeter(cam, size.height, a.depth);
@@ -189,8 +223,8 @@ export function StationCallouts({
 
   return (
     <>
-      {cards.map((c) => (
-        <group key={c.station.id}>
+      {cards.map((c, i) => (
+        <group key={i}>
           <primitive object={c.leader} />
           <primitive object={c.sprite} />
         </group>

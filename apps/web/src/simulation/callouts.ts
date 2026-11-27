@@ -120,10 +120,18 @@ export const MAX_CALLOUTS = 8;
  * among them. Beyond a handful the cards overlap into noise anyway.
  */
 export function pickCalloutStations(
-  _stations: readonly { id: string; x: number; y: number; z: number }[],
-  _camera: { x: number; y: number; z: number },
-  _bottleneckId: string | null,
-  _limit: number,
+  stations: readonly { id: string; x: number; y: number; z: number }[],
+  camera: { x: number; y: number; z: number },
+  bottleneckId: string | null,
+  limit: number,
 ): string[] {
-  throw new Error('not implemented');
+  const dist = (s: { x: number; y: number; z: number }) =>
+    Math.hypot(s.x - camera.x, s.y - camera.y, s.z - camera.z);
+  const ids = [...stations]
+    .sort((a, b) => dist(a) - dist(b))
+    .slice(0, limit)
+    .map((s) => s.id);
+  if (bottleneckId && !ids.includes(bottleneckId) && stations.some((s) => s.id === bottleneckId))
+    ids.push(bottleneckId);
+  return ids;
 }
