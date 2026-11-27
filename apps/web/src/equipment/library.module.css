@@ -35,6 +35,9 @@
   border-left: 6px solid var(--type-color);
   border-radius: var(--radius-md);
   cursor: grab;
+  /* `all: unset` above also wipes the browser's `[draggable='true']` rule, and without it Chrome
+     never starts a native drag from a button: dragstart never fires and nothing reaches the canvas. */
+  -webkit-user-drag: element;
 }
 .type:hover {
   border-color: var(--color-accent);
