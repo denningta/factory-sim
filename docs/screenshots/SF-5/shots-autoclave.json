@@ -1,0 +1,31 @@
+{
+  "project": "docs/screenshots/SF-5/line.json",
+  "projectName": "Autoclave line",
+  "shots": [
+    {
+      "name": "autoclave-curing",
+      "screen": "simulate",
+      "settle": 800,
+      "actions": [
+        {
+          "eval": "(() => { const c = document.querySelector('canvas'); for (let i=0;i<13;i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: 640, clientY: 400, bubbles: true, cancelable: true })); })()"
+        },
+        {
+          "fill": ["input[type=range]", "100"]
+        },
+        {
+          "click": "role=button[name=\"Play\"]"
+        },
+        {
+          "wait": 9000
+        },
+        {
+          "click": "role=button[name=\"Pause\"]"
+        },
+        {
+          "wait": 600
+        }
+      ]
+    }
+  ]
+}
