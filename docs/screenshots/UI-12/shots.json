@@ -1,0 +1,8 @@
+{
+  "shots": [
+    { "name": "layout-shadows-on", "screen": "layout", "settle": 1500 },
+    { "name": "simulate-shadows-on", "screen": "simulate", "actions": [{ "click": "text=Run to end" }, { "wait": 1500 }], "settle": 1500 },
+    { "name": "layout-shadows-off", "screen": "layout", "themes": ["dark"],
+      "actions": [{ "click": "role=button[name='Layers']" }, { "click": "role=menuitemcheckbox[name='Shadows']" }, { "press": "Escape" }], "settle": 1500 }
+  ]
+}
