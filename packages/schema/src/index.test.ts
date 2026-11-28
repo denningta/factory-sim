@@ -580,7 +580,11 @@ describe('schema v9: parallel stations as routing alternates (PS-0, ADR-0018)', 
   });
 
   it('rejects an alternate that is not a workstation', () => {
-    expectInvalid(withAlternate(['snk']), 'products[0].routing[0].alternates[0]', 'not a workstation');
+    expectInvalid(
+      withAlternate(['snk']),
+      'products[0].routing[0].alternates[0]',
+      'not a workstation',
+    );
   });
 
   it("rejects an alternate equal to the step's station", () => {
