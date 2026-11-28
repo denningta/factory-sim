@@ -103,19 +103,44 @@ function TechFigures({ session, ids }: { session: RunSession; ids: string[] }) {
   if (n === 0) return null;
   return (
     <>
-      <instancedMesh ref={refs.head} args={[geo.head, undefined, n]} frustumCulled={false}>
+      <instancedMesh
+        ref={refs.head}
+        args={[geo.head, undefined, n]}
+        frustumCulled={false}
+        castShadow
+      >
         <meshStandardMaterial color={scene.parts.accent} />
       </instancedMesh>
-      <instancedMesh ref={refs.torso} args={[geo.torso, undefined, n]} frustumCulled={false}>
+      <instancedMesh
+        ref={refs.torso}
+        args={[geo.torso, undefined, n]}
+        frustumCulled={false}
+        castShadow
+      >
         <meshStandardMaterial color={scene.parts.dark} />
       </instancedMesh>
-      <instancedMesh ref={refs.vest} args={[geo.vest, undefined, n]} frustumCulled={false}>
+      <instancedMesh
+        ref={refs.vest}
+        args={[geo.vest, undefined, n]}
+        frustumCulled={false}
+        castShadow
+      >
         <meshStandardMaterial />
       </instancedMesh>
-      <instancedMesh ref={refs.arm} args={[geo.arm, undefined, 2 * n]} frustumCulled={false}>
+      <instancedMesh
+        ref={refs.arm}
+        args={[geo.arm, undefined, 2 * n]}
+        frustumCulled={false}
+        castShadow
+      >
         <meshStandardMaterial color={scene.parts.frame} />
       </instancedMesh>
-      <instancedMesh ref={refs.leg} args={[geo.leg, undefined, 2 * n]} frustumCulled={false}>
+      <instancedMesh
+        ref={refs.leg}
+        args={[geo.leg, undefined, 2 * n]}
+        frustumCulled={false}
+        castShadow
+      >
         <meshStandardMaterial color={scene.parts.dark} />
       </instancedMesh>
     </>

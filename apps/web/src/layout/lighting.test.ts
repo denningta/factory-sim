@@ -39,8 +39,9 @@ describe('UI-12 AC2: the shadow camera is fitted to the floor', () => {
             const d = rel([x, y, z]);
             expect(Math.abs(dot(d, right))).toBeLessThanOrEqual(fit.half);
             expect(Math.abs(dot(d, up))).toBeLessThanOrEqual(fit.half);
-            expect(dot(d, f)).toBeGreaterThan(fit.near);
-            expect(dot(d, f)).toBeLessThan(fit.far);
+            const depth = -dot(d, f); // distance along the light's view direction
+            expect(depth).toBeGreaterThan(fit.near);
+            expect(depth).toBeLessThan(fit.far);
           }
     });
     it('is tight: not more than ~1.5× the floor diagonal, so shadows stay crisp', () => {

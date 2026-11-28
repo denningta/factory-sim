@@ -8,6 +8,7 @@ export function LayersMenu() {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const connections = useLayersStore((s) => s.connections);
+  const shadows = useLayersStore((s) => s.shadows);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
@@ -44,6 +45,18 @@ export function LayersMenu() {
               {connections ? '✓' : ''}
             </span>
             Connections
+          </button>
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            aria-checked={shadows}
+            className={styles.item}
+            onClick={() => useLayersStore.getState().setShadows(!shadows)}
+          >
+            <span className={styles.tick} aria-hidden="true">
+              {shadows ? '✓' : ''}
+            </span>
+            Shadows
           </button>
         </div>
       )}

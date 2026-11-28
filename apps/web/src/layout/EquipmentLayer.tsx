@@ -214,6 +214,7 @@ export function EquipmentLayer() {
             else meshes.current.delete(b.key);
           }}
           args={[undefined, undefined, b.capacity]}
+          castShadow
           material={roleMaterial(b.role)}
           onPointerDown={onPointerDown(b.key)}
         >
