@@ -134,6 +134,8 @@ const upgradeSteps: Readonly<Record<number, UpgradeStep>> = {
   // v7 → v8: optional workstation `cycle` and `maxWait` (SF-0); absent means per-product
   // cycle times and full batches only, as before.
   7: (doc) => ({ ...doc, schemaVersion: 8 }),
+  // v8 → v9: optional routing-step `alternates` (PS-0, ADR-0018); absent means one station.
+  8: (doc) => ({ ...doc, schemaVersion: 9 }),
 };
 
 export const loadProject: (input: unknown) => ParseResult<Project> = createUpgrader({

@@ -1,6 +1,6 @@
 # ADR-0018: Parallel stations as routing-step alternatives
 
-- **Status:** Proposed (decisions by the product owner, 2026-11-27)
+- **Status:** Accepted (product owner, 2026-11-28)
 - **Date:** 2026-11-27
 - **Amends:** ADR-0009 (a routing step points at one station _or a set of interchangeable stations_), ADR-0017 (how parallel batch stations share parts)
 
