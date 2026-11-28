@@ -2,33 +2,48 @@ import { createStore, useStore } from 'zustand';
 
 export const LAYERS_KEY = 'factory-sim.layers';
 
-type LayersState = { connections: boolean; setConnections: (on: boolean) => void };
+type LayersState = {
+  connections: boolean;
+  setConnections: (on: boolean) => void;
+  shadows: boolean;
+  setShadows: (on: boolean) => void;
+};
 
-// Per viewer, in this browser only: a view preference, never part of the project document.
-// Storage can be missing or blocked, so every access is guarded and the default is on.
-function load(): boolean {
+type Stored = { connections: boolean; shadows: boolean };
+
+// Per viewer, in this browser only: view preferences, never part of the project document.
+// Storage can be missing or blocked, so every access is guarded and the defaults are on.
+function load(): Stored {
+  const out = { connections: true, shadows: true };
   try {
     const v: unknown = JSON.parse(localStorage.getItem(LAYERS_KEY) ?? 'null');
-    if (v && typeof v === 'object' && 'connections' in v && typeof v.connections === 'boolean')
-      return v.connections;
+    if (v && typeof v === 'object') {
+      if ('connections' in v && typeof v.connections === 'boolean') out.connections = v.connections;
+      if ('shadows' in v && typeof v.shadows === 'boolean') out.shadows = v.shadows;
+    }
   } catch {
-    /* fall through to the default */
+    /* fall through to the defaults */
   }
-  return true;
+  return out;
 }
 
 export const createLayersStore = () =>
-  createStore<LayersState>((set) => ({
-    connections: load(),
-    setConnections: (connections) => {
-      set({ connections });
+  createStore<LayersState>((set, get) => {
+    const save = (patch: Partial<Stored>) => {
+      set(patch);
+      const { connections, shadows } = get();
       try {
-        localStorage.setItem(LAYERS_KEY, JSON.stringify({ connections }));
+        localStorage.setItem(LAYERS_KEY, JSON.stringify({ connections, shadows }));
       } catch {
         /* not remembered, still applied */
       }
-    },
-  }));
+    };
+    return {
+      ...load(),
+      setConnections: (connections) => save({ connections }),
+      setShadows: (shadows) => save({ shadows }),
+    };
+  });
 
 const store = createLayersStore();
 export const useLayersStore = Object.assign(

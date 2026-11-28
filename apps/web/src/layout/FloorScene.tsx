@@ -10,6 +10,8 @@ import { aspectOf, fitCamera, fitOrtho, fitScale, labelLayout } from './cameraFi
 import { controlSettings } from './viewControls';
 import { formatLength } from './units';
 import { useTheme } from '../ui/themeStore';
+import { useLayersStore } from './layersStore';
+import { shadowFit } from './lighting';
 
 /** Floor plan (x, y) maps to three's ground plane (x, z); y is up. */
 function GridLines() {
@@ -22,6 +24,15 @@ function GridLines() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[floor.width / 2, -0.01, floor.length / 2]}>
         <planeGeometry args={[floor.width, floor.length]} />
         <meshBasicMaterial color={scene.floor} />
+      </mesh>
+      {/* A shadow-only overlay: the floor keeps its exact token colour, shadows darken it. */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[floor.width / 2, 0.002, floor.length / 2]}
+        receiveShadow
+      >
+        <planeGeometry args={[floor.width, floor.length]} />
+        <shadowMaterial opacity={0.4} />
       </mesh>
       <lineSegments geometry={geometry}>
         <lineBasicMaterial color={scene.grid} />
@@ -163,6 +174,39 @@ function Controls() {
  * The floor with its equipment and connections. `children` render inside the canvas (the
  * simulation's parts); `interactive={false}` drops editing gestures for the simulate screen.
  */
+/** The one shadow-casting key light, its shadow camera fitted to the floor. */
+export function KeyLight() {
+  const width = useEditorStore((s) => s.floor.width);
+  const length = useEditorStore((s) => s.floor.length);
+  const shadows = useLayersStore((s) => s.shadows);
+  const key = useTheme().scene.key;
+  const fit = useMemo(() => shadowFit({ width, length }), [width, length]);
+  // The target must be in the scene graph, or three never updates its matrixWorld and the light
+  // (and its shadow camera) aims at the origin instead of the floor centre.
+  const target = useMemo(() => new THREE.Object3D(), []);
+  return (
+    <>
+      <primitive object={target} position={fit.target} />
+      <directionalLight
+        target={target}
+        position={fit.position}
+        intensity={key}
+        castShadow={shadows}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-fit.half}
+        shadow-camera-right={fit.half}
+        shadow-camera-top={fit.half}
+        shadow-camera-bottom={-fit.half}
+        shadow-camera-near={fit.near}
+        shadow-camera-far={fit.far}
+        // Small bias against acne; normalBias keeps thin bench legs attached to their shadows.
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+      />
+    </>
+  );
+}
+
 export function FloorScene({
   children,
   interactive = true,
@@ -174,6 +218,7 @@ export function FloorScene({
   const scene = useTheme().scene;
   return (
     <Canvas
+      shadows={{ type: THREE.PCFSoftShadowMap }}
       onCreated={({ gl }) => {
         // Dev-only handle for the SF-8 performance check (renderer.info); absent in production.
         if (import.meta.env.DEV)
@@ -188,7 +233,7 @@ export function FloorScene({
         <OrthographicCamera makeDefault up={[0, 0, -1]} near={0.1} far={5000} />
       )}
       <ambientLight intensity={scene.ambient} />
-      <directionalLight position={[10, 20, 8]} intensity={scene.key} />
+      <KeyLight />
       <GridLines />
       <DimensionLabels />
       <EquipmentLayer />

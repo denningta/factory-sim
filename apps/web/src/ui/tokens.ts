@@ -74,8 +74,8 @@ export const light: Theme = {
   },
   scene: {
     background: '#eef0f3',
-    floor: '#f4f5f7',
-    grid: '#c3c8d0',
+    floor: '#c9ced5',
+    grid: '#a3abb6',
     label: '#374151',
     flow: '#475569',
     parts: { frame: '#8a929c', accent: '#d7dbe0', dark: '#2b2f36' },
@@ -122,8 +122,8 @@ export const dark: Theme = {
   },
   scene: {
     background: '#070b0c',
-    floor: '#0d1416',
-    grid: '#1c2d30',
+    floor: '#3a4143',
+    grid: '#4e5759',
     label: '#b9cecf',
     flow: '#2f9d8a',
     parts: { frame: '#6f7f88', accent: '#b9c6cb', dark: '#161d21' },

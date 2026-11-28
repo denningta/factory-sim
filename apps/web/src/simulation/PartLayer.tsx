@@ -25,6 +25,7 @@ export function PartLayer({ session }: { session: RunSession }) {
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     m.count = 0;
     m.frustumCulled = false;
+    m.castShadow = true;
     return m;
   }, []);
   useEffect(

@@ -44,12 +44,12 @@ export function CureRig({ session, station }: { session: RunSession; station: Eq
     >
       {/* Hinged at the right edge; closed it covers the vessel mouth. */}
       <group ref={door} position={[d.center[0] + d.radius, d.center[1], d.center[2]]}>
-        <mesh position={[-d.radius, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[-d.radius, 0, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[d.radius, d.radius, 0.05, 32]} />
           <meshStandardMaterial color={theme.scene.parts.accent} />
         </mesh>
       </group>
-      <mesh ref={cart} position={c.center} visible={false}>
+      <mesh ref={cart} position={c.center} visible={false} castShadow>
         <boxGeometry args={c.size} />
         <meshStandardMaterial color={theme.scene.parts.frame} />
       </mesh>
