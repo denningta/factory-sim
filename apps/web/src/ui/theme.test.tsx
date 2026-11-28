@@ -195,3 +195,26 @@ describe('UI-9 AC5: no hard-coded colour in the migrated screens', () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe('UI-12 AC1: lighter floor', () => {
+  it('dark floor is a clearly lighter neutral grey than the page background', () => {
+    expect(lum(dark.scene.floor)).toBeGreaterThan(lum('#2a3032'));
+    expect(ratio(dark.scene.floor, dark.scene.background)).toBeGreaterThanOrEqual(1.8);
+    expect(ratio(dark.scene.floor, dark.color.bg)).toBeGreaterThanOrEqual(1.8);
+    const [r, g, b] = rgb(dark.scene.floor);
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThanOrEqual(12);
+  });
+  it('light floor is a light grey distinct from the white UI', () => {
+    expect(lum(light.scene.floor)).toBeLessThan(lum('#e4e7eb'));
+    expect(lum(light.scene.floor)).toBeGreaterThan(0.4);
+    expect(ratio(light.scene.floor, light.color.surface)).toBeGreaterThanOrEqual(1.3);
+  });
+  it.each([
+    ['dark', dark],
+    ['light', light],
+  ])('grid and equipment frame stay visible on the %s floor', (_n, t) => {
+    expect(ratio(t.scene.grid, t.scene.floor)).toBeGreaterThanOrEqual(1.15);
+    expect(ratio(t.scene.parts.frame, t.scene.floor)).toBeGreaterThanOrEqual(1.5);
+    expect(ratio(t.scene.parts.dark, t.scene.floor)).toBeGreaterThanOrEqual(1.5);
+  });
+});

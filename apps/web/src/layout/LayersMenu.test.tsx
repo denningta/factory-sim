@@ -8,7 +8,7 @@ import { useLayersStore } from './layersStore';
 afterEach(() => {
   cleanup();
   localStorage.clear();
-  useLayersStore.setState({ connections: true });
+  useLayersStore.setState({ connections: true, shadows: true });
 });
 
 describe('SF-3 AC4: Layers menu', () => {
@@ -27,5 +27,20 @@ describe('SF-3 AC4: Layers menu', () => {
   it('is in the editor viewport toolbar', () => {
     render(<ViewToolbar />);
     expect(screen.getByRole('button', { name: 'Layers' })).toBeTruthy();
+  });
+});
+
+describe('UI-12 AC3: Shadows toggle', () => {
+  it('is in the Layers menu, on by default, and switches the layer', async () => {
+    render(<LayersMenu />);
+    await userEvent.click(screen.getByRole('button', { name: 'Layers' }));
+    const box = screen.getByRole('menuitemcheckbox', { name: 'Shadows' });
+    expect(box.getAttribute('aria-checked')).toBe('true');
+    await userEvent.click(box);
+    expect(useLayersStore.getState().shadows).toBe(false);
+    expect(useLayersStore.getState().connections).toBe(true);
+    expect(
+      screen.getByRole('menuitemcheckbox', { name: 'Shadows' }).getAttribute('aria-checked'),
+    ).toBe('false');
   });
 });

@@ -35,3 +35,25 @@ describe('SF-3 AC4: layers are remembered per viewer', () => {
     expect(createLayersStore().getState().connections).toBe(true);
   });
 });
+
+describe('UI-12 AC3: Shadows layer', () => {
+  it('is on by default', () => {
+    expect(createLayersStore().getState().shadows).toBe(true);
+  });
+  it('is remembered per viewer and does not disturb Connections', () => {
+    const a = createLayersStore();
+    a.getState().setShadows(false);
+    const b = createLayersStore();
+    expect(b.getState().shadows).toBe(false);
+    expect(b.getState().connections).toBe(true);
+    b.getState().setConnections(false);
+    expect(createLayersStore().getState().shadows).toBe(false);
+    expect(createLayersStore().getState().connections).toBe(false);
+  });
+  it('still reads a value stored before Shadows existed', () => {
+    localStorage.setItem(LAYERS_KEY, JSON.stringify({ connections: false }));
+    const s = createLayersStore().getState();
+    expect(s.connections).toBe(false);
+    expect(s.shadows).toBe(true);
+  });
+});

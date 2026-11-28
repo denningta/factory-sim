@@ -2,7 +2,12 @@ import { createStore, useStore } from 'zustand';
 
 export const LAYERS_KEY = 'factory-sim.layers';
 
-type LayersState = { connections: boolean; setConnections: (on: boolean) => void };
+type LayersState = {
+  connections: boolean;
+  setConnections: (on: boolean) => void;
+  shadows: boolean;
+  setShadows: (on: boolean) => void;
+};
 
 // Per viewer, in this browser only: a view preference, never part of the project document.
 // Storage can be missing or blocked, so every access is guarded and the default is on.
@@ -19,6 +24,8 @@ function load(): boolean {
 
 export const createLayersStore = () =>
   createStore<LayersState>((set) => ({
+    shadows: true,
+    setShadows: () => {},
     connections: load(),
     setConnections: (connections) => {
       set({ connections });
