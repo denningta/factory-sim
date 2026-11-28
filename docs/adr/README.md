@@ -21,3 +21,4 @@ One file per decision. ADRs 0001–0013 accepted 2026-11-21; 0014 accepted 2026-
 | 0015 | Equipment names its 3D model (`model` key) | Accepted |
 | 0016 | Design tokens in TS, CSS Modules           | Accepted |
 | 0017 | Batch cure cycle on workstations           | Accepted |
+| 0018 | Parallel stations as routing alternatives  | Proposed |
