@@ -120,11 +120,18 @@ Order (lead, 2026-11-24): UI-1 ∥ UI-7 → UI-9 → UI-2 ∥ UI-5 → UI-6 ∥ 
 
 Planned 2026-11-26 (product owner): sprint 9 focuses on the 3D experience. UI-8 is closed and split into SF-1 (bench, machine), SF-2 (technicians) and SF-8 (scene); its other models go to UI-11. The autoclave gets a real cure cycle (fixed cure time per batch, partial batch after a max wait). Parts are carried at bench height, not along the overhead connections. Up to 2 builders. Order (lead): SF-0 (lead) → SF-1 ∥ SF-3 → SF-6 ∥ SF-4 → SF-2 ∥ SF-7 → SF-5 → SF-8. SF-7 stays in `equipment/` and SF-5 does the autoclave animation in `simulation/`, so SF-2 and SF-7 don't share a module.
 
-## Sprint 10 (tentative): Trends and more models (10 pts)
+## Sprint 10 (proposed): Parallel stations, lighter floor, trends (23 pts + UI-11)
 
-| ID                | Epic      | Pts | Priority | Depends on |
-| ----------------- | --------- | --- | -------- | ---------- |
-| [UI-10](UI-10.md) | UI polish | 5   | Must     | UI-6, UI-9 |
-| [UI-11](UI-11.md) | UI polish | 5   | Could    | SF-1       |
+| ID                                                           | Epic              | Pts | Priority | Depends on |
+| ------------------------------------------------------------ | ----------------- | --- | -------- | ---------- |
+| [PS-0](PS-0.md)                                              | Parallel stations | 2   | Must     | —          |
+| [PS-1](PS-1.md)                                              | Parallel stations | 8   | Must     | PS-0       |
+| [PS-2](PS-2.md)                                              | Parallel stations | 5   | Must     | PS-0       |
+| [PS-3](PS-3.md)                                              | Parallel stations | 3   | Should   | PS-1, PS-2 |
+| [UI-12](https://github.com/denningta/factory-sim/issues/202) | UI polish         | 3   | Should   | —          |
+| [UI-10](UI-10.md)                                            | UI polish         | 5   | Must     | UI-6, UI-9 |
+| [UI-11](UI-11.md)                                            | UI polish         | 5   | Could    | SF-1       |
+
+Parallel stations (ADR-0018) added by the product owner, 2026-11-27: a second autoclave in parallel to meet takt. Order: PS-0 (lead) → PS-1 (engine, Opus) ∥ PS-2 (routing editor) → PS-3 → UI-10. UI-12 (lighter floor, shadows) and the HF-1 hotfix were done as issue-specs on 2026-11-27.
 
 UI-10 (trend charts with uPlot, added 2026-11-24) moves from sprint 9 (product owner, 2026-11-26).

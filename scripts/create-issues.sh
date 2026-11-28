@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 label() { gh label create "$1" --color "$2" --description "${3:-}" --force >/dev/null; }
 
 echo "Creating labels…"
-for e in platform layout-editor equipment-library products-routings workstation-config technicians flow-connections simulation-engine scenarios-projects analytics-kpis ui-polish shop-floor; do
+for e in platform layout-editor equipment-library products-routings workstation-config technicians flow-connections simulation-engine scenarios-projects analytics-kpis ui-polish shop-floor parallel-stations; do
   label "epic:$e" 1d76db
 done
 for s in 1 2 3 4 5 6 7 8 9 10; do label "sprint:$s" 0e8a16; done
