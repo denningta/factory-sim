@@ -203,6 +203,15 @@ export interface EditorState extends Prefs {
   /** Moves a step to index `to` (clamped); the rest keep their order. */
   moveRoutingStep: (productId: string, stepId: string, to: number) => void;
   removeRoutingStep: (productId: string, stepId: string) => void;
+  /** Adds a parallel workstation to a step (ADR-0018), copying the primary's cycle time (PS-2). */
+  addRoutingAlternate: (productId: string, stepId: string, stationId: string) => RoutingStepResult;
+  removeRoutingAlternate: (productId: string, stepId: string, stationId: string) => void;
+  /** "product\0station" cells whose time was copied from the primary and not yet edited; session-only. */
+  copiedCycleTimes: string[];
+  /** Set by a connection to a same-type sibling of a routed station; session-only. */
+  parallelOffer: ParallelOffer | null;
+  acceptParallelOffer: () => void;
+  dismissParallelOffer: () => void;
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -278,6 +287,14 @@ export interface EditorState extends Prefs {
   /** 3D perspective or orthographic top-down; session-only. */
   viewMode: ViewMode;
   toggleView: () => void;
+}
+
+/** "Use <station> as parallel station for <label>?": the steps it would join (PS-2). */
+export interface ParallelOffer {
+  stationId: string;
+  primaryId: string;
+  label: string;
+  steps: { productId: string; stepId: string }[];
 }
 
 export type ConnectResult = { ok: true } | { ok: false; error: string };
@@ -787,6 +804,20 @@ export function createEditorStore() {
           productId,
           routingOf(productId).filter((s) => s.id !== stepId),
         );
+      },
+      addRoutingAlternate: () => {
+        throw new Error('not implemented');
+      },
+      removeRoutingAlternate: () => {
+        throw new Error('not implemented');
+      },
+      copiedCycleTimes: [],
+      parallelOffer: null,
+      acceptParallelOffer: () => {
+        throw new Error('not implemented');
+      },
+      dismissParallelOffer: () => {
+        throw new Error('not implemented');
       },
       selectedIds: [],
       userTypes: [],
