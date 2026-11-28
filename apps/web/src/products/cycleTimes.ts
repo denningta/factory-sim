@@ -34,9 +34,9 @@ export function parseDuration(text: string): number | null {
   return seconds !== null && seconds > 0 ? seconds : null;
 }
 
-/** The distinct stations a product's routing visits, in routing order. */
+/** The distinct stations a product's routing visits (alternates included), in routing order. */
 export function stationsOf(product: Project['products'][number]): string[] {
-  return [...new Set(product.routing.map((s) => s.stationId))];
+  return [...new Set(product.routing.flatMap((s) => [s.stationId, ...(s.alternates ?? [])]))];
 }
 
 /** (product, station) pairs a routing uses that have no cycle time yet. */

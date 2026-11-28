@@ -15,6 +15,7 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
   const setCycleTime = useStore((s) => s.setCycleTime);
   const setCycleTimeDuration = useStore((s) => s.setCycleTimeDuration);
   const importCycleTimes = useStore((s) => s.importCycleTimes);
+  const copied = useStore((s) => s.copiedCycleTimes);
   const beginEdit = useStore((s) => s.beginEdit);
   const endEdit = useStore((s) => s.endEdit);
   const [pasted, setPasted] = useState('');
@@ -81,6 +82,17 @@ export function CycleTimeGrid({ useStore = defaultStore }: { useStore?: Store })
                               beginEdit={beginEdit}
                               endEdit={endEdit}
                             />
+                            {copied.includes(`${p.id}\u0000${s.id}`) && (
+                              <span className={styles.copiedNote}>
+                                copied from{' '}
+                                {equipment.find(
+                                  (e) =>
+                                    e.id ===
+                                    p.routing.find((r) => r.alternates?.includes(s.id))?.stationId,
+                                )?.name ?? 'primary'}
+                                : change if different
+                              </span>
+                            )}
                           </td>
                         ) : (
                           <td

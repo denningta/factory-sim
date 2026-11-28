@@ -26,3 +26,4 @@ issue: 207
 ## Notes
 
 - _Lead (2026-11-27):_ stays in `products/` and the layout connect flow; no engine change.
+- _Builder (2026-11-28):_ "+ Parallel station" adds the first unused workstation, preferring the primary's type; it's a store action, so the choice can be refined later. The copied-time mark (`copiedCycleTimes`) is session-only, like `pendingFrom`: it isn't saved in the document. The connect offer fires when the new input's station has the same `typeId` as another station fed by the same output port and routed in a step. No engine change; engine-side `no_path`/`missing_cycle_time` for alternates is PS-1's. The web pre-run list covers alternates (missing cycle time per station, staffing per station).

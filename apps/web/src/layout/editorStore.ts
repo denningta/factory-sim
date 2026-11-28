@@ -203,6 +203,15 @@ export interface EditorState extends Prefs {
   /** Moves a step to index `to` (clamped); the rest keep their order. */
   moveRoutingStep: (productId: string, stepId: string, to: number) => void;
   removeRoutingStep: (productId: string, stepId: string) => void;
+  /** Adds a parallel workstation to a step (ADR-0018), copying the primary's cycle time (PS-2). */
+  addRoutingAlternate: (productId: string, stepId: string, stationId: string) => RoutingStepResult;
+  removeRoutingAlternate: (productId: string, stepId: string, stationId: string) => void;
+  /** "product\0station" cells whose time was copied from the primary and not yet edited; session-only. */
+  copiedCycleTimes: string[];
+  /** Set by a connection to a same-type sibling of a routed station; session-only. */
+  parallelOffer: ParallelOffer | null;
+  acceptParallelOffer: () => void;
+  dismissParallelOffer: () => void;
   /** Ids of the selected equipment; session-only. */
   selectedIds: string[];
   /** Snaps to the grid when enabled; returns null (and places nothing) if off the floor. */
@@ -278,6 +287,54 @@ export interface EditorState extends Prefs {
   /** 3D perspective or orthographic top-down; session-only. */
   viewMode: ViewMode;
   toggleView: () => void;
+}
+
+/** "Use <station> as parallel station for <label>?": the steps it would join (PS-2). */
+export interface ParallelOffer {
+  stationId: string;
+  primaryId: string;
+  label: string;
+  steps: { productId: string; stepId: string }[];
+}
+
+/**
+ * When the output `from` now feeds `toId` and already feeds a routed workstation of the same
+ * type, offer `toId` as that station's parallel twin (PS-2). Null when there's nothing to offer.
+ */
+function findParallelOffer(
+  connections: Connection[],
+  equipment: Equipment[],
+  products: Product[],
+  toId: string,
+  from: PortRef,
+): ParallelOffer | null {
+  const target = equipment.find((e) => e.id === toId);
+  if (target?.behavior !== 'workstation') return null;
+  for (const c of connections) {
+    if (c.from.equipmentId !== from.equipmentId || c.from.portId !== from.portId) continue;
+    const first = equipment.find((e) => e.id === c.to.equipmentId);
+    if (!first || first.id === toId || first.behavior !== 'workstation') continue;
+    if (first.typeId !== target.typeId) continue;
+    const steps = products.flatMap((p) =>
+      p.routing
+        .filter(
+          (s) =>
+            (s.stationId === first.id || s.alternates?.includes(first.id)) &&
+            s.stationId !== toId &&
+            !s.alternates?.includes(toId),
+        )
+        .map((s) => ({ productId: p.id, stepId: s.id, name: s.name })),
+    );
+    if (steps.length === 0) continue;
+    const named = steps.length === 1 ? steps[0]!.name : undefined;
+    return {
+      stationId: toId,
+      primaryId: first.id,
+      label: named ?? first.name,
+      steps: steps.map(({ productId, stepId }) => ({ productId, stepId })),
+    };
+  }
+  return null;
 }
 
 export type ConnectResult = { ok: true } | { ok: false; error: string };
@@ -379,14 +436,66 @@ export function createEditorStore() {
       if (!e) return 'Station not found';
       return e.behavior === 'workstation' ? null : `${e.name} is not a workstation`;
     };
+    const stationsOfStep = (s: RoutingStep) => [s.stationId, ...(s.alternates ?? [])];
+    const cellKey = (productId: string, stationId: string) => `${productId}\u0000${stationId}`;
+    /** The user has now chosen this cell's time, so it is no longer "copied". */
+    const unmark = (productId: string, stationId: string) =>
+      get().copiedCycleTimes.filter((k) => k !== cellKey(productId, stationId));
+    const withoutStations = (s: RoutingStep, gone: Set<string>): RoutingStep[] => {
+      const [first, ...rest] = stationsOfStep(s).filter((id) => !gone.has(id));
+      if (first === undefined) return [];
+      const { alternates: _old, ...bare } = s;
+      return [
+        rest.length
+          ? { ...bare, stationId: first, alternates: rest }
+          : { ...bare, stationId: first },
+      ];
+    };
+    const addAlt = (
+      productId: string,
+      stepId: string,
+      stationId: string,
+      recordIt: boolean,
+    ): RoutingStepResult => {
+      const error = notAStation(stationId);
+      if (error) return { ok: false, error };
+      const step = findStep(productId, stepId);
+      if (!step) return { ok: false, error: 'Step not found' };
+      if (stationsOfStep(step).includes(stationId))
+        return { ok: false, error: 'That station is already in this step' };
+      const next: RoutingStep = { ...step, alternates: [...(step.alternates ?? []), stationId] };
+      // A new alternate starts with the primary's time so the line stays runnable; the user
+      // can then change it, and the grid marks it as copied until they do.
+      const primary = get().cycleTimes.find(
+        (c) => c.productId === productId && c.stationId === step.stationId,
+      );
+      const hasOwn = get().cycleTimes.some(
+        (c) => c.productId === productId && c.stationId === stationId,
+      );
+      if (recordIt) record();
+      setRouting(
+        productId,
+        routingOf(productId).map((q) => (q.id === stepId ? next : q)),
+      );
+      if (primary && !hasOwn)
+        set({
+          cycleTimes: [...get().cycleTimes, { productId, stationId, time: primary.time }],
+          copiedCycleTimes: [...get().copiedCycleTimes, cellKey(productId, stationId)],
+        });
+      return { ok: true, step: next };
+    };
     const routingOf = (productId: string) =>
       get().products.find((p) => p.id === productId)?.routing ?? [];
     const findStep = (productId: string, stepId: string) =>
       routingOf(productId).find((s) => s.id === stepId);
     /** Cycle times exist only where a routing uses the station, so a routing edit prunes them. */
     const setRouting = (productId: string, routing: RoutingStep[]) => {
-      const used = new Set(routing.map((s) => s.stationId));
+      const used = new Set(routing.flatMap(stationsOfStep));
       set({
+        copiedCycleTimes: get().copiedCycleTimes.filter((k) => {
+          const [pid, sid] = k.split('\u0000');
+          return pid !== productId || used.has(sid!);
+        }),
         products: get().products.map((p) => (p.id === productId ? { ...p, routing } : p)),
         cycleTimes: get().cycleTimes.filter(
           (c) => c.productId !== productId || used.has(c.stationId),
@@ -408,7 +517,7 @@ export function createEditorStore() {
       setCycleTime: (productId, stationId, seconds) => {
         const product = get().products.find((p) => p.id === productId);
         if (!product) return { ok: false, error: 'Product not found' };
-        if (!product.routing.some((s) => s.stationId === stationId))
+        if (!product.routing.some((s) => stationsOfStep(s).includes(stationId)))
           return { ok: false, error: 'This product does not route through that station' };
         const current = get().cycleTimes;
         if (seconds === null) {
@@ -417,7 +526,7 @@ export function createEditorStore() {
           );
           if (next.length === current.length) return { ok: true };
           record();
-          set({ cycleTimes: next });
+          set({ cycleTimes: next, copiedCycleTimes: unmark(productId, stationId) });
           return { ok: true };
         }
         if (!Number.isFinite(seconds) || seconds <= 0)
@@ -427,13 +536,16 @@ export function createEditorStore() {
         );
         if (existing?.time.kind === 'fixed' && existing.time.value === seconds) return { ok: true };
         record();
-        set({ cycleTimes: withTime(current, productId, stationId, seconds) });
+        set({
+          cycleTimes: withTime(current, productId, stationId, seconds),
+          copiedCycleTimes: unmark(productId, stationId),
+        });
         return { ok: true };
       },
       setCycleTimeDuration: (productId, stationId, time) => {
         const product = get().products.find((p) => p.id === productId);
         if (!product) return { ok: false, error: 'Product not found' };
-        if (!product.routing.some((s) => s.stationId === stationId))
+        if (!product.routing.some((s) => stationsOfStep(s).includes(stationId)))
           return { ok: false, error: 'This product does not route through that station' };
         const current = get().cycleTimes;
         if (time === null) {
@@ -442,7 +554,7 @@ export function createEditorStore() {
           );
           if (next.length === current.length) return { ok: true };
           record();
-          set({ cycleTimes: next });
+          set({ cycleTimes: next, copiedCycleTimes: unmark(productId, stationId) });
           return { ok: true };
         }
         const parsed = durationSchema.safeParse(time);
@@ -459,6 +571,7 @@ export function createEditorStore() {
             ...current.filter((c) => c.productId !== productId || c.stationId !== stationId),
             { productId, stationId, time: parsed.data },
           ],
+          copiedCycleTimes: unmark(productId, stationId),
         });
         return { ok: true };
       },
@@ -469,7 +582,7 @@ export function createEditorStore() {
             e.seconds > 0 &&
             get()
               .products.find((p) => p.id === e.productId)
-              ?.routing.some((s) => s.stationId === e.stationId),
+              ?.routing.some((s) => stationsOfStep(s).includes(e.stationId)),
         );
         if (valid.length === 0) return;
         record();
@@ -761,7 +874,11 @@ export function createEditorStore() {
         const step = findStep(productId, stepId);
         if (!step) return { ok: false, error: 'Step not found' };
         if (step.stationId === stationId) return { ok: true, step };
-        const next = { ...step, stationId };
+        const alternates = step.alternates?.filter((a) => a !== stationId);
+        const { alternates: _old, ...bare } = step;
+        const next: RoutingStep = alternates?.length
+          ? { ...bare, stationId, alternates }
+          : { ...bare, stationId };
         record();
         setRouting(
           productId,
@@ -788,6 +905,32 @@ export function createEditorStore() {
           routingOf(productId).filter((s) => s.id !== stepId),
         );
       },
+      addRoutingAlternate: (productId, stepId, stationId) =>
+        addAlt(productId, stepId, stationId, true),
+      removeRoutingAlternate: (productId, stepId, stationId) => {
+        const step = findStep(productId, stepId);
+        if (!step?.alternates?.includes(stationId)) return;
+        const { alternates: _old, ...bare } = step;
+        const rest = step.alternates.filter((a) => a !== stationId);
+        record();
+        setRouting(
+          productId,
+          routingOf(productId).map((q) =>
+            q.id === stepId ? (rest.length ? { ...bare, alternates: rest } : bare) : q,
+          ),
+        );
+      },
+      copiedCycleTimes: [],
+      parallelOffer: null,
+      acceptParallelOffer: () => {
+        const offer = get().parallelOffer;
+        if (!offer) return;
+        record();
+        for (const { productId, stepId } of offer.steps)
+          addAlt(productId, stepId, offer.stationId, false);
+        set({ parallelOffer: null });
+      },
+      dismissParallelOffer: () => set({ parallelOffer: null }),
       selectedIds: [],
       userTypes: [],
       setUserTypes: (userTypes) => set({ userTypes }),
@@ -962,11 +1105,14 @@ export function createEditorStore() {
           equipment: get().equipment.filter((e) => !gone.has(e.id)),
           connections: connections.filter((c) => !dropped(c)),
           // A step at a deleted station would make the document invalid (PR-2).
+          // A deleted alternate just leaves its step; a deleted primary hands over to the first
+          // alternate (ADR-0018). A step with nothing left is dropped, as before.
           products: get().products.map((p) =>
-            p.routing.some((s) => gone.has(s.stationId))
-              ? { ...p, routing: p.routing.filter((s) => !gone.has(s.stationId)) }
+            p.routing.some((s) => stationsOfStep(s).some((id) => gone.has(id)))
+              ? { ...p, routing: p.routing.flatMap((s) => withoutStations(s, gone)) }
               : p,
           ),
+          copiedCycleTimes: get().copiedCycleTimes.filter((k) => !gone.has(k.split('\u0000')[1]!)),
           // Likewise a cycle time at one (PR-3).
           cycleTimes: get().cycleTimes.filter((c) => !gone.has(c.stationId)),
           // And a technician assigned to it (TE-1).
@@ -1022,7 +1168,12 @@ export function createEditorStore() {
         });
         if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
         record();
-        set({ connections: next, selectedConnectionId: `cn-${n}`, selectedIds: [] });
+        set({
+          connections: next,
+          selectedConnectionId: `cn-${n}`,
+          selectedIds: [],
+          parallelOffer: findParallelOffer(next, equipment, get().products, to.equipmentId, from),
+        });
         return { ok: true };
       },
       draggingIds: [],

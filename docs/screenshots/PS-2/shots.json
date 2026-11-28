@@ -1,0 +1,15 @@
+{
+  "project": "docs/screenshots/PS-2/project.json",
+  "shots": [
+    {
+      "name": "routing-parallel",
+      "screen": "products",
+      "settle": 600
+    },
+    {
+      "name": "layout-parallel",
+      "screen": "layout",
+      "settle": 1500
+    }
+  ]
+}
