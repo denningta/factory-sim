@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { shadowFit } from './lighting';
 
-const KEY_DIR = [10, 20, 8];
+const KEY_DIR = [-12, 22, -4];
 
 function lightAxes() {
   const len = Math.hypot(...KEY_DIR);

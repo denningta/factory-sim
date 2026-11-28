@@ -175,29 +175,35 @@ function Controls() {
  * simulation's parts); `interactive={false}` drops editing gestures for the simulate screen.
  */
 /** The one shadow-casting key light, its shadow camera fitted to the floor. */
-function KeyLight() {
+export function KeyLight() {
   const width = useEditorStore((s) => s.floor.width);
   const length = useEditorStore((s) => s.floor.length);
   const shadows = useLayersStore((s) => s.shadows);
   const key = useTheme().scene.key;
   const fit = useMemo(() => shadowFit({ width, length }), [width, length]);
+  // The target must be in the scene graph, or three never updates its matrixWorld and the light
+  // (and its shadow camera) aims at the origin instead of the floor centre.
+  const target = useMemo(() => new THREE.Object3D(), []);
   return (
-    <directionalLight
-      position={fit.position}
-      target-position={fit.target}
-      intensity={key}
-      castShadow={shadows}
-      shadow-mapSize={[2048, 2048]}
-      shadow-camera-left={-fit.half}
-      shadow-camera-right={fit.half}
-      shadow-camera-top={fit.half}
-      shadow-camera-bottom={-fit.half}
-      shadow-camera-near={fit.near}
-      shadow-camera-far={fit.far}
-      // Small bias against acne; normalBias keeps thin bench legs attached to their shadows.
-      shadow-bias={-0.0004}
-      shadow-normalBias={0.02}
-    />
+    <>
+      <primitive object={target} position={fit.target} />
+      <directionalLight
+        target={target}
+        position={fit.position}
+        intensity={key}
+        castShadow={shadows}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-fit.half}
+        shadow-camera-right={fit.half}
+        shadow-camera-top={fit.half}
+        shadow-camera-bottom={-fit.half}
+        shadow-camera-near={fit.near}
+        shadow-camera-far={fit.far}
+        // Small bias against acne; normalBias keeps thin bench legs attached to their shadows.
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+      />
+    </>
   );
 }
 

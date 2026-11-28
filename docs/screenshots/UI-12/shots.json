@@ -2,10 +2,32 @@
   "shots": [
     { "name": "layout-shadows-on", "screen": "layout", "settle": 1500 },
     {
-      "name": "simulate-shadows-on",
+      "name": "simulate-midrun",
       "screen": "simulate",
-      "actions": [{ "click": "text=Run to end" }, { "wait": 1500 }],
+      "actions": [
+        { "fill": ["role=spinbutton >> nth=1", "0"] },
+        { "click": "text=Apply" },
+        { "fill": ["role=slider", "40"] },
+        { "click": "text=Play" },
+        { "wait": 9000 },
+        {
+          "eval": "(()=>{const c=document.querySelector('canvas');const r=c.getBoundingClientRect();for(let i=0;i<10;i++)c.dispatchEvent(new WheelEvent('wheel',{deltaY:-200,clientX:r.left+r.width*0.4,clientY:r.top+r.height*0.7,bubbles:true,cancelable:true}));})()"
+        },
+        { "wait": 1000 }
+      ],
       "settle": 1500
+    },
+    {
+      "name": "layout-closeup",
+      "screen": "layout",
+      "themes": ["dark", "light"],
+      "actions": [
+        {
+          "eval": "(()=>{const c=document.querySelector('canvas');const r=c.getBoundingClientRect();for(let i=0;i<14;i++)c.dispatchEvent(new WheelEvent('wheel',{deltaY:-120,clientX:r.left+r.width*0.55,clientY:r.top+r.height*0.62,bubbles:true,cancelable:true}))})()"
+        },
+        { "wait": 1500 }
+      ],
+      "settle": 800
     },
     {
       "name": "layout-shadows-off",

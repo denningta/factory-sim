@@ -1,5 +1,9 @@
-/** Direction of the one shadow-casting key light, from the floor towards the light. */
-export const KEY_DIRECTION: readonly [number, number, number] = [10, 20, 8];
+/**
+ * Direction of the one shadow-casting key light, from the floor towards the light. It sits to the
+ * side of the default iso camera (which looks from +x/+z), so shadows fall across the view rather
+ * than hiding behind the equipment.
+ */
+export const KEY_DIRECTION: readonly [number, number, number] = [-12, 22, -4];
 
 /** Tallest thing that casts a shadow, in metres; padding so tall equipment is never clipped. */
 const MAX_HEIGHT = 4;
