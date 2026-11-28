@@ -63,6 +63,11 @@ export const routingStepSchema = z.strictObject({
   stationId: id,
   /** Optional operation name shown in the routing (e.g. "Cut stock"). */
   name: z.string().trim().max(100).optional(),
+  /**
+   * Other workstations that can do this step in parallel (ADR-0018): the part goes to
+   * `stationId` or any alternate, whichever has room first. Absent = this station only.
+   */
+  alternates: z.array(id).optional(),
 });
 
 export const productSchema = z.strictObject({

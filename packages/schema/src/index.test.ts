@@ -553,3 +553,41 @@ describe('schema v8: batch cure cycle and max wait (SF-0)', () => {
     expectInvalid(p, `equipment[${i}].params.cycle.time`);
   });
 });
+
+describe('schema v9: parallel stations as routing alternates (PS-0, ADR-0018)', () => {
+  /** pA's first step runs on s1 or s3 (a second workstation). */
+  const withAlternate = (alternates: string[]): Project => {
+    const p = sampleProject();
+    p.equipment.push(eq('s3', 'workstation', 20));
+    p.products[0]!.routing[0] = { ...p.products[0]!.routing[0]!, alternates };
+    return p;
+  };
+
+  it('upgrades a v8 document unchanged apart from the version', () => {
+    const current = sampleProject();
+    const v8 = JSON.parse(JSON.stringify({ ...current, schemaVersion: 8 }));
+    expect(loadProject(v8)).toEqual({ ok: true, project: current });
+  });
+
+  it('keeps alternates through save and load', () => {
+    const p = withAlternate(['s3']);
+    const result = loadProject(JSON.parse(JSON.stringify(p)));
+    expect(result.ok && result.project.products[0]?.routing[0]?.alternates).toEqual(['s3']);
+  });
+
+  it('rejects an alternate that is not known equipment', () => {
+    expectInvalid(withAlternate(['nope']), 'products[0].routing[0].alternates[0]', 'Unknown');
+  });
+
+  it('rejects an alternate that is not a workstation', () => {
+    expectInvalid(withAlternate(['snk']), 'products[0].routing[0].alternates[0]', 'not a workstation');
+  });
+
+  it("rejects an alternate equal to the step's station", () => {
+    expectInvalid(withAlternate(['s1']), 'products[0].routing[0].alternates[0]', 'already');
+  });
+
+  it('rejects the same alternate twice', () => {
+    expectInvalid(withAlternate(['s3', 's3']), 'products[0].routing[0].alternates[1]', 'already');
+  });
+});
