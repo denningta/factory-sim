@@ -26,3 +26,9 @@ issue: 206
 ## Notes
 
 - _Lead (2026-11-27):_ internal to `line-compile.ts` / `line-run.ts`; `LineEvent`s don't change (`partMoved.via.connectionId` shows the branch). If you need a public API change, stop and report to the lead.
+- _Builder (2026-11-28):_ design decisions.
+  - **Routes are per-step candidate sets.** `compileLine` stores, for each step and each place a part can start it from (the source or any station of the previous step), the shortest path to each candidate in listed order. At run time a part keeps the candidates it hasn't ruled out and walks their shared legs. It chooses where the paths split: at the previous station when each autoclave has its own buffer, or at a shared buffer. One candidate per step is today's behaviour, event for event (the reference model is unchanged).
+  - **"Parts waiting for it"** = parts bound for the station that haven't left it yet (en route, waiting, in process or finished and blocked). Counting only parts that haven't started would send a part to a busy station while its twin sits idle.
+  - **Batch ranking** (applies to all batch stations: perBatch and `batchSize` > 1). Tiers: loading (partial load, not curing) → idle → curing with a partial load → curing with nothing queued → curing with full batches queued. Within a curing tier the cure that ends first wins, then fewest bound, then listed order. Ordering by cure end is what keeps at most one station partially loaded when unlimited links let a part commit to a station mid-cure.
+  - **No room anywhere:** the part queues on every candidate's first place and takes whichever grants first; its other places are released at that moment.
+  - **Issues:** `no_path` names both stations (or the station and "a sink"); `no_path` and `missing_cycle_time` keep `objectId` = the routing step's id (lead, for PS-2).
