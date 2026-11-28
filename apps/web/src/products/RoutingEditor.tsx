@@ -21,6 +21,8 @@ export function RoutingEditor({
   const setRoutingStepStation = useStore((s) => s.setRoutingStepStation);
   const moveRoutingStep = useStore((s) => s.moveRoutingStep);
   const removeRoutingStep = useStore((s) => s.removeRoutingStep);
+  const addRoutingAlternate = useStore((s) => s.addRoutingAlternate);
+  const removeRoutingAlternate = useStore((s) => s.removeRoutingAlternate);
   const stations = equipment.filter((e) => e.behavior === 'workstation');
   const reachable = useMemo(
     () => reachableFromSources({ equipment, connections }),
@@ -46,7 +48,18 @@ export function RoutingEditor({
       <ol aria-label="Routing steps" className={styles.steps}>
         {steps.map((step, i) => {
           const n = i + 1;
+          const alternates = step.alternates ?? [];
+          const nameOf = (id: string) => equipment.find((e) => e.id === id)?.name ?? id;
           const unreachable = !reachable.has(step.stationId);
+          const unreachableAlts = alternates.filter((a) => !reachable.has(a));
+          // Workstations that could still join this step.
+          const candidates = stations
+            .filter((st) => st.id !== step.stationId && !alternates.includes(st.id))
+            // A twin of the primary's type is the likeliest intent.
+            .sort((a, b) => {
+              const type = equipment.find((e) => e.id === step.stationId)?.typeId;
+              return Number(b.typeId === type) - Number(a.typeId === type);
+            });
           return (
             <li
               key={step.id}
@@ -63,7 +76,7 @@ export function RoutingEditor({
                 dragging.current = null;
               }}
               onDragEnd={() => (dragging.current = null)}
-              className={unreachable ? styles.stepWarn : styles.step}
+              className={unreachable || unreachableAlts.length > 0 ? styles.stepWarn : styles.step}
             >
               <span aria-hidden className={styles.grip}>
                 ⋮⋮
@@ -86,9 +99,35 @@ export function RoutingEditor({
                   </option>
                 ))}
               </select>
-              {unreachable && (
+              {alternates.map((a) => (
+                <span key={a} className={styles.alternate}>
+                  <span className={styles.muted}>or</span>
+                  <span>{nameOf(a)}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove parallel station ${nameOf(a)}`}
+                    onClick={() => removeRoutingAlternate(product.id, step.id, a)}
+                    className={styles.iconButton}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                disabled={candidates.length === 0}
+                onClick={() => addRoutingAlternate(product.id, step.id, candidates[0]!.id)}
+                className={styles.linkButton}
+              >
+                + Parallel station
+              </button>
+              {(unreachable || unreachableAlts.length > 0) && (
                 <span className={styles.warningSmall}>
-                  ⚠ Not reachable from a source: connect this station on the Layout
+                  ⚠ Not reachable from a source:{' '}
+                  {[...(unreachable ? [step.stationId] : []), ...unreachableAlts]
+                    .map(nameOf)
+                    .join(', ')}
+                  . Connect on the Layout
                 </span>
               )}
               <span className={styles.stepActions}>

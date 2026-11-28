@@ -3,6 +3,7 @@ import { LibrarySection } from './equipment/LibrarySection';
 import { api } from './api/client';
 import { LibraryPreview } from './equipment/EquipmentModel';
 import { FloorEmptyHint } from './layout/FloorEmptyHint';
+import { ParallelOffer } from './layout/ParallelOffer';
 import { FloorScene } from './layout/FloorScene';
 import { RightPanel } from './layout/RightPanel';
 import { StatusBar } from './layout/StatusBar';
@@ -38,6 +39,7 @@ export function Editor({
         <div className={styles.viewport}>
           <FloorScene />
           <FloorEmptyHint />
+          <ParallelOffer />
         </div>
         <StatusBar />
       </main>

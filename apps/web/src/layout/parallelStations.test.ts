@@ -39,6 +39,7 @@ describe('PS-2 AC2: adding an alternate copies the primary cycle time, marked', 
     expect(s().copiedCycleTimes).toContain(`${pid}\u0000${a2}`);
   });
   it('does not overwrite an existing time, and adds none when the primary has none', () => {
+    s().addRoutingStep(pid, a2); // a2 already has its own time through another step
     s().setCycleTime(pid, a2, 30);
     s().setCycleTime(pid, a1, 90);
     s().addRoutingAlternate(pid, stepId, a2);
@@ -47,6 +48,10 @@ describe('PS-2 AC2: adding an alternate copies the primary cycle time, marked', 
       value: 30,
     });
     expect(s().copiedCycleTimes).toHaveLength(0);
+  });
+  it('adds no time when the primary has none', () => {
+    s().addRoutingAlternate(pid, stepId, a2);
+    expect(s().cycleTimes).toEqual([]);
   });
   it('editing the copied time clears the mark', () => {
     s().setCycleTime(pid, a1, 90);
