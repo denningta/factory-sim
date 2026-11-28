@@ -1,0 +1,53 @@
+{
+  "project": "docs/screenshots/PS-2/project-offer.json",
+  "shots": [
+    {
+      "name": "offer-banner",
+      "screen": "layout",
+      "settle": 1200,
+      "actions": [
+        {
+          "wait": 800
+        },
+        {
+          "eval": "import('/src/layout/editorStore.ts').then(m=>m.useEditorStore.getState().connect({equipmentId:'b2',portId:'out'},{equipmentId:'s3b',portId:'in'}))"
+        },
+        {
+          "waitFor": "text=Use as parallel station for"
+        }
+      ]
+    },
+    {
+      "name": "picker",
+      "screen": "products",
+      "settle": 300,
+      "actions": [
+        {
+          "click": "li:nth-child(3) >> text=+ Parallel station"
+        },
+        {
+          "waitFor": "role=menu"
+        }
+      ]
+    },
+    {
+      "name": "copied-note",
+      "screen": "products",
+      "settle": 300,
+      "actions": [
+        {
+          "click": "li:nth-child(3) >> text=+ Parallel station"
+        },
+        {
+          "click": "role=menuitem[name=/S3 Weld 2/]"
+        },
+        {
+          "waitFor": "text=copied from"
+        },
+        {
+          "eval": "document.querySelector('[class*=copiedNote]').scrollIntoView({inline:'center',block:'center'})"
+        }
+      ]
+    }
+  ]
+}

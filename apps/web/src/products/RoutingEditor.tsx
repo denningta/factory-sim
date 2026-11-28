@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Product } from '@factory-sim/schema';
 import { useEditorStore as defaultStore } from '../layout/editorStore';
 import { Button } from '../ui';
@@ -30,6 +30,8 @@ export function RoutingEditor({
   );
   // Which step is being dragged; a ref, since nothing re-renders off it.
   const dragging = useRef<string | null>(null);
+  // The step whose "+ Parallel station" menu is open.
+  const [picking, setPicking] = useState<string | null>(null);
   const steps = product.routing;
 
   return (
@@ -53,13 +55,11 @@ export function RoutingEditor({
           const unreachable = !reachable.has(step.stationId);
           const unreachableAlts = alternates.filter((a) => !reachable.has(a));
           // Workstations that could still join this step.
+          const primaryType = equipment.find((e) => e.id === step.stationId)?.typeId;
           const candidates = stations
             .filter((st) => st.id !== step.stationId && !alternates.includes(st.id))
-            // A twin of the primary's type is the likeliest intent.
-            .sort((a, b) => {
-              const type = equipment.find((e) => e.id === step.stationId)?.typeId;
-              return Number(b.typeId === type) - Number(a.typeId === type);
-            });
+            // A twin of the primary's type is the likeliest intent, so it leads.
+            .sort((a, b) => Number(b.typeId === primaryType) - Number(a.typeId === primaryType));
           return (
             <li
               key={step.id}
@@ -113,14 +113,43 @@ export function RoutingEditor({
                   </button>
                 </span>
               ))}
-              <button
-                type="button"
-                disabled={candidates.length === 0}
-                onClick={() => addRoutingAlternate(product.id, step.id, candidates[0]!.id)}
-                className={styles.linkButton}
-              >
-                + Parallel station
-              </button>
+              <span className={styles.pickerAnchor}>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={picking === step.id}
+                  disabled={candidates.length === 0}
+                  onClick={() => setPicking(picking === step.id ? null : step.id)}
+                  className={styles.linkButton}
+                >
+                  + Parallel station
+                </button>
+                {picking === step.id && (
+                  <ul
+                    role="menu"
+                    aria-label={`Parallel station for step ${n}`}
+                    className={styles.picker}
+                    onKeyDown={(e) => e.key === 'Escape' && setPicking(null)}
+                  >
+                    {candidates.map((st, k) => (
+                      <li key={st.id} role="none">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          autoFocus={k === 0}
+                          onClick={() => {
+                            addRoutingAlternate(product.id, step.id, st.id);
+                            setPicking(null);
+                          }}
+                          className={styles.pickerItem}
+                        >
+                          {st.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </span>
               {(unreachable || unreachableAlts.length > 0) && (
                 <span className={styles.warningSmall}>
                   ⚠ Not reachable from a source:{' '}

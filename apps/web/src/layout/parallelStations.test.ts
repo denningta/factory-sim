@@ -140,3 +140,28 @@ describe('PS-2 AC5: pre-run checks cover alternates', () => {
     expect(issues.find((i) => i.code === 'missing_cycle_times')?.message).toMatch(/Autoclave 2/);
   });
 });
+
+describe('PS-2 AC5: staffing applies to each parallel station', () => {
+  const staffing = () => {
+    const { products, equipment, technicians, cycleTimes } = s();
+    return preRunIssues({ products, equipment, technicians, cycleTimes }).find(
+      (i) => i.code === 'manual_station_without_tech',
+    );
+  };
+  it('a manual alternate without a technician is a staffing error naming it', () => {
+    const tech = s().addTechnician().id;
+    s().setTechnicianStation(tech, a1, true);
+    s().setCycleTime(pid, a1, 90);
+    expect(staffing()).toBeUndefined();
+    s().addRoutingAlternate(pid, stepId, a2);
+    expect(staffing()?.message).toMatch(/Autoclave 2/);
+    expect(staffing()?.message).not.toMatch(/Autoclave 1/);
+  });
+  it('assigning a technician to the alternate clears it', () => {
+    const tech = s().addTechnician().id;
+    s().setTechnicianStation(tech, a1, true);
+    s().addRoutingAlternate(pid, stepId, a2);
+    s().setTechnicianStation(tech, a2, true);
+    expect(staffing()).toBeUndefined();
+  });
+});

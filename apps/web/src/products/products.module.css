@@ -140,6 +140,7 @@
 .step,
 .stepWarn {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
@@ -297,11 +298,13 @@
 
 /* Parallel stations (PS-2) */
 .alternate {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
 }
 .linkButton {
+  white-space: nowrap;
   font: inherit;
   font-size: var(--font-size-sm);
   border: 0;
@@ -318,4 +321,36 @@
   display: block;
   font-size: var(--font-size-sm);
   color: var(--color-muted);
+}
+.pickerAnchor {
+  position: relative;
+}
+.picker {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+.pickerItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+}
+.pickerItem:hover,
+.pickerItem:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
 }

@@ -23,11 +23,19 @@ describe('PS-2 AC1: the routing editor shows and edits a step’s parallel stati
     const user = userEvent.setup();
     const a1 = ws(10, 'Autoclave 1');
     ws(15, 'Autoclave 2');
+    ws(20, 'Furnace');
     const pid = s().addProduct().id;
     s().addRoutingStep(pid, a1);
     render(<ProductsPanel useStore={store} />);
     const steps = within(await screen.findByRole('list', { name: /routing steps/i }));
     await user.click(steps.getByRole('button', { name: /\+ parallel station/i }));
+    // The menu lists the eligible workstations; the primary is not one of them.
+    const menu = within(screen.getByRole('menu', { name: /parallel station for step 1/i }));
+    expect(menu.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Autoclave 2',
+      'Furnace',
+    ]);
+    await user.click(menu.getByRole('menuitem', { name: /autoclave 2/i }));
     expect(s().products[0]!.routing[0]!.alternates).toHaveLength(1);
     expect(steps.getByText(/Autoclave 1 or Autoclave 2|^or$/i)).toBeTruthy();
     await user.click(steps.getByRole('button', { name: /remove parallel station autoclave 2/i }));
