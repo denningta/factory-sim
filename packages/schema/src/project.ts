@@ -23,7 +23,7 @@ import {
  * Project metadata (id, name, owner, timestamps) lives in relational columns
  * (ADR-0004); this document is the editable content only.
  */
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 /** Seconds, strictly positive. */
 const seconds = z.number().positive();
@@ -239,9 +239,16 @@ function checkReferences(p: ProjectShape, ctx: z.RefinementCtx): void {
     if (partNumbers.has(pr.partNumber))
       issue(['products', i, 'partNumber'], `Part number "${pr.partNumber}" is already used`);
     partNumbers.add(pr.partNumber);
-    pr.routing.forEach((s, j) =>
-      checkStation(s.stationId, ['products', i, 'routing', j, 'stationId']),
-    );
+    pr.routing.forEach((s, j) => {
+      checkStation(s.stationId, ['products', i, 'routing', j, 'stationId']);
+      const onStep = new Set([s.stationId]);
+      s.alternates?.forEach((alt, k) => {
+        const path = ['products', i, 'routing', j, 'alternates', k];
+        if (onStep.has(alt)) issue(path, `Station "${alt}" is already on this step`);
+        else checkStation(alt, path);
+        onStep.add(alt);
+      });
+    });
   });
 
   const productIds = new Set(p.products.map((pr) => pr.id));
