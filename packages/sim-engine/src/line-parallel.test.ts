@@ -49,6 +49,7 @@ function build(spec: Spec): Project {
   const at = (behavior: string, id: string) =>
     instantiate(type(behavior), {
       id,
+      name: id,
       position: { x: (n % 4) * 4, y: Math.floor(n++ / 4) * 4 },
       rotation: 0,
     });
@@ -123,15 +124,20 @@ const of = <T extends LineEvent['type']>(events: LineEvent[], type: T) =>
 /** Part ids in release order. */
 const released = (events: LineEvent[]) => of(events, 'partReleased').map((e) => e.partId);
 
-/** The workstation each part (in release order) started at, among `group`. */
-function stationsUsed(events: LineEvent[], group: string[]) {
-  const started = of(events, 'partStarted').filter((e) => group.includes(e.equipmentId));
-  return released(events).map((id) => started.find((e) => e.partId === id)?.equipmentId);
-}
-
 /** The connection a move went along (undefined for conveyor travel). */
 const conn = (e: Extract<LineEvent, { type: 'partMoved' }> | undefined) =>
   e && 'connectionId' in e.via ? e.via.connectionId : undefined;
+
+/** The station of `group` each part (in release order) was sent to, by the link it took into it. */
+function stationsUsed(events: LineEvent[], group: string[]) {
+  const into = (e: Extract<LineEvent, { type: 'partMoved' }>) =>
+    group.find((id) => conn(e)?.endsWith(`-${id}`));
+  const moves = of(events, 'partMoved');
+  return released(events).map((id) => {
+    const m = moves.find((e) => e.partId === id && into(e));
+    return m && into(m);
+  });
+}
 
 /** The time a part moved along a connection. */
 const movedAt = (events: LineEvent[], partId: number, connectionId: string) =>
@@ -286,21 +292,23 @@ describe('PS-1 AC2: parallel perBatch stations consolidate (ADR-0018 §3)', () =
     spec.interval = { kind: 'exponential', mean: 30 };
     const c = compileLine(build(spec));
     if (!c.ok) throw new Error(JSON.stringify(c.issues));
-    const r = createRun(c.model, { seed: 7, warmUp: 0, runLength: 4 * 3600 });
-    r.setEventsEnabled(false);
-    for (let t = 7; t < r.endTime; t += 7) {
-      r.runUntil(t);
-      const loading = new Set(
-        r
-          .wip()
-          .flatMap((p) => (p.last.type === 'partEntered' ? [p.last.equipmentId] : []))
-          .filter((id) => id === 'P1' || id === 'P2'),
-      );
-      expect(loading.size, `t=${t}`).toBeLessThanOrEqual(1);
+    for (const seed of [1, 7, 12]) {
+      const r = createRun(c.model, { seed, warmUp: 0, runLength: 4 * 3600 });
+      r.setEventsEnabled(false);
+      for (let t = 7; t < r.endTime; t += 7) {
+        r.runUntil(t);
+        const loading = new Set(
+          r
+            .wip()
+            .flatMap((p) => (p.last.type === 'partEntered' ? [p.last.equipmentId] : []))
+            .filter((id) => id === 'P1' || id === 'P2'),
+        );
+        expect(loading.size, `t=${t}`).toBeLessThanOrEqual(1);
+      }
+      const stations = r.stats().stations;
+      expect(stations.P1!.working).toBeGreaterThan(0.2);
+      expect(stations.P2!.working).toBeGreaterThan(0.2);
     }
-    const stations = r.stats().stations;
-    expect(stations.P1!.working).toBeGreaterThan(0.2);
-    expect(stations.P2!.working).toBeGreaterThan(0.2);
   });
 });
 
@@ -414,7 +422,10 @@ describe('PS-1 AC4: ADR-0018 edge cases (engine)', () => {
   });
 
   it('a station can be an alternate in one routing and the primary in another', () => {
+    // A's P1 cycle is slow and B's is fast, so A has a reason to use P2.
     const spec = twoFromBuffer({}, {});
+    spec.interval = fixed(60);
+    spec.cycles = { A: { P1: 200 }, B: { P2: 10 } };
     spec.routing = {
       A: [{ stationId: 'P1', alternates: ['P2'] }],
       B: [{ stationId: 'P2' }],

@@ -1,6 +1,6 @@
 /**
- * `createRun` (SE-6): runs a compiled line on the kernel. Parts follow their precomputed
- * route; every place a part can occupy (connection, buffer, conveyor, station, sink) is a
+ * `createRun` (SE-6): runs a compiled line on the kernel. Parts follow their routing step by
+ * step, choosing among a step's parallel stations where the paths split (ADR-0018); every place a part can occupy (connection, buffer, conveyor, station, sink) is a
  * `Place` with a capacity and a FIFO of parts waiting for room. Room is reserved the moment
  * it is granted and the move is delivered as a zero-delay event, like the kernel's queues.
  *
@@ -11,7 +11,7 @@
  * place's waiters are FIFO).
  */
 import type { Entity, EventHandle, Resource, Simulation, TimeWeighted } from './api';
-import type { CompiledLine, Leg, ProductDef, StationDef } from './line-compile';
+import type { CompiledLine, Leg, OptionDef, ProductDef, StationDef } from './line-compile';
 import type {
   FlowStats,
   LineEvent,
@@ -29,6 +29,7 @@ import { createSimulation } from './simulation';
 interface Place {
   readonly capacity: number;
   used: number;
+  /** Called when room is granted (already reserved), oldest first. */
   readonly waiters: (() => void)[];
   /** Runs after a part leaves (and its room is freed). */
   onLeave?: () => void;
@@ -36,9 +37,27 @@ interface Place {
 
 interface Part extends Entity {
   readonly product: ProductRt;
-  /** Index of the next leg in the route. */
-  leg: number;
+  /** Index of the current routing step (the last one leads to a sink). */
+  step: number;
+  /** The step's candidates still open: all share the legs taken so far (ADR-0018). */
+  options: OptionRt[];
+  /** Index of the next leg along the options' paths. */
+  hop: number;
   holder: Place;
+}
+
+interface OptionRt {
+  readonly def: OptionDef;
+  /** The step's station; absent on the hop to a sink. */
+  readonly station?: StationRt;
+  readonly cycle: () => number;
+}
+
+/** Options sharing their next leg: one way out of where the part is. */
+interface Branch {
+  readonly leg: Leg;
+  readonly target: Place;
+  readonly options: OptionRt[];
 }
 
 interface FlowRt {
@@ -51,8 +70,8 @@ interface FlowRt {
 interface ProductRt {
   readonly def: ProductDef;
   readonly flow: FlowRt;
-  /** Cycle-time sampler per route leg index (station steps only). */
-  readonly cycles: (() => number)[];
+  /** Per step: the candidates from each place a part can start it. */
+  readonly steps: Map<string, OptionRt[]>[];
 }
 
 interface TechRt {
@@ -81,6 +100,10 @@ interface StationRt {
   held: number;
   /** Jobs waiting for a technician (requested or walking). */
   awaiting: number;
+  /** Parts bound for it that haven't left it yet (ADR-0018 "parts waiting for it"). */
+  assigned: number;
+  /** Parts bound for it that haven't started a job yet. */
+  queued: number;
   state: StationState;
   readonly stateStats: Record<StationState, TimeWeighted>;
   techs: TechRt[];
@@ -137,18 +160,22 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
 
   // ---- places ----
   const place = (capacity: number): Place => ({ capacity, used: 0, waiters: [] });
-  const requestRoom = (p: Place, onRoom: () => void) => {
-    if (p.waiters.length === 0 && p.used < p.capacity) {
+  const hasRoom = (p: Place) => p.waiters.length === 0 && p.used < p.capacity;
+  /** Reserves room now or when it frees (FIFO); `onGrant` runs at that moment. */
+  const claim = (p: Place, onGrant: () => void) => {
+    if (hasRoom(p)) {
       p.used++;
-      defer(onRoom);
-    } else p.waiters.push(onRoom);
+      onGrant();
+    } else p.waiters.push(onGrant);
   };
+  /** Like `claim`, but `onRoom` runs as a zero-delay event. */
+  const requestRoom = (p: Place, onRoom: () => void) => claim(p, () => defer(onRoom));
   const leave = (part: Part) => {
     const p = part.holder;
     p.used--;
     while (p.waiters.length > 0 && p.used < p.capacity) {
       p.used++;
-      defer(p.waiters.shift()!);
+      p.waiters.shift()!();
     }
     p.onLeave?.();
   };
@@ -200,6 +227,8 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       processing: 0,
       held: 0,
       awaiting: 0,
+      assigned: 0,
+      queued: 0,
       state: 'starved',
       stateStats: indicators(STATION_STATES, 'starved'),
       techs: [],
@@ -211,6 +240,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
     };
     st.place.onLeave = () => {
       st.held--;
+      st.assigned--;
       refresh(st);
     };
     stations.set(def.id, st);
@@ -322,6 +352,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   const activeBatches = new Set<BatchInLine>();
 
   const startJob = (st: StationRt, batch: Waiting[]) => {
+    st.queued -= batch.length;
     const lead = batch[0]!;
     const cycle = st.cure ?? lead.cycle;
     const partIds = () => batch.map((w) => w.part.id);
@@ -330,7 +361,10 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       refresh(st);
       for (const { part } of batch)
         emit({ t: sim.now, type: 'partFinished', partId: part.id, equipmentId: st.def.id });
-      for (const { part } of batch) advance(part);
+      for (const { part } of batch) {
+        nextStep(part, st.def.id);
+        advance(part);
+      }
     };
     const started = (endsAt?: number) => {
       for (const { part } of batch)
@@ -407,28 +441,29 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   const connPlaces = new Map<string, Place>();
   const transfers = new Map<string, () => number>();
   for (const pr of line.products)
-    for (const leg of pr.route) {
-      const { connection: c, node } = leg;
-      if (!connPlaces.has(c.id)) {
-        connPlaces.set(c.id, place(c.capacity));
-        const tr = c.transfer;
-        transfers.set(
-          c.id,
-          tr.kind === 'instant'
-            ? () => 0
-            : tr.kind === 'seconds'
-              ? () => tr.value
-              : durationSampler(rng.fork(`transfer:${c.id}`), tr.time),
-        );
-      }
-      if (!nodePlaces.has(node.id))
-        nodePlaces.set(
-          node.id,
-          node.kind === 'station'
-            ? stations.get(node.id)!.place
-            : place(node.kind === 'buffer' ? node.capacity : Infinity),
-        );
-    }
+    for (const step of pr.steps)
+      for (const options of step.from.values())
+        for (const { connection: c, node } of options.flatMap((o) => o.legs)) {
+          if (!connPlaces.has(c.id)) {
+            connPlaces.set(c.id, place(c.capacity));
+            const tr = c.transfer;
+            transfers.set(
+              c.id,
+              tr.kind === 'instant'
+                ? () => 0
+                : tr.kind === 'seconds'
+                  ? () => tr.value
+                  : durationSampler(rng.fork(`transfer:${c.id}`), tr.time),
+            );
+          }
+          if (!nodePlaces.has(node.id))
+            nodePlaces.set(
+              node.id,
+              node.kind === 'station'
+                ? stations.get(node.id)!.place
+                : place(node.kind === 'buffer' ? node.capacity : Infinity),
+            );
+        }
 
   /** Where a part on `leg` needs room first: the connection, or the node on a direct hand-off. */
   const firstPlace = (leg: Leg) =>
@@ -436,10 +471,102 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       ? nodePlaces.get(leg.node.id)!
       : connPlaces.get(leg.connection.id)!;
 
-  const advance = (part: Part) => {
-    const leg = part.product.def.route[part.leg]!;
-    const target = firstPlace(leg);
-    requestRoom(target, () => depart(part, leg, target));
+  /** The ways out at `hop`, in listed order of their first option. */
+  const branches = (options: OptionRt[], hop: number): Branch[] => {
+    const out: Branch[] = [];
+    for (const o of options) {
+      const leg = o.def.legs[hop]!;
+      const same = out.find((b) => b.leg.connection.id === leg.connection.id);
+      if (same) same.options.push(o);
+      else out.push({ leg, target: firstPlace(leg), options: [o] });
+    }
+    return out;
+  };
+
+  /**
+   * ADR-0018 §2–3, lower is better. Batch stations go by tier (loading, idle, curing with a
+   * partial load, curing with nothing queued, curing with full batches queued), and among
+   * curing ones the cure that ends first, so a part never waits behind a later cure and only
+   * one station fills a partial load. Then fewest parts bound for the station; listed order
+   * breaks the remaining ties.
+   */
+  const rank = (o: OptionRt): [number, number, number] => {
+    const st = o.station;
+    if (!st) return [0, 0, 0];
+    if (!st.def.batches) return [0, 0, st.assigned];
+    const partial = st.queued % st.def.batchSize !== 0;
+    if (st.processing === 0) return [partial ? 0 : 1, 0, st.assigned];
+    let ends = Infinity; // loading or unloading: no cure end known yet
+    for (const b of activeBatches) if (b.equipmentId === st.def.id) ends = Math.min(ends, b.endsAt);
+    return [partial ? 2 : st.queued === 0 ? 3 : 4, ends, st.assigned];
+  };
+  const key = (b: Branch, options: OptionRt[]) =>
+    b.options
+      .map((o) => [...rank(o), options.indexOf(o)])
+      .reduce((best, k) => (before(k, best) ? k : best));
+  const before = (a: number[], b: number[]) => {
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i]! < b[i]!;
+    return false;
+  };
+
+  /**
+   * Picks the way out at `hop` and reserves its first place (ADR-0018 §2): with one way, wait
+   * for it; else the best way that has room; with no room anywhere, whichever frees first.
+   * `onGrant` runs at the moment of reservation.
+   */
+  const dispatch = (options: OptionRt[], hop: number, onGrant: (b: Branch) => void) => {
+    const all = branches(options, hop);
+    if (all.length === 1) {
+      claim(all[0]!.target, () => onGrant(all[0]!));
+      return;
+    }
+    let best: { b: Branch; k: number[] } | undefined;
+    for (const b of all) {
+      if (!hasRoom(b.target)) continue;
+      const k = key(b, options);
+      if (!best || before(k, best.k)) best = { b, k };
+    }
+    if (best) {
+      const { b } = best;
+      claim(b.target, () => onGrant(b));
+      return;
+    }
+    const waits = all.map((b) => {
+      const wait = () => {
+        all.forEach((other, i) => {
+          if (other === b) return;
+          const ws = other.target.waiters;
+          const at = ws.indexOf(waits[i]!);
+          if (at >= 0) ws.splice(at, 1);
+        });
+        onGrant(b);
+      };
+      b.target.waiters.push(wait);
+      return wait;
+    });
+  };
+
+  const nextStep = (part: Part, stationId: string) => {
+    part.step++;
+    part.options = part.product.steps[part.step]!.get(stationId)!;
+    part.hop = 0;
+  };
+
+  const advance = (part: Part) =>
+    dispatch(part.options, part.hop, (b) => {
+      bind(part, b);
+      defer(() => depart(part, b.leg, b.target));
+    });
+
+  /** Narrows the part to `b`; the first time that leaves one station, it is bound for it. */
+  const bind = (part: Part, b: Branch) => {
+    const st = b.options.length === 1 ? b.options[0]!.station : undefined;
+    // Narrowed to one station now: at the step's first hop, or where the paths split.
+    if (st && (part.hop === 0 || part.options.length > 1)) {
+      st.assigned++;
+      st.queued++;
+    }
+    part.options = b.options;
   };
 
   const depart = (part: Part, leg: Leg, target: Place) => {
@@ -468,7 +595,7 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
   };
 
   const enter = (part: Part, leg: Leg) => {
-    const index = part.leg++;
+    part.hop++;
     const node = leg.node;
     switch (node.kind) {
       case 'sink': {
@@ -499,20 +626,41 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
       case 'station': {
         emit({ t: sim.now, type: 'partEntered', partId: part.id, equipmentId: node.id });
         const st = stations.get(node.id)!;
-        st.waiting.push({ part, cycle: part.product.cycles[index]!, since: sim.now });
+        st.waiting.push({ part, cycle: part.options[0]!.cycle, since: sim.now });
         tryStart(st);
       }
     }
   };
 
   // ---- release ----
-  const products: ProductRt[] = line.products.map((def) => ({
-    def,
-    flow: flow(),
-    cycles: def.route.map((leg) =>
-      leg.cycle ? durationSampler(rng.fork(`cycle:${def.id}:${leg.node.id}`), leg.cycle) : () => 0,
-    ),
-  }));
+  const products: ProductRt[] = line.products.map((def) => {
+    /** One sampler per (step, station), shared by every place the step starts from. */
+    const samplers = new Map<string, () => number>();
+    const sampler = (i: number, o: OptionDef) => {
+      if (!o.cycle || !o.stationId) return () => 0;
+      const k = `${i}\n${o.stationId}`;
+      if (!samplers.has(k))
+        samplers.set(k, durationSampler(rng.fork(`cycle:${def.id}:${o.stationId}`), o.cycle));
+      return samplers.get(k)!;
+    };
+    return {
+      def,
+      flow: flow(),
+      steps: def.steps.map(
+        (step, i) =>
+          new Map(
+            [...step.from].map(([at, options]) => [
+              at,
+              options.map((o) => ({
+                def: o,
+                ...(o.stationId && { station: stations.get(o.stationId)! }),
+                cycle: sampler(i, o),
+              })),
+            ]),
+          ),
+      ),
+    };
+  });
   const interval = durationSampler(rng.fork('release'), line.release.interval);
   const pickProduct = productPicker(line, products, rng.fork('release-product'));
   /** Parts exist only once they leave the source, so it never holds one: no capacity. */
@@ -523,24 +671,26 @@ export function startRun(line: CompiledLine, options: RunOptions): Run {
    */
   const due = () => {
     const product = pickProduct();
-    const leg = product.def.route[0]!;
-    const target = firstPlace(leg);
-    requestRoom(target, () => {
-      const part: Part = sim.createEntity({ product, leg: 0, holder: source });
-      source.used++;
-      for (const f of [product.flow, total]) {
-        f.released++;
-        f.wip.update(f.wip.current + 1);
-      }
-      emit({
-        t: sim.now,
-        type: 'partReleased',
-        partId: part.id,
-        productId: product.def.id,
-        sourceId: line.sourceId,
+    const options = product.steps[0]!.get(line.sourceId)!;
+    dispatch(options, 0, (b) => {
+      const part: Part = sim.createEntity({ product, step: 0, options, hop: 0, holder: source });
+      bind(part, b);
+      defer(() => {
+        source.used++;
+        for (const f of [product.flow, total]) {
+          f.released++;
+          f.wip.update(f.wip.current + 1);
+        }
+        emit({
+          t: sim.now,
+          type: 'partReleased',
+          partId: part.id,
+          productId: product.def.id,
+          sourceId: line.sourceId,
+        });
+        depart(part, b.leg, b.target);
+        sim.schedule(interval(), due);
       });
-      depart(part, leg, target);
-      sim.schedule(interval(), due);
     });
   };
 

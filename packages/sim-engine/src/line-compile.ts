@@ -1,7 +1,7 @@
 /**
  * `compileLine` (SE-6): checks a project for problems that block a run (`ModelIssue`s) and
  * turns it into plain, precomputed data for `line-run.ts`. Everything that doesn't depend
- * on the seed (routes, distances, release weights) is done here, once.
+ * on the seed (each step's candidate paths, distances, release weights) is done here, once.
  */
 import type { Duration, Equipment, Labor, Port, Project } from '@factory-sim/schema';
 import type { ModelIssue } from './line-api';
@@ -25,13 +25,28 @@ export type NodeDef =
 export interface Leg {
   connection: ConnectionDef;
   node: NodeDef;
-  /** For a routing step's station: the cycle time. */
+}
+
+/** One way to do a step from a given place: the path to the step's station (or a sink). */
+export interface OptionDef {
+  /** The step's workstation; absent on the final hop to a sink. */
+  stationId?: string;
+  legs: Leg[];
   cycle?: Duration;
+}
+
+/**
+ * One routing step, plus a final one to a sink. Candidates are resolved at run time
+ * (ADR-0018): per place the part comes from (the source, or any station of the previous
+ * step), the step's stations in listed order (`stationId` first).
+ */
+export interface StepDef {
+  from: Map<string, OptionDef[]>;
 }
 
 export interface ProductDef {
   id: string;
-  route: Leg[];
+  steps: StepDef[];
 }
 
 export interface StationDef {
@@ -96,7 +111,7 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
 
   const staffed = new Set(p.technicians.flatMap((t) => t.stationIds));
   // Product owner decision (SE-6): only stations some routing uses need a technician.
-  const routed = new Set(p.products.flatMap((pr) => pr.routing.map((s) => s.stationId)));
+  const routed = new Set(p.products.flatMap((pr) => pr.routing.flatMap(candidatesOf)));
   const stations: StationDef[] = [];
   /** perBatch stations take no cycleTimes, so their steps can't miss one. */
   const perBatch = new Set<string>();
@@ -184,48 +199,60 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
   };
 
   const cycleTimes = new Map(p.cycleTimes.map((c) => [`${c.productId}\n${c.stationId}`, c.time]));
+  const name = (id: string) => `"${byId.get(id)?.name || id}"`;
   const products: ProductDef[] = [];
   for (const product of p.products) {
     if (product.routing.length === 0) {
       error('no_routing', `${product.name} has no routing: add its steps.`, product.id);
       continue; // nothing to path-check
     }
-    const route: Leg[] = [];
-    let at = sources[0]?.id;
+    const steps: StepDef[] = [];
+    /** Where parts start this step; undefined once a path is missing (one step's report is enough). */
+    let froms: string[] | undefined = sources[0] && [sources[0].id];
     for (const step of product.routing) {
-      const cycle = cycleTimes.get(`${product.id}\n${step.stationId}`);
-      if (!cycle && !perBatch.has(step.stationId))
-        error(
-          'missing_cycle_time',
-          `${product.name} has no cycle time at "${byId.get(step.stationId)?.name || step.stationId}".`,
-          step.id,
-        );
-      if (at === undefined) continue;
-      const legs = findPath(at, (e) => e.id === step.stationId);
-      if (!legs) {
-        error(
-          'no_path',
-          `${product.name} can't reach "${byId.get(step.stationId)?.name || step.stationId}": connect it from the previous step.`,
-          step.id,
-        );
-        at = undefined; // one missing path per product is enough to report
-        continue;
+      const candidates = candidatesOf(step);
+      for (const id of candidates)
+        if (!cycleTimes.has(`${product.id}\n${id}`) && !perBatch.has(id))
+          error('missing_cycle_time', `${product.name} has no cycle time at ${name(id)}.`, step.id);
+      if (froms === undefined) continue;
+      const from = new Map<string, OptionDef[]>();
+      let reached = true;
+      for (const at of froms) {
+        const options: OptionDef[] = [];
+        for (const id of candidates) {
+          const legs = findPath(at, (e) => e.id === id);
+          if (!legs) {
+            error(
+              'no_path',
+              `${product.name} can't reach ${name(id)} from ${name(at)}: connect them.`,
+              step.id,
+            );
+            reached = false;
+            continue;
+          }
+          const cycle = cycleTimes.get(`${product.id}\n${id}`);
+          options.push({ stationId: id, legs, ...(cycle && { cycle }) });
+        }
+        from.set(at, options);
       }
-      legs[legs.length - 1]!.cycle = cycle;
-      route.push(...legs);
-      at = step.stationId;
+      steps.push({ from });
+      froms = reached ? candidates : undefined;
     }
-    if (at !== undefined && hasSink) {
-      const legs = findPath(at, (e) => e.behavior === 'sink');
-      if (legs) route.push(...legs);
-      else
-        error(
-          'no_path',
-          `${product.name} can't reach a sink after its last step.`,
-          product.routing.at(-1)?.id ?? product.id,
-        );
+    if (froms !== undefined && hasSink) {
+      const from = new Map<string, OptionDef[]>();
+      for (const at of froms) {
+        const legs = findPath(at, (e) => e.behavior === 'sink');
+        if (legs) from.set(at, [{ legs }]);
+        else
+          error(
+            'no_path',
+            `${product.name} can't reach a sink from ${name(at)} after its last step.`,
+            product.routing.at(-1)!.id,
+          );
+      }
+      steps.push({ from });
     }
-    products.push({ id: product.id, route });
+    products.push({ id: product.id, steps });
   }
 
   if (issues.length > 0) return { issues };
@@ -249,6 +276,11 @@ export function compile(p: Project): { line?: CompiledLine; issues: ModelIssue[]
       weights,
     },
   };
+}
+
+/** A step's stations in listed order: `stationId`, then its alternates (ADR-0018). */
+function candidatesOf(step: Project['products'][number]['routing'][number]): string[] {
+  return [step.stationId, ...(step.alternates ?? [])];
 }
 
 function distance(
